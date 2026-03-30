@@ -2,15 +2,15 @@
 title: Gizlilik Politikası
 ---
 
-# Gizlilik Politikası (herio)
+# Gizlilik Politikası (heriO Chat App)
 
 Son güncelleme: 2026-03-30
 
-Bu Gizlilik Politikası, **herio** (“Uygulama”) uygulamasını kullandığınızda verilerinizi nasıl işlediğimizi açıklar.
+Bu Gizlilik Politikası, **heriO** (“Uygulama”) uygulamasını kullandığınızda verilerinizi nasıl işlediğimizi açıklar.
 
 ## 1) Veri Sorumlusu ve İletişim
 Bu uygulamanın geliştiricisi: **necatisen**  
-İletişim e‑postası: **[BURAYA_EPOSTA_YAZ]**
+İletişim e‑postası: **heriohelp@gmail.com**
 
 ## 2) Topladığımız / İşlediğimiz Veriler
 Aşağıdaki veri türleri, kullandığınız özelliklere göre işlenebilir:
@@ -57,7 +57,7 @@ Verilerinizi korumak için makul teknik ve idari önlemler uygularız; ancak int
 Uygulama, 13 yaş altı çocuklara yönelik değildir. 13 yaş altından bilerek veri topladığımızı fark edersek, gerekli işlemleri yaparız.
 
 ## 9) Haklarınız ve Talepler
-Verilerinizle ilgili erişim, düzeltme, silme gibi talepleriniz için bize **[BURAYA_EPOSTA_YAZ]** üzerinden ulaşabilirsiniz.
+Verilerinizle ilgili erişim, düzeltme, silme gibi talepleriniz için bize **[heriohelp@gmail.com]** üzerinden ulaşabilirsiniz.
 
 ## 10) Değişiklikler
 Bu politikayı zaman zaman güncelleyebiliriz. Güncellemeler bu sayfada yayınlanır.
