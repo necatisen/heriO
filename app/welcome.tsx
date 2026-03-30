@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Language } from '@/lib/i18n';
+import { HerioLogo } from '@/components/HerioLogo';
 
 const LANGUAGES: { code: Language; label: string }[] = [
   { code: 'tr', label: 'TR' },
@@ -19,7 +20,7 @@ const LANGUAGES: { code: Language; label: string }[] = [
 const contentByLang: Record<string, { welcome: string; appName: string; subtitle: string; login: string; register: string; features: { chat: string; match: string; connect: string } }> = {
   tr: {
     welcome: 'Hoş Geldiniz',
-    appName: 'Chat Connect',
+    appName: 'herio',
     subtitle: 'Yeni insanlarla tanış, sohbet et ve bağlantılar kur',
     login: 'Giriş Yap',
     register: 'Hesap Oluştur',
@@ -27,7 +28,7 @@ const contentByLang: Record<string, { welcome: string; appName: string; subtitle
   },
   en: {
     welcome: 'Welcome',
-    appName: 'Chat Connect',
+    appName: 'herio',
     subtitle: 'Meet new people, chat and build connections',
     login: 'Login',
     register: 'Create Account',
@@ -35,7 +36,7 @@ const contentByLang: Record<string, { welcome: string; appName: string; subtitle
   },
   ru: {
     welcome: 'Добро пожаловать',
-    appName: 'Chat Connect',
+    appName: 'herio',
     subtitle: 'Знакомьтесь, общайтесь и находите связи',
     login: 'Войти',
     register: 'Создать аккаунт',
@@ -43,7 +44,7 @@ const contentByLang: Record<string, { welcome: string; appName: string; subtitle
   },
   ar: {
     welcome: 'مرحباً',
-    appName: 'Chat Connect',
+    appName: 'herio',
     subtitle: 'تعرف على أشخاص جدد وتواصل وابنِ علاقات',
     login: 'تسجيل الدخول',
     register: 'إنشاء حساب',
@@ -51,7 +52,7 @@ const contentByLang: Record<string, { welcome: string; appName: string; subtitle
   },
   de: {
     welcome: 'Willkommen',
-    appName: 'Chat Connect',
+    appName: 'herio',
     subtitle: 'Lerne neue Leute kennen, chatte und knüpfe Kontakte',
     login: 'Anmelden',
     register: 'Konto erstellen',
@@ -59,7 +60,7 @@ const contentByLang: Record<string, { welcome: string; appName: string; subtitle
   },
   fr: {
     welcome: 'Bienvenue',
-    appName: 'Chat Connect',
+    appName: 'herio',
     subtitle: 'Rencontrez des gens, discutez et créez des liens',
     login: 'Connexion',
     register: 'Créer un compte',
@@ -67,7 +68,7 @@ const contentByLang: Record<string, { welcome: string; appName: string; subtitle
   },
   es: {
     welcome: 'Bienvenido',
-    appName: 'Chat Connect',
+    appName: 'herio',
     subtitle: 'Conoce gente, chatea y haz conexiones',
     login: 'Iniciar sesión',
     register: 'Crear cuenta',
@@ -81,7 +82,7 @@ export default function WelcomeScreen() {
   const content = contentByLang[language] || contentByLang.en;
 
   return (
-    <LinearGradient colors={['#4A90E2', '#50C9E9']} style={styles.container}>
+    <LinearGradient colors={['#2B7DE9', '#4A90E2', '#FF4D6D']} style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.languageContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.languageScroll}>
@@ -107,11 +108,8 @@ export default function WelcomeScreen() {
 
         <View style={styles.content}>
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <MessageCircle size={80} color="#FFFFFF" strokeWidth={2} />
-            </View>
+            <HerioLogo size="lg" variant="light" style={styles.logoMark} />
             <Text style={styles.welcomeText}>{content.welcome}</Text>
-            <Text style={styles.appName}>{content.appName}</Text>
             <Text style={styles.subtitle}>{content.subtitle}</Text>
           </View>
 
@@ -193,6 +191,10 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginTop: 40,
+  },
+  logoMark: {
+    transform: [{ scale: 1.25 }],
+    marginBottom: 20,
   },
   logoContainer: {
     width: 140,

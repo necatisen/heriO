@@ -8,7 +8,6 @@ import {
   Image,
   Alert,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -20,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter, useFocusEffect } from 'expo-router';
 import ProfileModal from '@/components/ProfileModal';
 import { formatLastMessageTime } from '@/lib/dateFormat';
+import HeartLoader from '@/components/HeartLoader';
 
 type Match = {
   id: string;
@@ -49,20 +49,22 @@ export default function ChatListScreen() {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchMatches();
-      fetchConversations();
+  const refreshAll = useCallback(async (opts?: { showSpinner?: boolean }) => {
+    if (!user) return;
+    if (opts?.showSpinner !== false) setLoading(true);
+    try {
+      await Promise.all([fetchMatches(), fetchConversations()]);
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
   useFocusEffect(
     useCallback(() => {
       if (user) {
-        fetchMatches();
-        fetchConversations();
+        refreshAll();
       }
-    }, [user])
+    }, [user, refreshAll])
   );
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function ChatListScreen() {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchMatches();
+          refreshAll({ showSpinner: false });
         }
       )
       .subscribe();
@@ -94,7 +96,7 @@ export default function ChatListScreen() {
           table: 'messages',
         },
         () => {
-          fetchConversations();
+          refreshAll({ showSpinner: false });
         }
       )
       .subscribe();
@@ -158,19 +160,35 @@ export default function ChatListScreen() {
 
   const fetchConversations = async () => {
     try {
+      // Fetch only the latest message per session for speed.
       const { data: sessions, error } = await supabase
         .from('chat_sessions')
         .select(`
           id,
           user1_id,
           user2_id,
-          messages(content, created_at, is_read, sender_id)
+          started_at,
+          messages(content, created_at, is_read, sender_id, receiver_id, attachment_url, attachment_type)
         `)
         .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id}`)
         .eq('status', 'active')
-        .order('started_at', { ascending: false });
+        .order('started_at', { ascending: false })
+        .order('created_at', { referencedTable: 'messages', ascending: false })
+        .limit(1, { referencedTable: 'messages' });
 
       if (!error && sessions) {
+        // Unread counts in one lightweight query (only unread rows).
+        const { data: unreadRows } = await supabase
+          .from('messages')
+          .select('session_id')
+          .eq('receiver_id', user?.id)
+          .eq('is_read', false);
+        const unreadBySession: Record<string, number> = {};
+        (unreadRows || []).forEach((r: any) => {
+          if (!r?.session_id) return;
+          unreadBySession[r.session_id] = (unreadBySession[r.session_id] || 0) + 1;
+        });
+
         // 1) Tüm karşı taraf kullanıcı id'lerini topla
         const otherUserIds = Array.from(
           new Set(
@@ -223,14 +241,8 @@ export default function ChatListScreen() {
             return null;
           }
 
-          const msgs = session.messages || [];
-          const sorted = [...msgs].sort(
-            (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-          const lastMessage = sorted[0];
-          const unreadCount = msgs.filter(
-            (m: any) => m.sender_id !== user?.id && !m.is_read
-          ).length || 0;
+          const lastMessage = (session.messages || [])[0];
+          const unreadCount = unreadBySession[session.id] || 0;
 
           let lastText = language === 'tr' ? 'Henüz mesaj yok' : 'No messages yet';
           if (lastMessage) {
@@ -252,13 +264,18 @@ export default function ChatListScreen() {
           };
         })
           .filter(Boolean) as Conversation[];
+        
+        // Yeni mesaj gelen sohbet her zaman en üstte görünsün.
+        const sortedConversations = conversationsWithDetails.sort((a, b) => {
+          const ta = new Date(a.last_message_time).getTime();
+          const tb = new Date(b.last_message_time).getTime();
+          return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
+        });
 
-        setConversations(conversationsWithDetails);
+        setConversations(sortedConversations);
       }
     } catch (error) {
       console.error('Error fetching conversations:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -327,9 +344,9 @@ export default function ChatListScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchMatches(), fetchConversations()]);
+    await refreshAll({ showSpinner: false });
     setRefreshing(false);
-  }, [user]);
+  }, [refreshAll]);
 
   const showProfile = async (userId: string) => {
     try {
@@ -416,10 +433,7 @@ export default function ChatListScreen() {
           </Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-            {language === 'tr' ? 'Yükleniyor...' : 'Loading...'}
-          </Text>
+          <HeartLoader />
         </View>
       </SafeAreaView>
     );
@@ -634,9 +648,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 16,
   },
 });

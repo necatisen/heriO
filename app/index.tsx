@@ -9,11 +9,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MessageCircle, Globe } from 'lucide-react-native';
+import { Globe } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/lib/i18n';
 import { getOnboardingSeen } from '@/lib/onboardingStorage';
+import { HerioLogo } from '@/components/HerioLogo';
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
@@ -51,12 +52,7 @@ export default function WelcomeScreen() {
   ];
 
   if (loading || (session && !checkedOnboarding)) {
-    return (
-      <View style={styles.loadingContainer}>
-        <MessageCircle size={64} color="#4A90E2" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
+    return <View style={styles.loadingContainer} />;
   }
 
   return (
@@ -67,7 +63,7 @@ export default function WelcomeScreen() {
       style={styles.background}
       blurRadius={3}>
       <LinearGradient
-        colors={['rgba(0,0,0,0.6)', 'rgba(74,144,226,0.7)']}
+        colors={['rgba(0,0,0,0.55)', 'rgba(43,125,233,0.65)', 'rgba(255,77,109,0.35)']}
         style={styles.gradient}>
         <View style={styles.languageSelector}>
           {languages.map((lang) => (
@@ -91,8 +87,7 @@ export default function WelcomeScreen() {
 
         <View style={styles.content}>
           <View style={styles.logoContainer}>
-            <MessageCircle size={80} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={styles.appName}>ChatConnect</Text>
+            <HerioLogo size="lg" />
           </View>
 
           <View style={styles.welcomeContainer}>

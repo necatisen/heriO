@@ -1,6 +1,19 @@
 /**
  * Mesaj listesi ve sohbet ekranı için tarih/saat formatı
  */
+export const ONLINE_FRESHNESS_MS = 90 * 1000;
+
+export function isUserOnlineNow(
+  isOnline: boolean | null | undefined,
+  lastSeen: string | null | undefined,
+  withinMs = ONLINE_FRESHNESS_MS
+): boolean {
+  if (!isOnline || !lastSeen) return false;
+  const ts = new Date(lastSeen).getTime();
+  if (Number.isNaN(ts)) return false;
+  return Date.now() - ts <= withinMs;
+}
+
 export function formatMessageTime(isoDate: string): string {
   if (!isoDate) return '';
 
@@ -57,10 +70,12 @@ export function formatLastSeen(isoDate: string | null | undefined, language: 'tr
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 5) return language === 'tr' ? 'Şu anda aktif' : 'Active now';
-  if (diffMins < 60) return language === 'tr' ? `${diffMins} dk önce aktifti` : `Active ${diffMins}m ago`;
-  if (diffHours < 24) return language === 'tr' ? `${diffHours} saat önce aktifti` : `Active ${diffHours}h ago`;
-  if (diffDays === 1) return language === 'tr' ? 'Dün aktifti' : 'Active yesterday';
-  return language === 'tr' ? 'Daha önce aktifti' : 'Was active earlier';
+  // Offline iken "aktif" gibi çelişkili ifadeler yerine net zaman bilgisini gösteriyoruz.
+  if (diffMins < 5) return language === 'tr' ? 'Az önce' : 'Just now';
+  if (diffMins < 60) return language === 'tr' ? `${diffMins} dk önce` : `${diffMins}m ago`;
+  if (diffHours < 24) return language === 'tr' ? `${diffHours} saat önce` : `${diffHours}h ago`;
+  if (diffDays === 1) return language === 'tr' ? 'Dün' : 'Yesterday';
+  if (diffDays < 7) return language === 'tr' ? `${diffDays} gün önce` : `${diffDays}d ago`;
+  return language === 'tr' ? 'Daha önce' : 'Earlier';
 }
 

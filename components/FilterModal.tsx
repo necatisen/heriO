@@ -8,12 +8,16 @@ import {
   ScrollView,
   Switch,
   TextInput,
+  useWindowDimensions,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import Slider from '@react-native-community/slider';
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { countries, turkishCities } from '@/lib/constants';
+import { countries, getCitiesForCountry } from '@/lib/constants';
 import ComboBox from '@/components/ComboBox';
 
 export type FilterOptions = {
@@ -55,6 +59,11 @@ export default function FilterModal({
   const { theme } = useTheme();
   const { language } = useLanguage();
   const [filters, setFilters] = useState<FilterOptions>(initialFilters);
+  const { width: windowWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const selectedCountry = filters.countries[0] || '';
+  const cityOptions = selectedCountry ? getCitiesForCountry(selectedCountry) : getCitiesForCountry('turkey');
+  const ageSliderLength = Math.max(220, Math.min(280, windowWidth - 120));
 
   const t = {
     filters: language === 'tr' ? 'Filtreler' : 'Filters',
@@ -242,19 +251,46 @@ export default function FilterModal({
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
               {t.ageRange}: {filters.ageRange[0]} - {filters.ageRange[1]} {language === 'tr' ? 'yaş' : 'years'}
             </Text>
-            <View style={styles.sliderContainer}>
+            <View style={styles.multiSliderRow}>
               <Text style={[styles.sliderLabel, { color: theme.textSecondary }]}>18</Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={18}
-                maximumValue={80}
-                step={1}
-                value={filters.ageRange[1]}
-                onValueChange={(value) => setFilters({ ...filters, ageRange: [filters.ageRange[0], value] })}
-                minimumTrackTintColor={theme.primary}
-                maximumTrackTintColor={theme.border}
-                thumbTintColor={theme.primary}
-              />
+              <View style={styles.multiSliderWrap}>
+                <MultiSlider
+                  values={[filters.ageRange[0], filters.ageRange[1]]}
+                  min={18}
+                  max={80}
+                  step={1}
+                  sliderLength={ageSliderLength}
+                  onValuesChange={(values) => {
+                    const [minV, maxV] = values as number[];
+                    setFilters({ ...filters, ageRange: [minV, maxV] });
+                  }}
+                  selectedStyle={{
+                    backgroundColor: theme.primary,
+                    height: 3,
+                    borderRadius: 999,
+                  }}
+                  unselectedStyle={{
+                    backgroundColor: theme.border,
+                    height: 3,
+                    borderRadius: 999,
+                  }}
+                  markerStyle={{
+                    backgroundColor: theme.primary,
+                    height: 14,
+                    width: 14,
+                    borderRadius: 7,
+                    borderWidth: 1,
+                    borderColor: '#FFFFFF',
+                    shadowColor: '#000',
+                    shadowOpacity: 0.12,
+                    shadowRadius: 4,
+                    shadowOffset: { width: 0, height: 1 },
+                    elevation: 2,
+                  }}
+                  trackStyle={{ height: 3, borderRadius: 999 }}
+                  containerStyle={{ height: 38 }}
+                />
+              </View>
               <Text style={[styles.sliderLabel, { color: theme.textSecondary }]}>80</Text>
             </View>
           </View>
@@ -309,29 +345,61 @@ export default function FilterModal({
                 label: c.label[language === 'tr' ? 'tr' : 'en'],
               }))}
               selectedValue={filters.countries[0] || ''}
-              onValueChange={(value) =>
-                setFilters({
-                  ...filters,
-                  countries: value ? [String(value)] : [],
-                })
-              }
+              onValueChange={(value) => {
+                const nextCountry = value ? String(value) : '';
+                setFilters((prev) => {
+                  const nextCities = getCitiesForCountry(nextCountry);
+                  const currentCity = prev.cities[0] || '';
+                  const keepCity =
+                    !nextCountry ||
+                    nextCities.length === 0 ||
+                    (currentCity && nextCities.includes(currentCity));
+                  return {
+                    ...prev,
+                    countries: nextCountry ? [nextCountry] : [],
+                    cities: keepCity ? prev.cities : [],
+                  };
+                });
+              }}
               placeholder={language === 'tr' ? 'Ülke seçin' : 'Select country'}
             />
           </View>
 
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.city}</Text>
-            <ComboBox
-              options={turkishCities.map((city) => ({ value: city, label: city }))}
-              selectedValue={filters.cities[0] || ''}
-              onValueChange={(value) =>
-                setFilters({
-                  ...filters,
-                  cities: value ? [String(value)] : [],
-                })
-              }
-              placeholder={language === 'tr' ? 'İl seçin' : 'Select city'}
-            />
+            {cityOptions.length > 0 ? (
+              <ComboBox
+                options={cityOptions.map((city) => ({ value: city, label: city }))}
+                selectedValue={filters.cities[0] || ''}
+                onValueChange={(value) =>
+                  setFilters({
+                    ...filters,
+                    cities: value ? [String(value)] : [],
+                  })
+                }
+                placeholder={language === 'tr' ? 'Şehir seçin' : 'Select city'}
+              />
+            ) : (
+              <TextInput
+                style={[
+                  styles.textInput,
+                  { borderColor: theme.border, color: theme.text, backgroundColor: theme.cardBackground },
+                ]}
+                value={filters.cities[0] || ''}
+                onChangeText={(text) =>
+                  setFilters({
+                    ...filters,
+                    cities: text.trim() ? [text] : [],
+                  })
+                }
+                placeholder={
+                  language === 'tr'
+                    ? 'Şehir yazın (örn. New York)'
+                    : 'Type a city (e.g. New York)'
+                }
+                placeholderTextColor={theme.textSecondary}
+              />
+            )}
           </View>
 
           <View style={styles.section}>
@@ -525,7 +593,17 @@ export default function FilterModal({
           </View>
         </ScrollView>
 
-        <View style={[styles.footer, { backgroundColor: theme.cardBackground }]}>
+        <View
+          style={[
+            styles.footer,
+            {
+              backgroundColor: theme.cardBackground,
+              // Mesaj ekranındaki input bar ile aynı alt safe-area hizası.
+              paddingBottom: Platform.OS === 'android'
+                ? (insets.bottom > 0 ? insets.bottom + 6 : 10)
+                : Math.max(insets.bottom, 10),
+            },
+          ]}>
           <TouchableOpacity
             style={[styles.resetButton, { backgroundColor: theme.background }]}
             onPress={handleReset}>
@@ -610,6 +688,15 @@ const styles = StyleSheet.create({
     minWidth: 35,
     textAlign: 'center',
   },
+  multiSliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  multiSliderWrap: {
+    flex: 1,
+    alignItems: 'center',
+  },
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -632,7 +719,10 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     gap: 12,
-    padding: 20,
+    // Mesajlar ekranındaki input bar ile aynı dikey yükseklik hissi için.
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
   },

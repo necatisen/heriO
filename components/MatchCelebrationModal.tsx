@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MessageCircle, Sparkles } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRouter } from 'expo-router';
+import { FullScreenModal } from '@/components/FullScreenModal';
 
 type MatchedUser = {
   id: string;
@@ -52,13 +53,14 @@ export default function MatchCelebrationModal({
       : 'Start chat';
 
   return (
-    <Modal
+    <FullScreenModal
       visible={visible}
-      transparent
+      onRequestClose={onClose}
       animationType="fade"
-      onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={[styles.box, { backgroundColor: theme.cardBackground }]}>
+      overlayStyle={styles.overlay}
+      contentStyle={[styles.fullScreen, { backgroundColor: 'transparent' }]}
+    >
+      <View style={[styles.box, { backgroundColor: theme.cardBackground }]}>
           <View style={[styles.iconWrap, { backgroundColor: theme.primary + '20' }]}>
             <Sparkles size={40} color={theme.primary} />
           </View>
@@ -91,9 +93,8 @@ export default function MatchCelebrationModal({
               {language === 'tr' ? 'Şimdi değil' : 'Not now'}
             </Text>
           </TouchableOpacity>
-        </View>
       </View>
-    </Modal>
+    </FullScreenModal>
   );
 }
 
@@ -101,6 +102,10 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreen: {
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,

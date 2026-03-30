@@ -3,9 +3,8 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   Image,
   useWindowDimensions,
@@ -21,6 +20,8 @@ import ProfileModal from '@/components/ProfileModal';
 import MatchCelebrationModal from '@/components/MatchCelebrationModal';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useMemo } from 'react';
+import HeartLoader from '@/components/HeartLoader';
+import { isUserOnlineNow } from '@/lib/dateFormat';
 
 type LikeUser = {
   id: string;
@@ -32,6 +33,7 @@ type LikeUser = {
   is_mutual?: boolean;
   is_friend?: boolean;
   is_online?: boolean;
+  last_seen?: string | null;
   is_verified?: boolean;
   face_verified?: boolean;
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
@@ -115,9 +117,32 @@ export default function LikesScreen() {
   };
 
   const fetchData = async () => {
-    setLoading(true);
+    const hasDataForActiveTab =
+      activeTab === 'received'
+        ? likesReceived.length > 0
+        : activeTab === 'sent'
+          ? displayedSent.length > 0
+          : visitors.length > 0;
+
+    if (!hasDataForActiveTab) setLoading(true);
     try {
-      await Promise.all([fetchLikesReceived(), fetchLikesSent(), fetchVisitors()]);
+      // İlk boyamayı hızlandır: önce sadece aktif sekmeyi çek.
+      if (activeTab === 'received') {
+        await fetchLikesReceived();
+      } else if (activeTab === 'sent') {
+        await fetchLikesSent();
+      } else {
+        await fetchVisitors();
+      }
+
+      // Diğer sekmeleri arka planda güncelle (UI bloklanmasın).
+      if (activeTab === 'received') {
+        void Promise.all([fetchLikesSent(), fetchVisitors()]);
+      } else if (activeTab === 'sent') {
+        void Promise.all([fetchLikesReceived(), fetchVisitors()]);
+      } else {
+        void Promise.all([fetchLikesReceived(), fetchLikesSent()]);
+      }
     } finally {
       setLoading(false);
     }
@@ -138,7 +163,7 @@ export default function LikesScreen() {
     const uniqueIds = [...new Set(likesData.map((l: any) => l.user_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, profile_picture, is_online, is_verified, face_verified, verification_status')
+      .select('id, full_name, username, bio, profile_picture, is_online, last_seen, is_verified, face_verified, verification_status')
       .in('id', uniqueIds);
 
     if (profilesError || !profilesData) {
@@ -183,6 +208,7 @@ export default function LikesScreen() {
       is_mutual: mutualLikeIds.has(p.id),
       is_friend: friendIds.has(p.id),
       is_online: p.is_online ?? false,
+      last_seen: p.last_seen ?? null,
       is_verified: p.is_verified ?? false,
       face_verified: p.face_verified ?? false,
       verification_status: p.verification_status ?? 'unverified',
@@ -218,7 +244,7 @@ export default function LikesScreen() {
     const uniqueIds = [...new Set(likesData.map((l: any) => l.liked_user_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, profile_picture, is_online, is_verified, face_verified, verification_status')
+      .select('id, full_name, username, bio, profile_picture, is_online, last_seen, is_verified, face_verified, verification_status')
       .in('id', uniqueIds);
 
     if (profilesError || !profilesData) {
@@ -238,6 +264,7 @@ export default function LikesScreen() {
       profile_picture: p.profile_picture ?? null,
       created_at: byCreated.get(p.id) ?? '',
       is_online: p.is_online ?? false,
+      last_seen: p.last_seen ?? null,
       is_verified: p.is_verified ?? false,
       face_verified: p.face_verified ?? false,
       verification_status: p.verification_status ?? 'unverified',
@@ -274,7 +301,7 @@ export default function LikesScreen() {
     const uniqueIds = [...new Set(viewsData.map((v: any) => v.viewer_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, profile_picture, is_online, is_verified, face_verified, verification_status')
+      .select('id, full_name, username, bio, profile_picture, is_online, last_seen, is_verified, face_verified, verification_status')
       .in('id', uniqueIds);
 
     if (profilesError || !profilesData) {
@@ -294,6 +321,7 @@ export default function LikesScreen() {
       profile_picture: p.profile_picture ?? null,
       created_at: byCreated.get(p.id) ?? '',
       is_online: p.is_online ?? false,
+      last_seen: p.last_seen ?? null,
       is_verified: p.is_verified ?? false,
       face_verified: p.face_verified ?? false,
       verification_status: p.verification_status ?? 'unverified',
@@ -591,20 +619,38 @@ export default function LikesScreen() {
   };
 
   const { width } = useWindowDimensions();
-  const padding = 14;
-  const gap = 10;
-  const stagger = 18;
-  const contentWidth = width - padding * 2;
-  const leftCardWidth = Math.floor(contentWidth * 0.42);
-  const rightCardWidth = contentWidth - leftCardWidth - gap;
-  const leftCardHeight = Math.floor(leftCardWidth * 1.72);
-  const rightCardHeight = Math.floor(rightCardWidth * 0.88);
-
   const currentData = getCurrentData();
-  const rowPairs: (LikeUser | null)[][] = [];
-  for (let i = 0; i < currentData.length; i += 2) {
-    rowPairs.push([currentData[i], currentData[i + 1] ?? null]);
-  }
+  const listPadding = 14;
+  const columnGap = 10;
+  const contentWidth = width - listPadding * 2;
+  const columnWidth = Math.floor((contentWidth - columnGap) / 2);
+
+  const getCardHeight = (item: LikeUser, index: number) => {
+    if (!item.profile_picture) return Math.round(columnWidth * 1.02);
+    const seed = (item.id?.charCodeAt(0) ?? 0) + index;
+    const ratio = seed % 3 === 0 ? 1.34 : seed % 3 === 1 ? 1.18 : 1.27;
+    return Math.round(columnWidth * ratio);
+  };
+
+  const { leftColumn, rightColumn } = useMemo(() => {
+    const left: { item: LikeUser; height: number }[] = [];
+    const right: { item: LikeUser; height: number }[] = [];
+    let leftHeight = 0;
+    let rightHeight = 0;
+
+    currentData.forEach((item, index) => {
+      const height = getCardHeight(item, index);
+      if (leftHeight <= rightHeight) {
+        left.push({ item, height });
+        leftHeight += height + columnGap;
+      } else {
+        right.push({ item, height });
+        rightHeight += height + columnGap;
+      }
+    });
+
+    return { leftColumn: left, rightColumn: right };
+  }, [currentData, columnWidth]);
 
   const renderCard = (item: LikeUser, cardWidth: number, cardHeight: number) => {
     const showWatermark = !isPremium;
@@ -636,7 +682,9 @@ export default function LikesScreen() {
               <View
                 style={[
                   styles.cardOnlineIndicator,
-                  item.is_online ? styles.cardOnlineIndicatorOn : styles.cardOnlineIndicatorOff,
+                  isUserOnlineNow(item.is_online, item.last_seen)
+                    ? styles.cardOnlineIndicatorOn
+                    : styles.cardOnlineIndicatorOff,
                 ]}
               />
             </>
@@ -661,14 +709,6 @@ export default function LikesScreen() {
     );
   };
 
-  const renderRow = ({ item: pair, index }: { item: (LikeUser | null)[]; index: number }) => (
-    <View style={[styles.staggerRow, index > 0 && { marginTop: stagger }]}>
-      {pair[0] && renderCard(pair[0], leftCardWidth, leftCardHeight)}
-      <View style={{ width: gap }} />
-      {pair[1] ? renderCard(pair[1], rightCardWidth, rightCardHeight) : <View style={{ width: rightCardWidth }} />}
-    </View>
-  );
-
   const getEmptyMessage = () => {
     if (activeTab === 'received') {
       return language === 'tr' ? 'Henüz beğeni almadınız' : 'No likes received yet';
@@ -679,94 +719,108 @@ export default function LikesScreen() {
     return language === 'tr' ? 'Henüz ziyaretçi yok' : 'No visitors yet';
   };
 
+  const getActiveTitle = () => {
+    if (activeTab === 'received') return language === 'tr' ? 'Seni Beğenenler' : 'People Who Like You';
+    if (activeTab === 'sent') return language === 'tr' ? 'Beğendiğin Profiller' : 'Profiles You Liked';
+    return language === 'tr' ? 'Profil Ziyaretçileri' : 'Profile Visitors';
+  };
+
+  const getActiveSubtitle = () => {
+    if (activeTab === 'received') return language === 'tr' ? 'Yeni beğenileri keşfet ve eşleşmeye başla.' : 'Discover new likes and start matching.';
+    if (activeTab === 'sent') return language === 'tr' ? 'İlgi gösterdiğin kişileri buradan takip et.' : 'Track people you have shown interest in.';
+    return language === 'tr' ? 'Profilini görüntüleyen kişileri burada gör.' : 'See who visited your profile here.';
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'received' && styles.activeTab]}
-          onPress={() => setActiveTab('received')}>
-          <Heart
-            size={20}
-            color={activeTab === 'received' ? '#FF6B9D' : '#666666'}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'received' && styles.activeTabText,
-            ]}>
-            {language === 'tr' ? 'Beğeniler' : 'Who liked me'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'sent' && styles.activeTab]}
-          onPress={() => setActiveTab('sent')}>
-          <ThumbsUp
-            size={20}
-            color={activeTab === 'sent' ? '#FF6B9D' : '#666666'}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'sent' && styles.activeTabText,
-            ]}>
-            {language === 'tr' ? 'Beğendiklerim' : 'Who I liked'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'visitors' && styles.activeTab]}
-          onPress={() => setActiveTab('visitors')}>
-          <Eye
-            size={20}
-            color={activeTab === 'visitors' ? '#FF6B9D' : '#666666'}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'visitors' && styles.activeTabText,
-            ]}>
-            {language === 'tr' ? 'Ziyaretçiler' : 'Visitors'}
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.headerBlock}>
+        <Text style={styles.headerTitle}>{getActiveTitle()}</Text>
+        <Text style={styles.headerSubtitle}>{getActiveSubtitle()}</Text>
       </View>
 
-      {!isPremium && (getCurrentData().length > 0) && (
-        <View style={styles.visitorsPremiumBanner}>
-          <Text style={styles.visitorsPremiumBannerText}>
-            {language === 'tr'
-              ? 'Listedeki kişilerin bilgilerini görmek için Premium\'a geçin.'
-              : 'Go Premium to view details of people in the list.'}
-          </Text>
+      <View style={styles.tabContainer}>
+        <View style={styles.tabSegment}>
           <TouchableOpacity
-            style={styles.visitorsPremiumCta}
-            onPress={() => router.push('/store/premium')}>
-            <Text style={styles.visitorsPremiumCtaText}>
-              {language === 'tr' ? 'Premium ol' : 'Go Premium'}
+            style={[styles.tab, activeTab === 'received' && styles.activeTab]}
+            onPress={() => setActiveTab('received')}>
+            <Heart
+              size={18}
+              color={activeTab === 'received' ? '#FFFFFF' : '#667085'}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'received' && styles.activeTabText,
+              ]}>
+              {language === 'tr' ? 'Beğeniler' : 'Who liked me'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'sent' && styles.activeTab]}
+            onPress={() => setActiveTab('sent')}>
+            <ThumbsUp
+              size={18}
+              color={activeTab === 'sent' ? '#FFFFFF' : '#667085'}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'sent' && styles.activeTabText,
+              ]}>
+              {language === 'tr' ? 'Beğendiklerim' : 'Who I liked'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'visitors' && styles.activeTab]}
+            onPress={() => setActiveTab('visitors')}>
+            <Eye
+              size={18}
+              color={activeTab === 'visitors' ? '#FFFFFF' : '#667085'}
+            />
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'visitors' && styles.activeTabText,
+              ]}>
+              {language === 'tr' ? 'Ziyaretçiler' : 'Visitors'}
             </Text>
           </TouchableOpacity>
         </View>
-      )}
+      </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6B9D" />
+          <HeartLoader />
+        </View>
+      ) : currentData.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          {activeTab === 'received' && <Heart size={80} color="#CCCCCC" />}
+          {activeTab === 'visitors' && <Eye size={80} color="#CCCCCC" />}
+          {activeTab === 'sent' && <ThumbsUp size={80} color="#CCCCCC" />}
+          <Text style={styles.emptyText}>{getEmptyMessage()}</Text>
         </View>
       ) : (
-        <FlatList
-          data={rowPairs}
-          renderItem={renderRow}
-          keyExtractor={(_, index) => `row-${index}`}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              {activeTab === 'received' && <Heart size={80} color="#CCCCCC" />}
-              {activeTab === 'visitors' && <Eye size={80} color="#CCCCCC" />}
-              {activeTab === 'sent' && <ThumbsUp size={80} color="#CCCCCC" />}
-              <Text style={styles.emptyText}>{getEmptyMessage()}</Text>
+        <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.masonryWrap}>
+            <View style={styles.masonryColumn}>
+              {leftColumn.map(({ item, height }, index) => (
+                <View key={`l-${item.id}-${index}`} style={styles.masonryItem}>
+                  {renderCard(item, columnWidth, height)}
+                </View>
+              ))}
             </View>
-          }
-        />
+            <View style={{ width: columnGap }} />
+            <View style={styles.masonryColumn}>
+              {rightColumn.map(({ item, height }, index) => (
+                <View key={`r-${item.id}-${index}`} style={styles.masonryItem}>
+                  {renderCard(item, columnWidth, height)}
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
       )}
 
       {selectedProfile && (
@@ -809,13 +863,37 @@ export default function LikesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F4F6FA',
+  },
+  headerBlock: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A1F36',
+  },
+  headerSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#667085',
   },
   tabContainer: {
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+  },
+  tabSegment: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderRadius: 16,
+    padding: 4,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   tab: {
     flex: 1,
@@ -823,20 +901,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   activeTab: {
-    borderBottomColor: '#FF6B9D',
+    backgroundColor: '#FF6B9D',
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666666',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#667085',
   },
   activeTabText: {
-    color: '#FF6B9D',
+    color: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
@@ -845,39 +922,48 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 14,
-    paddingBottom: 24,
+    paddingTop: 2,
+    paddingBottom: 26,
   },
-  staggerRow: {
+  masonryWrap: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  masonryColumn: {
+    flex: 1,
+  },
+  masonryItem: {
     marginBottom: 10,
   },
   avatarCell: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#E8E8E8',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: '#E6E9EF',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    shadowColor: '#101828',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 5,
   },
   avatarImage: {
-    borderRadius: 12,
+    borderRadius: 16,
   },
   avatarPlaceholder: {
-    borderRadius: 12,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#E2E2E2',
+    backgroundColor: '#E3E7EE',
   },
   avatarCardOverlay: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(0,0,0,0.28)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -903,38 +989,13 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 72,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#666666',
     marginTop: 16,
-  },
-  visitorsPremiumBanner: {
-    backgroundColor: '#FFF4E5',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFE0B2',
-    alignItems: 'center',
-  },
-  visitorsPremiumBannerText: {
-    fontSize: 13,
-    color: '#E65100',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  visitorsPremiumCta: {
-    backgroundColor: '#FF6B9D',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  visitorsPremiumCtaText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   watermarkOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -1,6 +1,11 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { AppState, Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+
+WebBrowser.maybeCompleteAuthSession();
 
 type Profile = {
   id: string;
@@ -31,6 +36,7 @@ type Profile = {
   is_verified?: boolean;
   tc_verified: boolean;
   face_verified: boolean;
+  last_seen?: string | null;
   /** Verification badge: only show when === 'verified'. Values: unverified | pending | verified | rejected */
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
   preferred_language: string;
@@ -62,23 +68,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastPresenceUpdateAtRef = useRef<number>(0);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      })
+      .catch(async (err) => {
+        // Invalid/expired refresh token: clear local session so app opens cleanly.
+        console.warn('Initial session check failed:', (err as any)?.message || err);
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          // Ignore signOut failures; we still reset local state.
+        }
+        setSession(null);
+        setUser(null);
+        setProfile(null);
         setLoading(false);
-      }
-    });
+      });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event, session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -91,6 +111,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // App açıkken online, arka plana gidince/kapandığında offline + last_seen güncelle.
+  // Böylece sohbet ekranında "Çevrimiçi / Son görülme" doğru davranır.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const userId = user.id;
+    const setPresence = async (isOnline: boolean) => {
+      const now = Date.now();
+      // Çok sık state dalgalanmasında gereksiz write'ı azalt.
+      if (now - lastPresenceUpdateAtRef.current < 3000) return;
+      lastPresenceUpdateAtRef.current = now;
+
+      try {
+        await supabase
+          .from('profiles')
+          .update({ is_online: isOnline, last_seen: new Date().toISOString() })
+          .eq('id', userId);
+      } catch (e) {
+        console.warn('Presence update failed:', e);
+      }
+    };
+
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') setPresence(true);
+      else setPresence(false);
+    };
+
+    // İlk yüklemede mevcut AppState'e göre ayarla.
+    handleAppStateChange(AppState.currentState);
+
+    const sub = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      sub.remove();
+      // Provider kapanırken/oturum değişiminde offline yap.
+      setPresence(false);
+    };
+  }, [user?.id]);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -171,10 +229,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    // Web: Supabase handles redirect automatically.
+    if (Platform.OS === 'web') {
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+      if (error) throw error;
+      return;
+    }
+
+    // Native: open auth session and exchange code for session
+    const redirectTo = Linking.createURL('auth/callback');
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+      },
     });
     if (error) throw error;
+    if (!data?.url) throw new Error('OAuth URL missing');
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    if (result.type !== 'success' || !result.url) {
+      throw new Error('Google sign-in cancelled');
+    }
+
+    const url = new URL(result.url);
+    const code = url.searchParams.get('code');
+    const err = url.searchParams.get('error_description') || url.searchParams.get('error');
+    if (err) throw new Error(err);
+    if (!code) throw new Error('OAuth code missing');
+
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    if (exchangeError) throw exchangeError;
   };
 
   const resetPassword = async (email: string) => {

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Modal,
   TouchableOpacity,
   ScrollView,
   Image,
@@ -11,11 +10,25 @@ import {
   Dimensions,
   FlatList,
 } from 'react-native';
-import { X, MapPin, MessageCircle, Ban, Flag } from 'lucide-react-native';
-import VerifiedBadge from '@/components/VerifiedBadge';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  X,
+  MapPin,
+  MessageCircle,
+  Ban,
+  Flag,
+  User,
+  Ruler,
+  Weight,
+  GraduationCap,
+  Briefcase,
+  Baby,
+  Cigarette,
+  Heart,
+} from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { getEffectiveSubscription } from '@/lib/subscription';
 import { useRouter } from 'expo-router';
@@ -30,8 +43,25 @@ import {
   getReligionLabel,
   getGenderLabel,
 } from '@/lib/profileTranslations';
+import { countries } from '@/lib/constants';
+import { FullScreenModal } from '@/components/FullScreenModal';
+import { formatLastSeen, isUserOnlineNow } from '@/lib/dateFormat';
+
+function getCountryLabel(value: string | null | undefined, language: string): string {
+  const raw = String(value ?? '').trim();
+  const norm = raw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+  const isTr = language.toLowerCase().startsWith('tr');
+
+  const match = countries.find((c) => c.value === norm);
+  if (match) return isTr ? match.label.tr : match.label.en;
+
+  return raw;
+}
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const PHOTO_CAROUSEL_WIDTH = Math.max(240, SCREEN_WIDTH - 40);
+// Fotoğraf alanını daha baskın yapıyoruz; "Bilgilerim" başlığına kadar uzasın.
+const PHOTO_CAROUSEL_HEIGHT = Math.min(460, Math.max(330, Math.round(PHOTO_CAROUSEL_WIDTH * 1.22)));
 
 type ProfileData = {
   id: string;
@@ -57,6 +87,7 @@ type ProfileData = {
   is_online?: boolean;
   is_verified?: boolean;
   face_verified?: boolean;
+  last_seen?: string | null;
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
 };
 
@@ -91,11 +122,27 @@ export default function ProfileModal({
   const language = languageProp ?? contextLanguage;
   const { user } = useAuth();
   const router = useRouter();
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [isPremium, setIsPremium] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const isOwnProfile = !!user && !!profile && profile.id === user.id;
+  const onlineNow = isUserOnlineNow(profile?.is_online, profile?.last_seen);
+
+  const lastSeenChipText =
+    onlineNow
+      ? language === 'tr'
+        ? 'Çevrimiçi'
+        : 'Online'
+      : profile?.last_seen
+        ? language === 'tr'
+          ? `Son görülme: ${formatLastSeen(profile.last_seen, 'tr')}`
+          : `Last seen: ${formatLastSeen(profile.last_seen, 'en')}`
+        : language === 'tr'
+          ? 'Son görülme: —'
+          : 'Last seen: —';
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -302,264 +349,301 @@ export default function ProfileModal({
 
   return (
     <>
-      <Modal
+      <FullScreenModal
         visible={visible}
+        onRequestClose={onClose}
         animationType="slide"
-        transparent={true}
-        onRequestClose={onClose}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <LinearGradient
-              colors={['#FF6B9D', '#C44569']}
-              style={styles.modalHeader}>
-              <View style={styles.modalHeaderLeft} />
-              <View style={styles.modalHeaderRight}>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <X size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
+        overlayStyle={styles.modalOverlay}
+        contentStyle={{ ...styles.modalContent, backgroundColor: theme.cardBackground }}
+      >
+        <View style={styles.modalRoot}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={[styles.closeFloating, { top: Math.max(8, insets.top + 14) }]}
+            accessibilityLabel="Close"
+          >
+            <X size={26} color="#FFFFFF" />
+          </TouchableOpacity>
 
-            <ScrollView style={styles.scrollContent}>
-              <View style={styles.profileSection}>
-                <TouchableOpacity onPress={() => handleImagePress(0)}>
-                  {profile.profile_picture ? (
-                    <Image
-                      source={{ uri: profile.profile_picture }}
-                      style={styles.profileImage}
-                    />
-                  ) : (
-                    <View style={styles.profileImagePlaceholder}>
-                      <Text style={styles.placeholderText}>
-                        {profile.full_name.charAt(0).toUpperCase()}
-                      </Text>
+          <ScrollView style={styles.scrollContent}>
+          <View style={styles.profileSection}>
+            {photos.length > 0 ? (
+              <>
+                <View style={styles.photoCarouselWrap}>
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.photoCarouselScroll}
+                    onMomentumScrollEnd={(event) => {
+                      const newIndex = Math.round(event.nativeEvent.contentOffset.x / PHOTO_CAROUSEL_WIDTH);
+                      setSelectedImageIndex(Math.max(0, Math.min(newIndex, photos.length - 1)));
+                    }}
+                  >
+                    {photos.map((uri, index) => (
+                      <TouchableOpacity
+                        // eslint-disable-next-line react/no-array-index-key
+                        key={`${index}`}
+                        style={styles.photoSlide}
+                        activeOpacity={0.9}
+                        onPress={() => handleImagePress(index)}
+                      >
+                        <Image source={{ uri }} style={styles.photoImage} resizeMode="cover" />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  {photos.length > 1 && (
+                    <View style={styles.photoDotsRow}>
+                      {photos.map((_, i) => (
+                        <View
+                          // eslint-disable-next-line react/no-array-index-key
+                          key={`${i}`}
+                          style={[
+                            styles.photoDot,
+                            i === selectedImageIndex && styles.photoDotActive,
+                          ]}
+                        />
+                      ))}
                     </View>
                   )}
-                </TouchableOpacity>
 
-                <View style={styles.nameRow}>
-                  <Text style={styles.profileName}>{profile.full_name}</Text>
-                  {profile.verification_status === 'verified' && (
-                    <VerifiedBadge size={20} verified />
-                  )}
-                  {profile.is_online && <View style={styles.onlineIndicator} />}
+                  <View style={styles.photoInfoOverlay} pointerEvents="none">
+                    <Text style={styles.photoNameText} numberOfLines={1}>
+                      {profile.full_name}
+                    </Text>
+                    <Text style={styles.photoUsernameText}>@{profile.username}</Text>
+                    <Text style={styles.photoMetaText}>
+                      {age} {language === 'tr' ? 'yaşında' : 'years old'}
+                    </Text>
+                    <Text style={styles.photoMetaText} numberOfLines={1}>
+                      {profile.city ? `${profile.city}, ${getCountryLabel(profile.country, language)}` : '—'}
+                    </Text>
+                    <View style={styles.photoOnlineRow}>
+                      {onlineNow ? <View style={styles.photoOnlineDot} /> : null}
+                      <Text style={styles.photoOnlineText} numberOfLines={1}>
+                        {lastSeenChipText}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-              <Text style={styles.profileUsername}>@{profile.username}</Text>
-              <Text style={styles.profileAge}>
-                {age} {language === 'tr' ? 'yaşında' : 'years old'}
-              </Text>
-
-              {profile.city && (
-                <View style={styles.locationContainer}>
-                  <MapPin size={16} color="#666666" />
-                  <Text style={styles.locationText}>
-                    {profile.city}, {profile.country}
+              </>
+            ) : (
+              <View style={styles.profileImagePlaceholder}>
+                <Text style={styles.placeholderText}>{profile.full_name.charAt(0).toUpperCase()}</Text>
+                <View style={styles.photoInfoOverlay} pointerEvents="none">
+                  <Text style={styles.photoNameText} numberOfLines={1}>
+                    {profile.full_name}
                   </Text>
+                  <Text style={styles.photoUsernameText}>@{profile.username}</Text>
+                  <Text style={styles.photoMetaText}>
+                    {age} {language === 'tr' ? 'yaşında' : 'years old'}
+                  </Text>
+                  <Text style={styles.photoMetaText} numberOfLines={1}>
+                    {profile.city ? `${profile.city}, ${getCountryLabel(profile.country, language)}` : '—'}
+                  </Text>
+                  <View style={styles.photoOnlineRow}>
+                    {onlineNow ? <View style={styles.photoOnlineDot} /> : null}
+                    <Text style={styles.photoOnlineText} numberOfLines={1}>
+                      {lastSeenChipText}
+                    </Text>
+                  </View>
                 </View>
-              )}
-
-              {profile.bio && (
-                <Text style={styles.bioText}>{profile.bio}</Text>
-              )}
-            </View>
-
-            <View style={styles.detailsSection}>
-              <Text style={styles.sectionTitle}>
-                {language === 'tr' ? 'Profil Bilgileri' : 'Profile Details'}
-              </Text>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>
-                  {language === 'tr' ? 'Cinsiyet' : 'Gender'}:
-                </Text>
-                <Text style={styles.detailValue}>{getGenderLabel(profile.gender, language)}</Text>
               </View>
+            )}
+          </View>
 
-              {profile.height && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Boy' : 'Height'}:
-                  </Text>
-                  <Text style={styles.detailValue}>{profile.height} cm</Text>
+          <View style={styles.detailsSection}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              {language === 'tr' ? 'Hakkımda' : 'About'}
+            </Text>
+
+            <Text style={[styles.aboutText, { color: theme.textSecondary }]}>
+              {profile.bio
+                ? profile.bio
+                : language === 'tr'
+                  ? 'Hakkımda bilgisi yok.'
+                  : 'No bio.'}
+            </Text>
+
+            <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 16 }]}>
+              {language === 'tr' ? 'Bilgilerim' : 'Information'}
+            </Text>
+
+            <View style={styles.chipsGrid}>
+              {profile.gender ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <User size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{getGenderLabel(profile.gender, language)}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.weight && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Kilo' : 'Weight'}:
-                  </Text>
-                  <Text style={styles.detailValue}>{profile.weight} kg</Text>
+              {profile.height ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Ruler size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{`${profile.height} cm`}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.body_type && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Vücut Tipi' : 'Body Type'}:
-                  </Text>
-                  <Text style={styles.detailValue}>{getBodyTypeLabel(profile.body_type, language)}</Text>
+              {profile.weight ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Weight size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{`${profile.weight} kg`}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.profession && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Meslek' : 'Profession'}:
-                  </Text>
-                  <Text style={styles.detailValue}>{getProfessionLabel(profile.profession, language)}</Text>
+              {profile.body_type ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Heart size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{getBodyTypeLabel(profile.body_type, language)}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.education && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Eğitim' : 'Education'}:
-                  </Text>
-                  <Text style={styles.detailValue}>{getEducationLabel(profile.education, language)}</Text>
+              {profile.religion ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Flag size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{getReligionLabel(profile.religion, language)}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.religion && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Din' : 'Religion'}:
-                  </Text>
-                  <Text style={styles.detailValue}>{getReligionLabel(profile.religion, language)}</Text>
+              {profile.profession ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Briefcase size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{getProfessionLabel(profile.profession, language)}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.relationship_status && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'İlişki Durumu' : 'Relationship Status'}:
-                  </Text>
-                  <Text style={styles.detailValue}>
-                    {getRelationshipStatusLabel(profile.relationship_status, language)}
-                  </Text>
+              {profile.education ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <GraduationCap size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{getEducationLabel(profile.education, language)}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.children_status && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Çocuk Durumu' : 'Children'}:
-                  </Text>
-                  <Text style={styles.detailValue}>
-                    {getChildrenStatusLabel(profile.children_status, language)}
-                  </Text>
+              {profile.children_status ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Baby size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{getChildrenStatusLabel(profile.children_status, language)}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.smoking_habit && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Sigara' : 'Smoking'}:
-                  </Text>
-                  <Text style={styles.detailValue}>{getSmokingLabel(profile.smoking_habit, language)}</Text>
+              {profile.smoking_habit ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Cigarette size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{getSmokingLabel(profile.smoking_habit, language)}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.alcohol_consumption && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Alkol' : 'Alcohol'}:
-                  </Text>
-                  <Text style={styles.detailValue}>
-                    {getAlcoholLabel(profile.alcohol_consumption, language)}
-                  </Text>
+              {profile.alcohol_consumption ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <MessageCircle size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{getAlcoholLabel(profile.alcohol_consumption, language)}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {profile.languages && profile.languages.length > 0 && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>
-                    {language === 'tr' ? 'Diller' : 'Languages'}:
-                  </Text>
-                  <Text style={styles.detailValue}>
+              {profile.relationship_status ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Ban size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>{getRelationshipStatusLabel(profile.relationship_status, language)}</Text>
+                </View>
+              ) : null}
+
+              {profile.languages?.length ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <MapPin size={16} color={theme.textSecondary} />
+                  <Text
+                    style={[styles.infoChipText, { color: theme.text }]}
+                    numberOfLines={1}>
                     {profile.languages.join(', ')}
                   </Text>
                 </View>
-              )}
+              ) : null}
             </View>
-          </ScrollView>
 
-          {showActionButtons && (
-            <View style={styles.actionButtons}>
-              {onLike && (
+            {!isOwnProfile && (
+              <View style={styles.reportBlockRow}>
                 <TouchableOpacity
-                  style={[styles.actionButton, styles.likeButton]}
-                  onPress={onLike}>
-                  <Text style={styles.buttonText}>
-                    {language === 'tr' ? 'Beğen' : 'Like'}
+                  style={[styles.reportBtn, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}
+                  onPress={handleReport}>
+                  <Text style={[styles.reportBtnText, { color: theme.text }]}>
+                    {language === 'tr' ? 'Şikayet et' : 'Report'}
                   </Text>
                 </TouchableOpacity>
-              )}
-              {isPremium && (
+
                 <TouchableOpacity
-                  style={styles.chatButton}
-                  onPress={handleStartChat}>
-                  <MessageCircle size={24} color="#FFFFFF" />
-                  <Text style={styles.buttonText}>
-                    {language === 'tr' ? 'Sohbet Et' : 'Chat'}
+                  style={[styles.blockBtn, { backgroundColor: theme.error, borderColor: theme.error }]}
+                  onPress={handleBlock}>
+                  <Text style={[styles.reportBtnText, { color: '#FFFFFF' }]}>
+                    {language === 'tr' ? 'Engelle' : 'Block'}
                   </Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
-      </View>
-      </Modal>
-
-      <Modal
-        visible={imageModalVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setImageModalVisible(false)}>
-        <View style={styles.imageModalOverlay}>
-          <TouchableOpacity
-            style={styles.imageModalCloseButton}
-            onPress={() => setImageModalVisible(false)}>
-            <X size={32} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          <FlatList
-            key={`gallery-${photos.length}`}
-            data={photos}
-            horizontal
-            pagingEnabled
-            initialScrollIndex={Math.min(selectedImageIndex, Math.max(0, photos.length - 1))}
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item, index) => index.toString()}
-            getItemLayout={(data, index) => ({
-              length: SCREEN_WIDTH,
-              offset: SCREEN_WIDTH * index,
-              index,
-            })}
-            onMomentumScrollEnd={(event) => {
-              const newIndex = Math.round(
-                event.nativeEvent.contentOffset.x / SCREEN_WIDTH
-              );
-              setSelectedImageIndex(newIndex);
-            }}
-            renderItem={({ item }) => (
-              <View style={styles.imageSlideContainer}>
-                <Image
-                  source={{ uri: item }}
-                  style={styles.fullScreenImage}
-                  resizeMode="contain"
-                />
               </View>
             )}
-          />
-
-          <View style={styles.imageCounter}>
-            <Text style={styles.imageCounterText}>
-              {selectedImageIndex + 1} / {photos.length}
-            </Text>
           </View>
+        </ScrollView>
+
+        {showActionButtons && (
+          <View style={[styles.actionButtons, { paddingBottom: Math.max(16, insets.bottom + 16) }]}>
+            {onLike && (
+              <TouchableOpacity style={[styles.actionButton, styles.likeButton]} onPress={onLike}>
+                <Text style={styles.buttonText}>{language === 'tr' ? 'Beğen' : 'Like'}</Text>
+              </TouchableOpacity>
+            )}
+            {isPremium && (
+              <TouchableOpacity style={styles.chatButton} onPress={handleStartChat}>
+                <MessageCircle size={24} color="#FFFFFF" />
+                <Text style={styles.buttonText}>{language === 'tr' ? 'Sohbet Et' : 'Chat'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
         </View>
-      </Modal>
+      </FullScreenModal>
+
+      <FullScreenModal
+        visible={imageModalVisible}
+        onRequestClose={() => setImageModalVisible(false)}
+        animationType="fade"
+        overlayStyle={styles.imageModalOverlay}
+        contentStyle={styles.imageModalContent}
+      >
+        <TouchableOpacity
+          style={styles.imageModalCloseButton}
+          onPress={() => setImageModalVisible(false)}
+        >
+          <X size={32} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <FlatList
+          key={`gallery-${photos.length}`}
+          data={photos}
+          horizontal
+          pagingEnabled
+          initialScrollIndex={Math.min(selectedImageIndex, Math.max(0, photos.length - 1))}
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item, index) => index.toString()}
+          getItemLayout={(data, index) => ({
+            length: SCREEN_WIDTH,
+            offset: SCREEN_WIDTH * index,
+            index,
+          })}
+          onMomentumScrollEnd={(event) => {
+            const newIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+            setSelectedImageIndex(newIndex);
+          }}
+          renderItem={({ item }) => (
+            <View style={styles.imageSlideContainer}>
+              <Image source={{ uri: item }} style={styles.fullScreenImage} resizeMode="contain" />
+            </View>
+          )}
+        />
+
+        <View style={styles.imageCounter}>
+          <Text style={styles.imageCounterText}>
+            {selectedImageIndex + 1} / {photos.length}
+          </Text>
+        </View>
+      </FullScreenModal>
     </>
   );
 }
@@ -568,13 +652,18 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '90%',
+    width: '100%',
+    height: '100%',
+    borderRadius: 0,
+    maxHeight: '100%',
+  },
+  modalRoot: {
+    flex: 1,
+    position: 'relative',
   },
   modalHeader: {
     paddingVertical: 16,
@@ -591,14 +680,21 @@ const styles = StyleSheet.create({
   headerActionBlock: { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 8 },
   headerActionText: { fontSize: 12, fontWeight: '600', color: '#FFFFFF' },
   closeButton: { padding: 4 },
+  closeFloating: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 20,
+    padding: 6,
+  },
   scrollContent: {
     paddingHorizontal: 20,
+    flex: 1,
   },
   profileSection: {
     alignItems: 'center',
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingTop: 0,
+    paddingBottom: 0,
+    borderBottomWidth: 0,
   },
   nameRow: {
     flexDirection: 'row',
@@ -611,25 +707,136 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#4ECB71',
   },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    marginBottom: 12,
-  },
   profileImagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: PHOTO_CAROUSEL_WIDTH,
+    height: PHOTO_CAROUSEL_HEIGHT,
+    borderRadius: 18,
     backgroundColor: '#FF6B9D',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    overflow: 'hidden',
+    position: 'relative',
   },
   placeholderText: {
-    fontSize: 48,
+    fontSize: 56,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  photoCarouselWrap: {
+    width: PHOTO_CAROUSEL_WIDTH,
+    height: PHOTO_CAROUSEL_HEIGHT,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#F3F3F3',
+    position: 'relative',
+  },
+  photoCarouselScroll: {
+    flex: 1,
+  },
+  photoSlide: {
+    width: PHOTO_CAROUSEL_WIDTH,
+    height: PHOTO_CAROUSEL_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
+  },
+  photoDotsRow: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  photoDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+  },
+  photoDotActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  photoInfoOverlay: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    top: 16,
+    zIndex: 2,
+  },
+  photoNameText: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 2 },
+  },
+  photoUsernameText: {
+    marginTop: 4,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 2 },
+  },
+  photoMetaText: {
+    marginTop: 4,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 2 },
+  },
+  photoOnlineRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  photoOnlineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#4ECB71',
+  },
+  photoOnlineText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 2 },
+    maxWidth: 220,
+  },
+  lastSeenPill: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  lastSeenDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  lastSeenPillText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   profileName: {
     fontSize: 24,
@@ -671,6 +878,59 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333333',
     marginBottom: 16,
+  },
+  aboutText: {
+    fontSize: 14,
+    lineHeight: 20,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  reportBlockRow: {
+    marginTop: 16,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  reportBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blockBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  chipsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  infoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  infoChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    maxWidth: 210,
   },
   detailRow: {
     flexDirection: 'row',
@@ -728,6 +988,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  imageModalContent: {
+    backgroundColor: 'transparent',
   },
   imageModalCloseButton: {
     position: 'absolute',

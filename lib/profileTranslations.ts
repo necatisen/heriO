@@ -183,6 +183,9 @@ export const getReligionLabel = (value: string, language: string) => {
   const religionMap: Record<string, { tr: string; en: string }> = {
     muslim: { tr: 'Müslüman', en: 'Muslim' },
     christian: { tr: 'Hristiyan', en: 'Christian' },
+    catholic: { tr: 'Katolik', en: 'Catholic' },
+    protestant: { tr: 'Protestan', en: 'Protestant' },
+    orthodox: { tr: 'Ortodoks', en: 'Orthodox' },
     jewish: { tr: 'Yahudi', en: 'Jewish' },
     hindu: { tr: 'Hindu', en: 'Hindu' },
     buddhist: { tr: 'Budist', en: 'Buddhist' },

@@ -97,8 +97,15 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ complete: false, error: 'Invalid step' }, 400);
     }
 
+    // If Azure Face API isn't configured, return a soft error (200) so the client can
+    // fall back to its demo/advance mode instead of hard-failing the flow.
     if (!azureEndpoint || !azureKey) {
-      return jsonResponse({ complete: false, error: 'Face API not configured' }, 503);
+      return jsonResponse({
+        complete: false,
+        error: 'FACE_AI_NOT_CONFIGURED',
+        noFace: false,
+        multipleFaces: false,
+      });
     }
 
     const binary = base64ToBinary(imageBase64);

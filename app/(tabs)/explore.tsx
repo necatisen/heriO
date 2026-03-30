@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   Platform,
   Alert,
 } from 'react-native';
@@ -24,6 +23,8 @@ import MatchCelebrationModal from '@/components/MatchCelebrationModal';
 import SwipeableExploreCard from '@/components/SwipeableExploreCard';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { getProfessionLabel, getGenderLabel } from '@/lib/profileTranslations';
+import HeartLoader from '@/components/HeartLoader';
+import { isUserOnlineNow } from '@/lib/dateFormat';
 
 type UserProfile = {
   id: string;
@@ -50,9 +51,12 @@ type UserProfile = {
   face_verified?: boolean;
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
   is_online: boolean;
+  last_seen?: string | null;
   profession: string | null;
   education: string | null;
 };
+
+const PAGE_SIZE = 48;
 
 export default function ExploreScreen() {
   const { theme } = useTheme();
@@ -63,6 +67,9 @@ export default function ExploreScreen() {
   const [filterVisible, setFilterVisible] = useState(false);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [matchCelebration, setMatchCelebration] = useState<{
@@ -87,6 +94,8 @@ export default function ExploreScreen() {
     cities: [],
   });
 
+  const fetchSeq = useRef(0);
+
   const fetchPremiumStatus = useCallback(async () => {
     const sub = await getEffectiveSubscription(user?.id);
     setIsPremium(sub.isPremium);
@@ -103,12 +112,32 @@ export default function ExploreScreen() {
   );
 
   useEffect(() => {
-    if (user) {
-      fetchUsers();
-      updateOnlineStatus();
-      updateProfileLocation();
+    if (!user) return;
+    updateOnlineStatus();
+    updateProfileLocation();
+  }, [user?.id]);
+
+  const resetAndFetch = useCallback(() => {
+    if (!user) return;
+    setUsers([]);
+    setCurrentIndex(0);
+    setPage(0);
+    setHasMore(true);
+    fetchUsers({ mode: 'reset', page: 0 });
+  }, [user?.id, isPremium, filters]);
+
+  useEffect(() => {
+    if (!user) return;
+    resetAndFetch();
+  }, [user?.id, isPremium, filters]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!hasMore || loadingMore || loading) return;
+    if (currentIndex >= Math.max(0, users.length - 6)) {
+      fetchUsers({ mode: 'append', page: page + 1 });
     }
-  }, [user, filters, profile?.latitude, profile?.longitude, isPremium]);
+  }, [currentIndex, users.length, hasMore, loadingMore, loading, page, user?.id]);
 
   const updateProfileLocation = async () => {
     if (!user) return;
@@ -170,68 +199,117 @@ export default function ExploreScreen() {
     return R * c;
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (opts?: { mode: 'reset' | 'append'; page: number }) => {
+    const mode = opts?.mode ?? 'reset';
+    const nextPage = opts?.page ?? 0;
+    const seq = ++fetchSeq.current;
     try {
-      setLoading(true);
-      let query = supabase
+      if (mode === 'append') setLoadingMore(true);
+      else setLoading(true);
+      // Kick off independent queries in parallel for faster first paint.
+      let baseQuery = supabase
         .from('profiles')
-        .select('*')
-        .neq('id', user?.id);
+        .select(
+          [
+            'id',
+            'full_name',
+            'username',
+            'bio',
+            'profile_picture',
+            'birth_date',
+            'gender',
+            'height',
+            'weight',
+            'city',
+            'country',
+            'latitude',
+            'longitude',
+            'body_type',
+            'languages',
+            'religion',
+            'alcohol_consumption',
+            'smoking_habit',
+            'children_status',
+            'relationship_status',
+            'verification_status',
+            'is_verified',
+            'face_verified',
+            'is_online',
+            'last_seen',
+            'profession',
+            'education',
+          ].join(', ')
+        )
+        .neq('id', user?.id)
+        .range(nextPage * PAGE_SIZE, nextPage * PAGE_SIZE + PAGE_SIZE - 1);
 
       if (isPremium) {
-        if (filters.gender.length > 0) query = query.in('gender', filters.gender);
-        if (filters.verifiedOnly) query = query.eq('verification_status', 'verified');
-        if (filters.onlineOnly) query = query.eq('is_online', true);
-        if (filters.bodyTypes.length > 0) query = query.in('body_type', filters.bodyTypes);
-        if (filters.religions.length > 0) query = query.in('religion', filters.religions);
-        if (filters.alcoholConsumption.length > 0) query = query.in('alcohol_consumption', filters.alcoholConsumption);
-        if (filters.smokingHabit.length > 0) query = query.in('smoking_habit', filters.smokingHabit);
-        if (filters.childrenStatus.length > 0) query = query.in('children_status', filters.childrenStatus);
-        if (filters.relationshipStatus.length > 0) query = query.in('relationship_status', filters.relationshipStatus);
+        if (filters.gender.length > 0) baseQuery = baseQuery.in('gender', filters.gender);
+        if (filters.verifiedOnly) baseQuery = baseQuery.eq('verification_status', 'verified');
+        if (filters.onlineOnly) baseQuery = baseQuery.eq('is_online', true);
+        if (filters.bodyTypes.length > 0) baseQuery = baseQuery.in('body_type', filters.bodyTypes);
+        if (filters.religions.length > 0) baseQuery = baseQuery.in('religion', filters.religions);
+        if (filters.alcoholConsumption.length > 0) baseQuery = baseQuery.in('alcohol_consumption', filters.alcoholConsumption);
+        if (filters.smokingHabit.length > 0) baseQuery = baseQuery.in('smoking_habit', filters.smokingHabit);
+        if (filters.childrenStatus.length > 0) baseQuery = baseQuery.in('children_status', filters.childrenStatus);
+        if (filters.relationshipStatus.length > 0) baseQuery = baseQuery.in('relationship_status', filters.relationshipStatus);
       }
 
-      const { data, error } = await query;
+      const blocksPromise = user?.id
+        ? supabase.from('blocks').select('blocked_user_id').eq('user_id', user.id)
+        : Promise.resolve({ data: [] as any[] } as any);
+      const likesPromise = user?.id
+        ? supabase.from('likes').select('liked_user_id').eq('user_id', user.id)
+        : Promise.resolve({ data: [] as any[] } as any);
+      const friendsPromise = user?.id
+        ? supabase
+            .from('friends')
+            .select('user_id, friend_id')
+            .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+            .eq('status', 'accepted')
+        : Promise.resolve({ data: [] as any[] } as any);
+      const sessionsPromise = user?.id
+        ? supabase
+            .from('chat_sessions')
+            .select('user1_id, user2_id')
+            .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        : Promise.resolve({ data: [] as any[] } as any);
+
+      const [{ data, error }, { data: blocks }, { data: likesSent }, { data: friendsRows }, { data: sessions }] =
+        await Promise.all([baseQuery, blocksPromise, likesPromise, friendsPromise, sessionsPromise]);
+
       if (error) throw error;
 
-      let filteredUsers = data || [];
+      // If a newer fetch started, ignore this result.
+      if (seq !== fetchSeq.current) return;
+
+      const rawCount = (data || []).length;
+      setHasMore(rawCount === PAGE_SIZE);
+      setPage(nextPage);
+
+      let filteredUsers = (data || []) as any[];
 
       if (user?.id) {
-        const { data: blocks } = await supabase
-          .from('blocks')
-          .select('blocked_user_id')
-          .eq('user_id', user.id);
-        const blockedIds = new Set((blocks || []).map((b) => b.blocked_user_id));
-        filteredUsers = filteredUsers.filter((u) => !blockedIds.has(u.id));
+        const blockedIds = new Set((blocks || []).map((b: any) => b.blocked_user_id));
+        const likedUserIds = new Set((likesSent || []).map((l: any) => l.liked_user_id));
 
-        const { data: likesSent } = await supabase
-          .from('likes')
-          .select('liked_user_id')
-          .eq('user_id', user.id);
-        const likedUserIds = new Set((likesSent || []).map((l: { liked_user_id: string }) => l.liked_user_id));
-        filteredUsers = filteredUsers.filter((u) => !likedUserIds.has(u.id));
-
-        const { data: friendsRows } = await supabase
-          .from('friends')
-          .select('user_id, friend_id')
-          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-          .eq('status', 'accepted');
         const friendIds = new Set<string>();
-        (friendsRows || []).forEach((r) => {
+        (friendsRows || []).forEach((r: any) => {
           if (r.user_id !== user.id) friendIds.add(r.user_id);
           if (r.friend_id !== user.id) friendIds.add(r.friend_id);
         });
-
-        const { data: sessions } = await supabase
-          .from('chat_sessions')
-          .select('user1_id, user2_id')
-          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`);
         const chatPartnerIds = new Set<string>();
-        (sessions || []).forEach((s) => {
+        (sessions || []).forEach((s: any) => {
           if (s.user1_id !== user.id) chatPartnerIds.add(s.user1_id);
           if (s.user2_id !== user.id) chatPartnerIds.add(s.user2_id);
         });
 
-        const excludeIds = new Set([...friendIds, ...chatPartnerIds]);
+        const excludeIds = new Set<string>([
+          ...Array.from(friendIds),
+          ...Array.from(chatPartnerIds),
+          ...Array.from(blockedIds),
+          ...Array.from(likedUserIds),
+        ]);
         filteredUsers = filteredUsers.filter((u) => !excludeIds.has(u.id));
       }
 
@@ -251,19 +329,27 @@ export default function ExploreScreen() {
         });
       }
 
-      if (isPremium && filteredUsers.length > 0) {
-        const ids = filteredUsers.map((u) => u.id);
-        const { data: subs } = await supabase.from('subscriptions').select('user_id').in('user_id', ids).eq('is_premium', true);
-        const premiumIds = new Set((subs || []).map((s: { user_id: string }) => s.user_id));
-        filteredUsers.sort((a, b) => (premiumIds.has(b.id) ? 1 : 0) - (premiumIds.has(a.id) ? 1 : 0));
-      }
+      // Not: Ek premium sıralama sorgusu ilk açılışı geciktirdiği için kaldırıldı.
+      // Ana hedef burada hızlı first-paint ve akıcı kart geçişi.
 
-      setUsers(filteredUsers);
-      setCurrentIndex(0);
+      setUsers((prev) => {
+        const next = mode === 'append' ? [...prev, ...filteredUsers] : [...filteredUsers];
+        const deduped: UserProfile[] = [];
+        const seen = new Set<string>();
+        for (const u of next) {
+          if (!u?.id || seen.has(u.id)) continue;
+          seen.add(u.id);
+          deduped.push(u as UserProfile);
+        }
+        return deduped;
+      });
+      if (mode === 'reset') setCurrentIndex(0);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
+      if (seq !== fetchSeq.current) return;
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -385,7 +471,7 @@ export default function ExploreScreen() {
 
         setMatchCelebration({ matchedUser: likedUser, sessionId });
       } else {
-        if (likedUser.is_online) {
+        if (isUserOnlineNow(likedUser.is_online, likedUser.last_seen)) {
           const { error: notifError } = await supabase
             .from('notifications')
             .insert({
@@ -507,7 +593,7 @@ export default function ExploreScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
+          <HeartLoader />
         </View>
       ) : currentUser ? (
         <View style={styles.cardContainer}>
@@ -539,7 +625,7 @@ export default function ExploreScreen() {
                 {currentUser.verification_status === 'verified' && (
                   <VerifiedBadge size={18} verified />
                 )}
-                {currentUser.is_online && <View style={styles.onlineIndicator} />}
+                {isUserOnlineNow(currentUser.is_online, currentUser.last_seen) && <View style={styles.onlineIndicator} />}
               </View>
               <Text style={[styles.genderText, { color: theme.textSecondary }]}>
                 {getGenderLabel(currentUser.gender, language)}
@@ -625,7 +711,7 @@ export default function ExploreScreen() {
           visible={profileModalVisible}
           profile={currentUser}
           onClose={() => setProfileModalVisible(false)}
-          onBlocked={() => fetchUsers()}
+          onBlocked={() => resetAndFetch()}
           showActionButtons={false}
           language={language}
         />

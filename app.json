@@ -1,26 +1,29 @@
 {
   "expo": {
-    "name": "bolt-expo-nativewind",
-    "slug": "bolt-expo-nativewind",
-    "version": "1.0.0",
+    "name": "herio",
+    "slug": "nschatapp",
+    "version": "1.0.4",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app-icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/app-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FF6B9D"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
-      "useNextNotificationsApi": true
+      "package": "com.necatisen.nschatapp",
+      "versionCode": 5
     },
     "web": {
       "bundler": "metro",
@@ -34,14 +37,23 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/images/app-icon.png",
           "color": "#FF6B9D",
           "sounds": []
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d5a17b85-a987-49e1-829e-bf08847e9838"
+      }
+    },
+    "owner": "necatisen"
   }
 }

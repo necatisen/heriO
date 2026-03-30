@@ -3,19 +3,20 @@ import {
   View,
   Text,
   StyleSheet,
-  Modal,
   TouchableOpacity,
   TextInput,
   ScrollView,
   Platform,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Save } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { religionOptions, alcoholConsumptionOptions, generateAgeOptions, getCitiesForCountry, countries } from '@/lib/constants';
 import ComboBox from '@/components/ComboBox';
+import { FullScreenModal } from '@/components/FullScreenModal';
 
 type Profile = {
   full_name?: string | null;
@@ -53,6 +54,7 @@ export default function EditProfileModal({
 }: EditProfileModalProps) {
   const { theme } = useTheme();
   const { language } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [formData, setFormData] = useState({
     full_name: '',
     username: '',
@@ -302,9 +304,13 @@ export default function EditProfileModal({
   if (visible && !profile) return null;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContainer, { backgroundColor: theme.cardBackground }]}>
+    <FullScreenModal
+      visible={visible}
+      onRequestClose={onClose}
+      animationType="slide"
+      overlayStyle={styles.modalOverlay}
+      contentStyle={[styles.modalContainer, { backgroundColor: theme.cardBackground }]}
+    >
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
               {language === 'tr' ? 'Profili Düzenle' : 'Edit Profile'}
@@ -831,7 +837,14 @@ export default function EditProfileModal({
             </View>
           </ScrollView>
 
-          <View style={[styles.modalFooter, { borderTopColor: theme.border }]}>
+          <View
+            style={[
+              styles.modalFooter,
+              {
+                borderTopColor: theme.border,
+                paddingBottom: Math.max(20, insets.bottom + 16),
+              },
+            ]}>
             <TouchableOpacity
               style={[styles.cancelBtn, { backgroundColor: theme.background, borderColor: theme.border }]}
               onPress={onClose}
@@ -850,9 +863,7 @@ export default function EditProfileModal({
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
-    </Modal>
+    </FullScreenModal>
   );
 }
 
@@ -860,12 +871,11 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
   },
   modalContainer: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
+    width: '100%',
+    height: '100%',
+    borderRadius: 0,
   },
   modalHeader: {
     flexDirection: 'row',

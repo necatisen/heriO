@@ -76,6 +76,37 @@ const PROGRESS_RADIUS = 40;
 const PROGRESS_STROKE = 8;
 const PROGRESS_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RADIUS;
 
+function localizeVerificationFailureMessage(raw: string, isTr: boolean): string {
+  const msg = String(raw || '').trim();
+  const lower = msg.toLowerCase();
+
+  // Supabase Edge Function common errors
+  if (
+    lower.includes('request function was not found') ||
+    (lower.includes('function') && lower.includes('was not found')) ||
+    lower.includes('/functions/v1/')
+  ) {
+    return isTr
+      ? 'Doğrulama servisi bulunamadı (Edge Function). Lütfen daha sonra tekrar deneyin.'
+      : 'Verification service was not found (Edge Function). Please try again later.';
+  }
+
+  if (lower.includes('not authenticated') || lower.includes('jwt') || lower.includes('unauthorized')) {
+    return isTr
+      ? 'Oturumunuz doğrulanamadı. Lütfen çıkış yapıp tekrar giriş yapın.'
+      : 'Your session could not be verified. Please sign out and sign in again.';
+  }
+
+  if (lower.includes('network request failed') || lower.includes('failed to fetch') || lower.includes('fetch failed')) {
+    return isTr
+      ? 'İnternet bağlantısı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.'
+      : 'Could not connect to the internet. Check your connection and try again.';
+  }
+
+  // Fall back to original
+  return msg;
+}
+
 export default function VerifyFaceScreen() {
   const router = useRouter();
   const { user, refreshProfile } = useAuth();
@@ -156,7 +187,9 @@ export default function VerifyFaceScreen() {
       const result = await submitVerification(selfieBase64, frames.length >= 2, frames);
       await refreshProfile();
       setVerificationSuccess(result.success);
-      setResultMessage(result.message);
+      setResultMessage(
+        result.success ? result.message : localizeVerificationFailureMessage(result.message, isTr)
+      );
       setStep('done');
     },
     [selfieBase64, isTr, refreshProfile]

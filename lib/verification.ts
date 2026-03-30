@@ -26,18 +26,31 @@ export type VerificationResult =
     };
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+async function sleep(ms: number) {
+  await new Promise((r) => setTimeout(r, ms));
+}
+
+async function getAccessToken(): Promise<string | null> {
+  // On native, session can be null briefly while SecureStore loads.
+  for (let i = 0; i < 2; i++) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session?.access_token) return session.access_token;
+    await sleep(350);
+  }
+  return null;
+}
 
 export async function submitVerification(
   selfieBase64: string,
   livenessPassed: boolean,
   livenessFrames?: string[]
 ): Promise<VerificationResult> {
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-
-  if (sessionError || !session?.access_token) {
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
     return {
       success: false,
       stage: 'selfie_capture',
@@ -58,7 +71,8 @@ export async function submitVerification(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
+      ...(SUPABASE_ANON_KEY ? { apikey: SUPABASE_ANON_KEY } : {}),
+      Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
       selfie_base64: selfieBase64,
@@ -110,12 +124,8 @@ export async function checkLivenessStep(
   imageBase64: string,
   step: LivenessStep
 ): Promise<LivenessCheckResult> {
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-
-  if (sessionError || !session?.access_token) {
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
     return { complete: false, error: 'Not authenticated' };
   }
 
@@ -124,7 +134,8 @@ export async function checkLivenessStep(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
+      ...(SUPABASE_ANON_KEY ? { apikey: SUPABASE_ANON_KEY } : {}),
+      Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ image_base64: imageBase64, step }),
   });

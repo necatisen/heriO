@@ -30,9 +30,10 @@ import { getEffectiveSubscription } from '@/lib/subscription';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import ProfileModal from '@/components/ProfileModal';
 import SwipeableMessage from '@/components/SwipeableMessage';
-import { formatMessageTime, formatLastSeen } from '@/lib/dateFormat';
+import { formatMessageTime, formatLastSeen, isUserOnlineNow } from '@/lib/dateFormat';
 import { containsBadWord, isSpam } from '@/lib/moderation';
 import { uploadChatImage } from '@/lib/uploadAvatar';
+import HeartLoader from '@/components/HeartLoader';
 
 type Message = {
   id: string;
@@ -89,16 +90,27 @@ export default function ConversationScreen() {
 
     (async () => {
       try {
-        const { data: session, error: sessionError } = await supabase
-          .from('chat_sessions')
-          .select('user1_id, user2_id')
-          .eq('id', sessionIdParam)
-          .single();
-        if (sessionError || !session) {
-          setLoadError(true);
-          return;
+        const friendIdParam = typeof params.friendId === 'string' ? params.friendId : undefined;
+
+        let otherUserId = friendIdParam;
+        if (!otherUserId) {
+          const { data: session, error: sessionError } = await supabase
+            .from('chat_sessions')
+            .select('user1_id, user2_id')
+            .eq('id', sessionIdParam)
+            .single();
+          if (sessionError || !session) {
+            setLoadError(true);
+            return;
+          }
+          otherUserId = session.user1_id === user?.id ? session.user2_id : session.user1_id;
         }
-        const otherUserId = session.user1_id === user?.id ? session.user2_id : session.user1_id;
+
+        // Mesajları ve yardımcı verileri profile sorgusunu beklemeden başlat.
+        fetchMessages(sessionIdParam);
+        fetchCredits();
+        fetchSubscription();
+        updateOnlineStatus();
 
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -110,10 +122,6 @@ export default function ConversationScreen() {
           return;
         }
         setOtherUser(profile);
-        fetchMessages(sessionIdParam);
-        fetchCredits();
-        fetchSubscription();
-        updateOnlineStatus();
       } catch {
         setLoadError(true);
       }
@@ -132,6 +140,34 @@ export default function ConversationScreen() {
     }
   };
 
+  // Sohbet ekranında header'daki "Çevrimiçi / Son görülme" için karşı kullanıcının
+  // profiles'is_online + last_seen değerlerini realtime takip ediyoruz.
+  useEffect(() => {
+    if (!otherUser?.id) return;
+    const otherUserId = otherUser.id as string;
+
+    const channel = supabase
+      .channel(`profiles:${otherUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${otherUserId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Partial<any>;
+          setOtherUser((prev: any) => (prev && prev.id === otherUserId ? { ...prev, ...updated } : prev));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [otherUser?.id]);
+
   useEffect(() => {
     if (!sessionId) return;
 
@@ -145,23 +181,53 @@ export default function ConversationScreen() {
           table: 'messages',
           filter: `session_id=eq.${sessionId}`,
         },
-        (payload) => {
+        async (payload) => {
           if (payload.eventType === 'INSERT') {
             const newMsg = payload.new as Message;
+
+            // Reply referansını karşı tarafta gösterebilmek için INSERT anında
+            // reply_to_id üzerinden mesaj içeriğini çekiyoruz.
+            let msgWithReply: Message = newMsg;
+            if (newMsg.reply_to_id) {
+              const { data: replyData } = await supabase
+                .from('messages')
+                .select('content, sender_id')
+                .eq('id', newMsg.reply_to_id)
+                .maybeSingle();
+
+              msgWithReply = {
+                ...newMsg,
+                reply_to: replyData
+                  ? { content: replyData.content, sender_id: replyData.sender_id }
+                  : null,
+              };
+            }
+
             setMessages((prev) => {
               if (prev.some((m) => m.id === newMsg.id)) return prev;
+
               if (newMsg.sender_id === user?.id) {
-                const temp = prev.find((m) => String(m.id).startsWith('temp'));
+                // Optimistic "temp-..." mesajlarını temizleyip gerçek mesajı ekliyoruz.
                 const withoutTemp = prev.filter((m) => !String(m.id).startsWith('temp'));
-                const msgWithReply = temp?.reply_to ? { ...newMsg, reply_to: temp.reply_to } : newMsg;
                 return [...withoutTemp, msgWithReply];
               }
-              return [...prev, newMsg];
+
+              return [...prev, msgWithReply];
             });
           } else if (payload.eventType === 'UPDATE') {
             setMessages((prev) =>
               prev.map((msg) =>
-                msg.id === payload.new.id ? (payload.new as Message) : msg
+                msg.id === payload.new.id
+                  ? {
+                      ...msg,
+                      ...(payload.new as Message),
+                      // UPDATE payload'ında reply_to gelmediğinde mevcut referansı koru.
+                      reply_to:
+                        (payload.new as Message).reply_to !== undefined
+                          ? (payload.new as Message).reply_to
+                          : msg.reply_to,
+                    }
+                  : msg
               )
             );
           }
@@ -208,35 +274,56 @@ export default function ConversationScreen() {
         .order('created_at', { ascending: true });
 
       if (!error && data) {
-        const messagesWithReplies = await Promise.all(
-          data.map(async (msg) => {
-            if (msg.reply_to_id) {
-              const { data: replyData } = await supabase
-                .from('messages')
-                .select('content, sender_id')
-                .eq('id', msg.reply_to_id)
-                .maybeSingle();
-              return { ...msg, reply_to: replyData };
-            }
-            return msg;
-          })
+        // İlk boyamayı hızlandır: mesajları önce ham haliyle hemen bas.
+        setMessages(data as Message[]);
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
+
+        // Reply referanslarını N+1 yerine tek toplu sorguyla zenginleştir.
+        const replyIds = Array.from(
+          new Set(
+            (data || [])
+              .map((m: any) => m.reply_to_id)
+              .filter((id: string | null | undefined): id is string => !!id)
+          )
         );
-        setMessages(messagesWithReplies);
-        const ids = (data || []).map((m) => m.id);
-        if (ids.length > 0) {
-          const { data: reactions } = await supabase
-            .from('message_reactions')
-            .select('message_id, user_id, emoji')
-            .in('message_id', ids);
+
+        if (replyIds.length > 0) {
+          const { data: replyRows } = await supabase
+            .from('messages')
+            .select('id, content, sender_id')
+            .in('id', replyIds);
+
+          const replyById = Object.fromEntries(
+            (replyRows || []).map((r: any) => [r.id, { content: r.content, sender_id: r.sender_id }])
+          );
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.reply_to_id ? { ...m, reply_to: replyById[m.reply_to_id] || null } : m
+            )
+          );
+        }
+
+        // Reaksiyon ve read update işlemlerini UI'dan bağımsız yürüt.
+        const ids = (data || []).map((m: any) => m.id);
+        Promise.all([
+          ids.length > 0
+            ? supabase
+                .from('message_reactions')
+                .select('message_id, user_id, emoji')
+                .in('message_id', ids)
+            : Promise.resolve({ data: [] as any[] } as any),
+          markMessagesAsRead(sessionId),
+        ]).then(([reactionsRes]) => {
+          const reactions = reactionsRes?.data || [];
           const byMessage: Record<string, { emoji: string; user_id: string }[]> = {};
-          (reactions || []).forEach((r) => {
+          reactions.forEach((r: any) => {
             if (!byMessage[r.message_id]) byMessage[r.message_id] = [];
             byMessage[r.message_id].push({ emoji: r.emoji, user_id: r.user_id });
           });
           setReactionsByMessageId(byMessage);
-        }
-        markMessagesAsRead(sessionId);
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
+        });
+
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -485,12 +572,12 @@ export default function ConversationScreen() {
         ...[
           {
             key: 'harassment',
-            tr: 'Taciz / Rahatsızlık',
+            tr: 'Şikayet et',
             en: 'Harassment',
           },
           {
             key: 'spam',
-            tr: 'Spam / Reklam',
+            tr: 'Engelle',
             en: 'Spam / Ads',
           },
           {
@@ -796,10 +883,7 @@ export default function ConversationScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.loadingScreen}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingScreenText, { color: theme.textSecondary }]}>
-            {language === 'tr' ? 'Yükleniyor...' : 'Loading...'}
-          </Text>
+          <HeartLoader />
         </View>
       </SafeAreaView>
     );
@@ -837,14 +921,18 @@ export default function ConversationScreen() {
                 {otherUser.verification_status === 'verified' && (
                   <VerifiedBadge size={18} verified />
                 )}
-                {otherUser.is_online && <View style={styles.onlineIndicator} />}
+                {(isUserOnlineNow(otherUser.is_online, otherUser.last_seen)) && <View style={styles.onlineIndicator} />}
               </View>
               <Text style={styles.userDetails}>
-                {otherUser.is_online
+                {isUserOnlineNow(otherUser.is_online, otherUser.last_seen)
                   ? language === 'tr'
                     ? 'Çevrimiçi'
                     : 'Online'
-                  : formatLastSeen(otherUser.last_seen, language) || (otherUser.city || otherUser.country)}
+                  : (otherUser.last_seen
+                    ? (language === 'tr'
+                      ? `Son görülme: ${formatLastSeen(otherUser.last_seen, language)}`
+                      : `Last seen: ${formatLastSeen(otherUser.last_seen, language)}`)
+                    : (otherUser.city || otherUser.country))}
               </Text>
             </View>
           </TouchableOpacity>
@@ -1043,7 +1131,10 @@ export default function ConversationScreen() {
             {
               backgroundColor: theme.cardBackground,
               borderTopColor: theme.border,
-              paddingBottom: Math.max(insets.bottom, 16) + (Platform.OS === 'android' ? 12 : 0),
+              // Android alt gezinme çubuğuyla çakışmayı önleyip barı gereksiz yukarı itmeden hizala.
+              paddingBottom: Platform.OS === 'android'
+                ? (insets.bottom > 0 ? insets.bottom + 6 : 10)
+                : Math.max(insets.bottom, 10),
             },
           ]}>
           <TouchableOpacity

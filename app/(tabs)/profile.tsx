@@ -10,7 +10,6 @@ import {
   Alert,
   Platform,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,12 +34,26 @@ import {
   getAlcoholLabel,
   getRelationshipStatusLabel,
 } from '@/lib/profileTranslations';
+import { countries } from '@/lib/constants';
+import HeartLoader from '@/components/HeartLoader';
+import { isUserOnlineNow } from '@/lib/dateFormat';
 
 type Photo = {
   id: string;
   photo_url: string;
   created_at: string;
 };
+
+function getCountryLabel(value: string | null | undefined, language: string): string {
+  const raw = String(value ?? '').trim();
+  const norm = raw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+  const isTr = language.toLowerCase().startsWith('tr');
+
+  const match = countries.find((c) => c.value === norm);
+  if (match) return isTr ? match.label.tr : match.label.en;
+
+  return raw;
+}
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile, loading: authLoading } = useAuth();
@@ -399,10 +412,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-            {language === 'tr' ? 'Yükleniyor...' : 'Loading...'}
-          </Text>
+          <HeartLoader />
         </View>
       </SafeAreaView>
     );
@@ -516,7 +526,7 @@ export default function ProfileScreen() {
                     />
                   )}
                   {age && <Text style={styles.userAge}>, {age}</Text>}
-                  {displayProfile.is_online && <View style={styles.onlineIndicator} />}
+                  {isUserOnlineNow(displayProfile.is_online, displayProfile.last_seen) && <View style={styles.onlineIndicator} />}
                 </View>
                 <Text style={styles.userHandle}>@{displayProfile.username || (language === 'tr' ? 'kullanıcı' : 'user')}</Text>
               </View>
@@ -816,7 +826,7 @@ export default function ProfileScreen() {
                   {language === 'tr' ? 'Ülke:' : 'Country:'}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
-                  {displayProfile.country.replace(/\b\w/g, (c) => c.toUpperCase())}
+                  {getCountryLabel(displayProfile.country, language)}
                 </Text>
               </View>
             )}

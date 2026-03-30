@@ -11,10 +11,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MessageCircle, Mail, Lock, ArrowLeft, Globe, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, ArrowLeft, Globe, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import * as SecureStore from 'expo-secure-store';
+import { HerioLogo } from '@/components/HerioLogo';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -140,9 +141,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <MessageCircle size={64} color="#FFFFFF" />
-            <Text style={styles.title}>{t.login}</Text>
-            <Text style={styles.subtitle}>{t.welcomeMessage}</Text>
+            <HerioLogo size="lg" variant="light" style={styles.logoMark} />
           </View>
 
           <View style={styles.formContainer}>
@@ -268,11 +267,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
+  logoMark: {
+    transform: [{ scale: 1.25 }],
+  },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginTop: 16,
   },
   subtitle: {
     fontSize: 16,
