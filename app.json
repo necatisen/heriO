@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/app-icon.png",
+      "image": "./assets/images/heriokalp-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -28,7 +28,7 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/heriokalp-logo.png"
     },
     "plugins": [
       "expo-router",
@@ -37,7 +37,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/app-icon.png",
+          "icon": "./assets/images/heriokalp-logo.png",
           "color": "#FF6B9D",
           "sounds": []
         }

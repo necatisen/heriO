@@ -31,9 +31,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import ProfileModal from '@/components/ProfileModal';
 import SwipeableMessage from '@/components/SwipeableMessage';
 import { formatMessageTime, formatLastSeen, isUserOnlineNow } from '@/lib/dateFormat';
-import { containsBadWord, isSpam } from '@/lib/moderation';
+import { isSpam, maskBadWords } from '@/lib/moderation';
 import { uploadChatImage } from '@/lib/uploadAvatar';
 import HeartLoader from '@/components/HeartLoader';
+import { sanitizeSocialAndContacts } from '@/lib/textSanitizer';
 
 type Message = {
   id: string;
@@ -401,18 +402,10 @@ export default function ConversationScreen() {
   const sendMessage = async () => {
     if (!messageText.trim() || !sessionId || !otherUser || loading) return;
 
-    const messageContent = messageText.trim();
-
-    // Basit küfür ve spam filtresi
-    if (containsBadWord(messageContent)) {
-      Alert.alert(
-        language === 'tr' ? 'Uygunsuz İçerik' : 'Inappropriate Content',
-        language === 'tr'
-          ? 'Mesajınız uygunsuz kelimeler içeriyor. Lütfen daha uygun bir dil kullanın.'
-          : 'Your message contains inappropriate language. Please use more appropriate wording.'
-      );
-      return;
-    }
+    const raw = messageText.trim();
+    const masked = maskBadWords(raw);
+    const sanitized = sanitizeSocialAndContacts(masked.text);
+    const messageContent = sanitized.text;
 
     const recentOwnMessages = messages
       .filter((m) => m.sender_id === user?.id)
@@ -550,6 +543,20 @@ export default function ConversationScreen() {
 
         if (error) throw error;
         fetchCredits();
+
+        // Push notification (receiver device)
+        try {
+          const title = language === 'tr' ? 'Yeni mesaj' : 'New message';
+          const body = messageContent.length > 120 ? `${messageContent.slice(0, 117)}...` : messageContent;
+          void supabase.functions.invoke('send-push-message', {
+            body: {
+              to_user_id: otherUser.id,
+              title,
+              body,
+              data: { type: 'message', session_id: sessionId, sender_id: user?.id },
+            },
+          });
+        } catch {}
       } catch (error: any) {
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
         setMessageText(messageContent);
@@ -715,6 +722,28 @@ export default function ConversationScreen() {
       });
       const asset = result.canceled ? null : result.assets?.[0];
       if (!asset?.uri) return;
+      // +18 / nudity moderation (best-effort). If flagged, show a placeholder message instead.
+      try {
+        const { data } = await supabase.functions.invoke('moderate-image', {
+          body: { image_base64: asset.base64 ?? null },
+        });
+        const allowed = data?.allowed !== false;
+        if (!allowed) {
+          const msgTr = 'Uygunsuz resim yüklediniz, bu nedenle gösterilmiyor.';
+          const msgEn = 'You uploaded an inappropriate image, so it is not shown.';
+          const placeholder = language === 'tr' ? msgTr : msgEn;
+          await supabase.from('messages').insert({
+            session_id: sessionId,
+            sender_id: user?.id,
+            receiver_id: otherUser.id,
+            content: placeholder,
+          });
+          Alert.alert(language === 'tr' ? 'Uygunsuz içerik' : 'Inappropriate content', placeholder);
+          return;
+        }
+      } catch {
+        // If moderation service is not configured, continue without blocking.
+      }
 
       const replyTo = replyToMessage;
       setReplyToMessage(null);
@@ -800,6 +829,20 @@ export default function ConversationScreen() {
             )
           );
           fetchCredits();
+
+          // Push notification (receiver device)
+          try {
+            const title = language === 'tr' ? 'Yeni mesaj' : 'New message';
+            const body = language === 'tr' ? '📷 Fotoğraf' : '📷 Photo';
+            void supabase.functions.invoke('send-push-message', {
+              body: {
+                to_user_id: otherUser.id,
+                title,
+                body,
+                data: { type: 'message', session_id: sessionId, sender_id: user?.id },
+              },
+            });
+          } catch {}
         } catch (error: any) {
           setMessages((prev) => prev.filter((m) => m.id !== tempId));
           setReplyToMessage(replyTo || null);

@@ -92,8 +92,12 @@ android {
         applicationId 'com.necatisen.nschatapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
-        versionName "1.0.4"
+        def _vcRaw = project.findProperty('VERSION_CODE')?.toString()
+        def _vcDigits = _vcRaw ? _vcRaw.replaceAll(/[^0-9]/, '') : null
+        versionCode (_vcDigits ? Integer.parseInt(_vcDigits) : 5)
+
+        def _vnRaw = project.findProperty('VERSION_NAME')?.toString()
+        versionName (_vnRaw ? _vnRaw : "1.0.4")
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

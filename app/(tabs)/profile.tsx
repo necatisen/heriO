@@ -37,6 +37,7 @@ import {
 import { countries } from '@/lib/constants';
 import HeartLoader from '@/components/HeartLoader';
 import { isUserOnlineNow } from '@/lib/dateFormat';
+import { limitWords, sanitizeSocialAndContacts } from '@/lib/textSanitizer';
 
 type Photo = {
   id: string;
@@ -77,6 +78,22 @@ export default function ProfileScreen() {
       fetchPhotos();
     }
   }, [user]);
+
+  // Prefetch avatar + first few photos to reduce "late image" feeling after login.
+  useEffect(() => {
+    const urls: string[] = [];
+    const avatar = (profile?.profile_picture || '').trim();
+    if (avatar) urls.push(avatar);
+    (photos || []).slice(0, 8).forEach((p) => {
+      const u = String(p?.photo_url || '').trim();
+      if (u) urls.push(u);
+    });
+    const unique = Array.from(new Set(urls));
+    unique.forEach((u) => {
+      // fire-and-forget; failures are fine
+      void Image.prefetch(u);
+    });
+  }, [profile?.profile_picture, photos]);
 
   useFocusEffect(
     useCallback(() => {
@@ -258,9 +275,22 @@ export default function ProfileScreen() {
 
   const handleUpdateBio = async () => {
     try {
+      const limited = limitWords(bioText, 50);
+      const sanitized = sanitizeSocialAndContacts(limited.text);
+      if (limited.truncated || sanitized.changed) {
+        setBioText(sanitized.text);
+        if (Platform.OS !== 'web') {
+          Alert.alert(
+            language === 'tr' ? 'Düzenlendi' : 'Adjusted',
+            language === 'tr'
+              ? 'Hakkımda alanı en fazla 50 kelime olabilir ve sosyal medya/iletişim bilgileri gizlenir.'
+              : 'Bio is limited to 50 words and social/contact details are hidden.'
+          );
+        }
+      }
       const { error } = await supabase
         .from('profiles')
-        .update({ bio: bioText })
+        .update({ bio: sanitized.text })
         .eq('id', user?.id);
 
       if (error) throw error;
@@ -496,10 +526,7 @@ export default function ProfileScreen() {
                 disabled={uploading}>
                 {displayProfile.profile_picture ? (
                   <Image
-                    source={{
-                      uri: displayProfile.profile_picture,
-                      cache: 'reload'
-                    }}
+                    source={{ uri: displayProfile.profile_picture }}
                     style={styles.avatar}
                     key={displayProfile.profile_picture}
                   />

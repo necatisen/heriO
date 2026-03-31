@@ -8,6 +8,7 @@ import {
   Alert,
   Image,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Heart, Eye, ThumbsUp, UserPlus, MessageCircle, User, Crown } from 'lucide-react-native';
@@ -22,6 +23,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useMemo } from 'react';
 import HeartLoader from '@/components/HeartLoader';
 import { isUserOnlineNow } from '@/lib/dateFormat';
+import { BlurView } from 'expo-blur';
+import * as Location from 'expo-location';
 
 type LikeUser = {
   id: string;
@@ -37,6 +40,9 @@ type LikeUser = {
   is_verified?: boolean;
   face_verified?: boolean;
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
+  latitude?: number | null;
+  longitude?: number | null;
+  distance_km?: number | null;
 };
 
 type Tab = 'received' | 'visitors' | 'sent';
@@ -58,6 +64,7 @@ export default function LikesScreen() {
     sessionId: string;
   } | null>(null);
   const [hasChatWithSelectedUser, setHasChatWithSelectedUser] = useState(false);
+  const [myCoords, setMyCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const receivedIds = useMemo(() => new Set(likesReceived.map((u) => u.id)), [likesReceived]);
   const displayedSent = useMemo(
@@ -78,11 +85,53 @@ export default function LikesScreen() {
       if (user) {
         fetchSubscription();
         fetchData();
+        void ensureLocation();
         const t = setTimeout(() => fetchData(), 600);
         return () => clearTimeout(t);
       }
     }, [user, activeTab])
   );
+
+  const ensureLocation = async () => {
+    if (!user?.id) return;
+    if (Platform.OS === 'web') return;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      setMyCoords(coords);
+      // Keep DB profile up-to-date for other screens too.
+      await supabase
+        .from('profiles')
+        .update({ latitude: coords.latitude, longitude: coords.longitude })
+        .eq('id', user.id);
+    } catch {
+      // ignore
+    }
+  };
+
+  const haversineKm = (a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) => {
+    const R = 6371;
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const dLat = toRad(b.latitude - a.latitude);
+    const dLon = toRad(b.longitude - a.longitude);
+    const lat1 = toRad(a.latitude);
+    const lat2 = toRad(b.latitude);
+    const s =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    return 2 * R * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+  };
+
+  const withDistances = (rows: LikeUser[]) => {
+    if (!myCoords) return rows;
+    return rows.map((u) => {
+      if (typeof u.latitude !== 'number' || typeof u.longitude !== 'number') return { ...u, distance_km: null };
+      const km = haversineKm(myCoords, { latitude: u.latitude, longitude: u.longitude });
+      return { ...u, distance_km: Number.isFinite(km) ? km : null };
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -163,7 +212,7 @@ export default function LikesScreen() {
     const uniqueIds = [...new Set(likesData.map((l: any) => l.user_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, profile_picture, is_online, last_seen, is_verified, face_verified, verification_status')
+      .select('id, full_name, username, bio, profile_picture, is_online, last_seen, is_verified, face_verified, verification_status, latitude, longitude')
       .in('id', uniqueIds);
 
     if (profilesError || !profilesData) {
@@ -198,7 +247,7 @@ export default function LikesScreen() {
       ...(friendships2?.map((f: any) => f.user_id) || []),
     ]);
 
-    let formatted = profilesData.map((p: any) => ({
+    let formatted: LikeUser[] = profilesData.map((p: any) => ({
       id: p.id,
       full_name: p.full_name,
       username: p.username,
@@ -212,6 +261,8 @@ export default function LikesScreen() {
       is_verified: p.is_verified ?? false,
       face_verified: p.face_verified ?? false,
       verification_status: p.verification_status ?? 'unverified',
+      latitude: typeof p.latitude === 'number' ? p.latitude : null,
+      longitude: typeof p.longitude === 'number' ? p.longitude : null,
     }));
 
     // Engellenen kullanıcıları listeden çıkar
@@ -226,7 +277,7 @@ export default function LikesScreen() {
       formatted = formatted.filter((u) => !blockedIds.has(u.id));
     }
 
-    setLikesReceived(formatted);
+    setLikesReceived(withDistances(formatted));
   };
 
   const fetchLikesSent = async () => {
@@ -244,7 +295,7 @@ export default function LikesScreen() {
     const uniqueIds = [...new Set(likesData.map((l: any) => l.liked_user_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, profile_picture, is_online, last_seen, is_verified, face_verified, verification_status')
+      .select('id, full_name, username, bio, profile_picture, is_online, last_seen, is_verified, face_verified, verification_status, latitude, longitude')
       .in('id', uniqueIds);
 
     if (profilesError || !profilesData) {
@@ -256,7 +307,7 @@ export default function LikesScreen() {
     likesData.forEach((l: any) => {
       if (!byCreated.has(l.liked_user_id)) byCreated.set(l.liked_user_id, l.created_at);
     });
-    let formatted = profilesData.map((p: any) => ({
+    let formatted: LikeUser[] = profilesData.map((p: any) => ({
       id: p.id,
       full_name: p.full_name,
       username: p.username,
@@ -268,6 +319,8 @@ export default function LikesScreen() {
       is_verified: p.is_verified ?? false,
       face_verified: p.face_verified ?? false,
       verification_status: p.verification_status ?? 'unverified',
+      latitude: typeof p.latitude === 'number' ? p.latitude : null,
+      longitude: typeof p.longitude === 'number' ? p.longitude : null,
     }));
 
     // Engellenen kullanıcıları listeden çıkar
@@ -282,7 +335,7 @@ export default function LikesScreen() {
       formatted = formatted.filter((u) => !blockedIds.has(u.id));
     }
 
-    setLikesSent(formatted);
+    setLikesSent(withDistances(formatted));
   };
 
   const fetchVisitors = async () => {
@@ -301,7 +354,7 @@ export default function LikesScreen() {
     const uniqueIds = [...new Set(viewsData.map((v: any) => v.viewer_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, full_name, username, bio, profile_picture, is_online, last_seen, is_verified, face_verified, verification_status')
+      .select('id, full_name, username, bio, profile_picture, is_online, last_seen, is_verified, face_verified, verification_status, latitude, longitude')
       .in('id', uniqueIds);
 
     if (profilesError || !profilesData) {
@@ -313,7 +366,7 @@ export default function LikesScreen() {
     viewsData.forEach((v: any) => {
       if (!byCreated.has(v.viewer_id)) byCreated.set(v.viewer_id, v.created_at);
     });
-    let formatted = profilesData.map((p: any) => ({
+    let formatted: LikeUser[] = profilesData.map((p: any) => ({
       id: p.id,
       full_name: p.full_name,
       username: p.username,
@@ -325,6 +378,8 @@ export default function LikesScreen() {
       is_verified: p.is_verified ?? false,
       face_verified: p.face_verified ?? false,
       verification_status: p.verification_status ?? 'unverified',
+      latitude: typeof p.latitude === 'number' ? p.latitude : null,
+      longitude: typeof p.longitude === 'number' ? p.longitude : null,
     }));
 
     // Engellenen kullanıcıları listeden çıkar
@@ -339,7 +394,7 @@ export default function LikesScreen() {
       formatted = formatted.filter((u) => !blockedIds.has(u.id));
     }
 
-    setVisitors(formatted);
+    setVisitors(withDistances(formatted));
   };
 
   const handleUserClick = async (userId: string) => {
@@ -654,58 +709,90 @@ export default function LikesScreen() {
 
   const renderCard = (item: LikeUser, cardWidth: number, cardHeight: number) => {
     const showWatermark = !isPremium;
+    const showChatCta = isPremium && activeTab === 'sent';
+    const kmText =
+      isPremium && typeof item.distance_km === 'number'
+        ? `${item.distance_km < 1 ? (item.distance_km * 1000).toFixed(0) + ' m' : item.distance_km.toFixed(1) + ' km'}`
+        : null;
     return (
-      <TouchableOpacity
-        style={[styles.avatarCell, { width: cardWidth, height: cardHeight }]}
-        onPress={() => handleUserClick(item.id)}
-        activeOpacity={0.88}>
-        {item.profile_picture ? (
-          <Image
-            source={{ uri: item.profile_picture }}
-            style={[styles.avatarImage, { width: cardWidth, height: cardHeight }]}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={[styles.avatarPlaceholder, { width: cardWidth, height: cardHeight }]}>
-            <User size={cardWidth * 0.4} color="#AAAAAA" />
+      <View style={[styles.avatarCell, { width: cardWidth, height: cardHeight }]}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPress={() => handleUserClick(item.id)}
+          activeOpacity={0.88}
+        >
+          {item.profile_picture ? (
+            <Image
+              source={{ uri: item.profile_picture }}
+              style={[styles.avatarImage, { width: cardWidth, height: cardHeight }]}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.avatarPlaceholder, { width: cardWidth, height: cardHeight }]}>
+              <User size={cardWidth * 0.4} color="#AAAAAA" />
+            </View>
+          )}
+          <View style={styles.avatarCardOverlay}>
+            {!showWatermark && (
+              <>
+                <View style={styles.cardTitleRow}>
+                  <Text style={styles.avatarCardName} numberOfLines={1}>
+                    {item.full_name}
+                  </Text>
+                  {item.verification_status === 'verified' && <VerifiedBadge size={14} verified />}
+                </View>
+                {kmText ? (
+                  <Text style={styles.cardKmText} numberOfLines={1}>
+                    {kmText}
+                  </Text>
+                ) : null}
+                <View
+                  style={[
+                    styles.cardOnlineIndicator,
+                    isUserOnlineNow(item.is_online, item.last_seen)
+                      ? styles.cardOnlineIndicatorOn
+                      : styles.cardOnlineIndicatorOff,
+                  ]}
+                />
+              </>
+            )}
           </View>
-        )}
-        <View style={styles.avatarCardOverlay}>
-          {!showWatermark && (
+          {showWatermark && (
             <>
-              <Text style={styles.avatarCardName} numberOfLines={1}>
-                {item.full_name}
-              </Text>
-              {item.verification_status === 'verified' && (
-                <VerifiedBadge size={14} verified />
-              )}
-              <View
-                style={[
-                  styles.cardOnlineIndicator,
-                  isUserOnlineNow(item.is_online, item.last_seen)
-                    ? styles.cardOnlineIndicatorOn
-                    : styles.cardOnlineIndicatorOff,
-                ]}
+              {/* Blur the photo so non-premium users can't see it */}
+              <BlurView
+                intensity={32}
+                tint="light"
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
               />
+              <View style={styles.watermarkOverlay} pointerEvents="none">
+              <View style={styles.watermarkPattern}>
+                <Text style={styles.watermarkText}>PREMIUM</Text>
+                <Text style={styles.watermarkText}>PREMIUM</Text>
+                <Text style={styles.watermarkText}>PREMIUM</Text>
+              </View>
+              <View style={styles.watermarkCenter}>
+                <Crown size={28} color="rgba(0,0,0,0.45)" />
+                <Text style={styles.watermarkHint}>
+                  {language === 'tr' ? 'Bilgileri görmek için Premium' : 'Premium to view'}
+                </Text>
+              </View>
+              </View>
             </>
           )}
-        </View>
-        {showWatermark && (
-          <View style={styles.watermarkOverlay} pointerEvents="none">
-            <View style={styles.watermarkPattern}>
-              <Text style={styles.watermarkText}>PREMIUM</Text>
-              <Text style={styles.watermarkText}>PREMIUM</Text>
-              <Text style={styles.watermarkText}>PREMIUM</Text>
-            </View>
-            <View style={styles.watermarkCenter}>
-              <Crown size={28} color="rgba(0,0,0,0.45)" />
-              <Text style={styles.watermarkHint}>
-                {language === 'tr' ? 'Bilgileri görmek için Premium' : 'Premium to view'}
-              </Text>
-            </View>
-          </View>
-        )}
-      </TouchableOpacity>
+        </TouchableOpacity>
+
+        {showChatCta ? (
+          <TouchableOpacity
+            style={styles.chatFab}
+            onPress={() => handleStartChat(item.id)}
+            activeOpacity={0.9}
+          >
+            <MessageCircle size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
     );
   };
 
@@ -968,6 +1055,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    minWidth: 0,
+  },
+  cardKmText: {
+    marginTop: 2,
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 11,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
   avatarCardName: {
     color: '#FFFFFF',
     fontSize: 12,
@@ -986,6 +1089,22 @@ const styles = StyleSheet.create({
   },
   cardOnlineIndicatorOff: {
     backgroundColor: '#9E9E9E',
+  },
+  chatFab: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#4A90E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#101828',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
   },
   emptyContainer: {
     alignItems: 'center',

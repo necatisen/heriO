@@ -131,6 +131,21 @@ export default function ExploreScreen() {
     resetAndFetch();
   }, [user?.id, isPremium, filters]);
 
+  // Prefetch current + next few profile images for smoother first-time experience.
+  useEffect(() => {
+    const slice = users.slice(currentIndex, currentIndex + 6);
+    const urls = Array.from(
+      new Set(
+        slice
+          .map((u) => String(u?.profile_picture || '').trim())
+          .filter((u) => !!u)
+      )
+    );
+    urls.forEach((u) => {
+      void Image.prefetch(u);
+    });
+  }, [users, currentIndex]);
+
   useEffect(() => {
     if (!user) return;
     if (!hasMore || loadingMore || loading) return;
@@ -712,7 +727,7 @@ export default function ExploreScreen() {
           profile={currentUser}
           onClose={() => setProfileModalVisible(false)}
           onBlocked={() => resetAndFetch()}
-          showActionButtons={false}
+          showActionButtons={isPremium}
           language={language}
         />
       )}

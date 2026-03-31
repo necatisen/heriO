@@ -365,7 +365,10 @@ export default function ProfileModal({
             <X size={26} color="#FFFFFF" />
           </TouchableOpacity>
 
-          <ScrollView style={styles.scrollContent}>
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={{ paddingBottom: Math.max(24, insets.bottom + 24) }}
+        >
           <View style={styles.profileSection}>
             {photos.length > 0 ? (
               <>
@@ -892,6 +895,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 8,
   },
   reportBtn: {
     flex: 1,
