@@ -4,7 +4,7 @@
     "slug": "nschatapp",
     "version": "1.0.4",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon.png",
+    "icon": "./assets/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -22,7 +22,7 @@
       }
     },
     "android": {
-      "package": "com.necatisen.nschatapp",
+      "package": "com.necatisen.heriO",
       "versionCode": 5
     },
     "web": {
