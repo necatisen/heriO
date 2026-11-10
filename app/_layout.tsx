@@ -15,16 +15,23 @@ export default function RootLayout() {
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="welcome" />
-              <Stack.Screen name="auth/login" />
-              <Stack.Screen name="auth/register" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'slide_from_right',
+                animationDuration: 280,
+                gestureEnabled: true,
+              }}>
+              <Stack.Screen name="index" options={{ animation: 'fade' }} />
+              <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
+              <Stack.Screen name="auth/login" options={{ animation: 'fade_from_bottom' }} />
+              <Stack.Screen name="auth/register" options={{ animation: 'fade_from_bottom' }} />
               <Stack.Screen name="auth/forgot-password" />
-              <Stack.Screen name="onboarding" />
-              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+              <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
               <Stack.Screen name="conversation/[id]" />
-              <Stack.Screen name="store" />
+              <Stack.Screen name="verify-face" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+              <Stack.Screen name="store" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="legal" />
               <Stack.Screen name="+not-found" />
             </Stack>

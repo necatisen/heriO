@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -72,6 +72,7 @@ export default function RegisterScreen() {
     alcoholConsumption: '',
     religion: '',
     relationshipStatus: '',
+    relationshipGoal: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -89,8 +90,15 @@ export default function RegisterScreen() {
   const [showAlcoholPicker, setShowAlcoholPicker] = useState(false);
   const [showReligionPicker, setShowReligionPicker] = useState(false);
   const [showRelationshipPicker, setShowRelationshipPicker] = useState(false);
+  const [showRelationshipGoalPicker, setShowRelationshipGoalPicker] = useState(false);
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
-  const [profilePhotoBase64, setProfilePhotoBase64] = useState<string | null>(null);
+
+  const scrollRef = useRef<ScrollView | null>(null);
+  const fullNameRef = useRef<TextInput | null>(null);
+  const usernameRef = useRef<TextInput | null>(null);
+  const emailRef = useRef<TextInput | null>(null);
+  const passwordRef = useRef<TextInput | null>(null);
+  const confirmPasswordRef = useRef<TextInput | null>(null);
 
   const educationOptions = [
     { value: 'no_diploma', label: language === 'tr' ? 'Diploması Yok' : 'No Diploma' },
@@ -129,7 +137,51 @@ export default function RegisterScreen() {
     { value: 'married', label: language === 'tr' ? 'Evli' : 'Married' },
     { value: 'divorced', label: language === 'tr' ? 'Boşanmış' : 'Divorced' },
     { value: 'widowed', label: language === 'tr' ? 'Dul' : 'Widowed' },
-    { value: 'complicated', label: language === 'tr' ? 'Karışık' : 'Complicated' },
+  ];
+
+  const relationshipGoalOptions = [
+    {
+      value: 'serious_long_term',
+      label:
+        language === 'tr'
+          ? 'Ciddi ilişki / uzun vadeli partner'
+          : 'Serious relationship / long-term partner',
+    },
+    {
+      value: 'marriage_focused',
+      label: language === 'tr' ? 'Evlilik odaklı' : 'Marriage focused',
+    },
+    {
+      value: 'slow_getting_to_know',
+      label:
+        language === 'tr'
+          ? 'Yavaş ilerleyen (önce tanışma)'
+          : 'Slow pace (get to know first)',
+    },
+    {
+      value: 'short_term_casual',
+      label: language === 'tr' ? 'Kısa süreli / casual' : 'Short-term / casual',
+    },
+    {
+      value: 'exploring',
+      label:
+        language === 'tr'
+          ? 'Belirsiz / keşif aşamasında'
+          : 'Unsure / exploring',
+    },
+    {
+      value: 'go_with_flow',
+      label:
+        language === 'tr' ? 'Akışına bırak' : 'Go with the flow',
+    },
+    {
+      value: 'friendship',
+      label: language === 'tr' ? 'Arkadaşlık' : 'Friendship',
+    },
+    {
+      value: 'relaxed',
+      label: language === 'tr' ? 'Rahat bir şeyler' : 'Something relaxed',
+    },
   ];
 
   const ageOptions = generateAgeOptions();
@@ -213,18 +265,93 @@ export default function RegisterScreen() {
     setError('');
     setSuccess('');
 
-    if (
-      !formData.email ||
-      !formData.password ||
-      !formData.confirmPassword ||
-      !formData.fullName ||
-      !formData.username ||
-      !formData.age ||
-      !formData.country ||
-      !formData.city ||
-      !profilePhotoUri
-    ) {
-      setError(language === 'tr' ? 'Lütfen tüm zorunlu alanları ve en az bir fotoğraf ekleyin' : 'Please fill all required fields and add at least one photo');
+    if (!profilePhotoUri) {
+      setError(
+        language === 'tr'
+          ? 'Profil fotoğrafını boş geçemezsiniz. Lütfen bir profil fotoğrafı ekleyin.'
+          : 'You cannot leave the profile photo empty. Please add a profile photo.'
+      );
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
+
+    if (!formData.fullName.trim()) {
+      setError(
+        language === 'tr'
+          ? 'Ad Soyad alanını boş geçemezsiniz.'
+          : 'You cannot leave the full name field empty.'
+      );
+      fullNameRef.current?.focus();
+      return;
+    }
+
+    if (!formData.username.trim()) {
+      setError(
+        language === 'tr'
+          ? 'Kullanıcı adı alanını boş geçemezsiniz.'
+          : 'You cannot leave the username field empty.'
+      );
+      usernameRef.current?.focus();
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError(
+        language === 'tr'
+          ? 'E-posta alanını boş geçemezsiniz.'
+          : 'You cannot leave the email field empty.'
+      );
+      emailRef.current?.focus();
+      return;
+    }
+
+    if (!formData.age) {
+      setError(
+        language === 'tr'
+          ? 'Yaş alanını boş geçemezsiniz.'
+          : 'You cannot leave the age field empty.'
+      );
+      setShowAgePicker(true);
+      return;
+    }
+
+    if (!formData.country) {
+      setError(
+        language === 'tr'
+          ? 'Ülke alanını boş geçemezsiniz.'
+          : 'You cannot leave the country field empty.'
+      );
+      setShowCountryPicker(true);
+      return;
+    }
+
+    if (!formData.city) {
+      setError(
+        language === 'tr'
+          ? 'Şehir alanını boş geçemezsiniz.'
+          : 'You cannot leave the city field empty.'
+      );
+      setShowCityPicker(true);
+      return;
+    }
+
+    if (!formData.password) {
+      setError(
+        language === 'tr'
+          ? 'Şifre alanını boş geçemezsiniz.'
+          : 'You cannot leave the password field empty.'
+      );
+      passwordRef.current?.focus();
+      return;
+    }
+
+    if (!formData.confirmPassword) {
+      setError(
+        language === 'tr'
+          ? 'Şifre tekrar alanını boş geçemezsiniz.'
+          : 'You cannot leave the confirm password field empty.'
+      );
+      confirmPasswordRef.current?.focus();
       return;
     }
 
@@ -268,12 +395,33 @@ export default function RegisterScreen() {
         alcohol_consumption: formData.alcoholConsumption || null,
         religion: formData.religion || null,
         relationship_status: formData.relationshipStatus || null,
+        relationship_goal: formData.relationshipGoal || null,
         preferred_language: language,
       });
+      // The account already exists at this point, so a photo failure must not
+      // leave the user stuck on the register screen with a raw error.
+      let photoFailed = false;
       if (userId && profilePhotoUri) {
-        const photoUrl = await uploadAvatarUri(userId, profilePhotoUri, 'avatar.jpg', profilePhotoBase64);
-        await supabase.from('profiles').update({ profile_picture: photoUrl }).eq('id', userId);
-        await supabase.from('photos').insert({ user_id: userId, photo_url: photoUrl });
+        try {
+          const photoUrl = await uploadAvatarUri(userId, profilePhotoUri, 'avatar.jpg');
+          const { error: profileErr } = await supabase
+            .from('profiles')
+            .update({ profile_picture: photoUrl })
+            .eq('id', userId);
+          if (profileErr) throw profileErr;
+          await supabase.from('photos').insert({ user_id: userId, photo_url: photoUrl });
+        } catch (photoError) {
+          console.error('Profile photo upload failed:', photoError);
+          photoFailed = true;
+        }
+      }
+      if (photoFailed) {
+        Alert.alert(
+          language === 'tr' ? 'Fotoğraf yüklenemedi' : 'Photo upload failed',
+          language === 'tr'
+            ? 'Hesabınız oluşturuldu ancak profil fotoğrafınız yüklenemedi. Profil sayfasından tekrar ekleyebilirsiniz.'
+            : 'Your account was created but the profile photo could not be uploaded. You can add it again from your profile.'
+        );
       }
       setSuccess(language === 'tr' ? 'Hesabınız oluşturuldu! Yönlendiriliyorsunuz...' : 'Account created! Redirecting...');
       setTimeout(() => {
@@ -300,6 +448,7 @@ export default function RegisterScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
           <TouchableOpacity
@@ -343,12 +492,10 @@ export default function RegisterScreen() {
                   allowsEditing: true,
                   aspect: [1, 1],
                   quality: 0.8,
-                  base64: true,
                 });
                 const asset = result.canceled ? null : result.assets?.[0];
                 if (asset?.uri) {
                   setProfilePhotoUri(asset.uri);
-                  setProfilePhotoBase64(asset.base64 ?? null);
                 }
               }}>
               {profilePhotoUri ? (
@@ -839,7 +986,10 @@ export default function RegisterScreen() {
               <User size={20} color="#4A90E2" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
-                onPress={() => setShowRelationshipPicker(!showRelationshipPicker)}>
+                onPress={() => {
+                  setShowRelationshipGoalPicker(false);
+                  setShowRelationshipPicker(!showRelationshipPicker);
+                }}>
                 <Text
                   style={[
                     styles.pickerButtonText,
@@ -869,6 +1019,51 @@ export default function RegisterScreen() {
                         style={[
                           styles.pickerOptionText,
                           formData.relationshipStatus === option.value && styles.pickerOptionTextSelected,
+                        ]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            <View style={styles.inputContainer}>
+              <User size={20} color="#4A90E2" style={styles.inputIcon} />
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => {
+                  setShowRelationshipPicker(false);
+                  setShowRelationshipGoalPicker(!showRelationshipGoalPicker);
+                }}>
+                <Text
+                  style={[
+                    styles.pickerButtonText,
+                    !formData.relationshipGoal && styles.pickerPlaceholder,
+                  ]}>
+                  {formData.relationshipGoal
+                    ? relationshipGoalOptions.find((opt) => opt.value === formData.relationshipGoal)?.label
+                    : (language === 'tr' ? 'İlişki Arayışı Seçin' : 'Select Relationship Goal')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {showRelationshipGoalPicker && (
+              <View style={styles.pickerContainer}>
+                <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
+                  {relationshipGoalOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.pickerOption,
+                        formData.relationshipGoal === option.value && styles.pickerOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setFormData({ ...formData, relationshipGoal: option.value });
+                      }}>
+                      <Text
+                        style={[
+                          styles.pickerOptionText,
+                          formData.relationshipGoal === option.value && styles.pickerOptionTextSelected,
                         ]}>
                         {option.label}
                       </Text>

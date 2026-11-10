@@ -330,7 +330,11 @@ export default function ChatListScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase.from('chat_sessions').delete().eq('id', conversation.id);
+              // RLS doesn't allow deleting chat_sessions; instead, end the session (hides it from the list).
+              const { error } = await supabase
+                .from('chat_sessions')
+                .update({ status: 'ended', ended_at: new Date().toISOString() })
+                .eq('id', conversation.id);
               if (error) throw error;
               setConversations((prev) => prev.filter((c) => c.id !== conversation.id));
             } catch (e: any) {

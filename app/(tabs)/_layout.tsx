@@ -14,6 +14,32 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerPushToken, setNotificationHandler } from '@/lib/pushNotifications';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+
+/** Tab icon that pops up slightly when its tab becomes active. */
+function TabIcon({
+  Icon,
+  size,
+  color,
+  focused,
+}: {
+  Icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+  size: number;
+  color: string;
+  focused: boolean;
+}) {
+  const scale = useSharedValue(focused ? 1.15 : 1);
+  useEffect(() => {
+    scale.value = withSpring(focused ? 1.15 : 1, { damping: 10, stiffness: 220 });
+  }, [focused, scale]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View style={style}>
+      <Icon size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
+    </Animated.View>
+  );
+}
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -86,27 +112,29 @@ export default function TabLayout() {
           paddingTop: 8,
         },
         tabBarShowLabel: false,
+        animation: 'shift',
+      }}
+      screenListeners={{
+        tabPress: () => {
+          Haptics.selectionAsync().catch(() => {});
+        },
       }}>
       <Tabs.Screen
         name="explore"
         options={{
-          tabBarIcon: ({ size, color }) => (
-            <Search size={size} color={color} />
-          ),
+          tabBarIcon: ({ size, color, focused }) => <TabIcon Icon={Search} size={size} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ size, color }) => (
-            <MessageCircle size={size} color={color} />
-          ),
+          tabBarIcon: ({ size, color, focused }) => <TabIcon Icon={MessageCircle} size={size} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="likes"
         options={{
-          tabBarIcon: ({ size, color }) => <Heart size={size} color={color} />,
+          tabBarIcon: ({ size, color, focused }) => <TabIcon Icon={Heart} size={size} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -118,7 +146,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ size, color }) => <User size={size} color={color} />,
+          tabBarIcon: ({ size, color, focused }) => <TabIcon Icon={User} size={size} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen

@@ -783,15 +783,6 @@ export default function LikesScreen() {
           )}
         </TouchableOpacity>
 
-        {showChatCta ? (
-          <TouchableOpacity
-            style={styles.chatFab}
-            onPress={() => handleStartChat(item.id)}
-            activeOpacity={0.9}
-          >
-            <MessageCircle size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        ) : null}
       </View>
     );
   };
@@ -939,7 +930,15 @@ export default function LikesScreen() {
 
       <MatchCelebrationModal
         visible={!!matchCelebration}
-        matchedUser={matchCelebration?.matchedUser ?? null}
+        matchedUser={
+          matchCelebration
+            ? {
+                id: matchCelebration.matchedUser.id,
+                full_name: matchCelebration.matchedUser.full_name,
+                profile_picture: matchCelebration.matchedUser.profile_picture ?? null,
+              }
+            : null
+        }
         sessionId={matchCelebration?.sessionId}
         onClose={() => setMatchCelebration(null)}
       />
@@ -1092,10 +1091,10 @@ const styles = StyleSheet.create({
   },
   chatFab: {
     position: 'absolute',
-    right: 10,
-    bottom: 10,
-    width: 38,
-    height: 38,
+    right: 70,
+    bottom: 3,
+    width: 25,
+    height: 25,
     borderRadius: 19,
     backgroundColor: '#4A90E2',
     alignItems: 'center',

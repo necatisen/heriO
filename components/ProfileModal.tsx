@@ -40,6 +40,7 @@ import {
   getAlcoholLabel,
   getBodyTypeLabel,
   getRelationshipStatusLabel,
+  getRelationshipGoalLabel,
   getReligionLabel,
   getGenderLabel,
 } from '@/lib/profileTranslations';
@@ -82,6 +83,7 @@ type ProfileData = {
   smoking_habit: string | null;
   children_status: string | null;
   relationship_status: string | null;
+  relationship_goal: string | null;
   profession: string | null;
   education: string | null;
   is_online?: boolean;
@@ -365,10 +367,7 @@ export default function ProfileModal({
             <X size={26} color="#FFFFFF" />
           </TouchableOpacity>
 
-        <ScrollView
-          style={styles.scrollContent}
-          contentContainerStyle={{ paddingBottom: Math.max(24, insets.bottom + 24) }}
-        >
+          <ScrollView style={styles.scrollContent}>
           <View style={styles.profileSection}>
             {photos.length > 0 ? (
               <>
@@ -551,6 +550,15 @@ export default function ProfileModal({
                 </View>
               ) : null}
 
+              {profile.relationship_goal ? (
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Heart size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>
+                    {getRelationshipGoalLabel(profile.relationship_goal, language)}
+                  </Text>
+                </View>
+              ) : null}
+
               {profile.languages?.length ? (
                 <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
                   <MapPin size={16} color={theme.textSecondary} />
@@ -573,6 +581,16 @@ export default function ProfileModal({
                   </Text>
                 </TouchableOpacity>
 
+                {isPremium && (
+                  <TouchableOpacity
+                    style={[styles.reportBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
+                    onPress={handleStartChat}>
+                    <Text style={[styles.reportBtnText, { color: '#FFFFFF' }]}>
+                      {language === 'tr' ? 'Sohbet et' : 'Chat'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
                   style={[styles.blockBtn, { backgroundColor: theme.error, borderColor: theme.error }]}
                   onPress={handleBlock}>
@@ -590,12 +608,6 @@ export default function ProfileModal({
             {onLike && (
               <TouchableOpacity style={[styles.actionButton, styles.likeButton]} onPress={onLike}>
                 <Text style={styles.buttonText}>{language === 'tr' ? 'Beğen' : 'Like'}</Text>
-              </TouchableOpacity>
-            )}
-            {isPremium && (
-              <TouchableOpacity style={styles.chatButton} onPress={handleStartChat}>
-                <MessageCircle size={24} color="#FFFFFF" />
-                <Text style={styles.buttonText}>{language === 'tr' ? 'Sohbet Et' : 'Chat'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -895,7 +907,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 8,
   },
   reportBtn: {
     flex: 1,

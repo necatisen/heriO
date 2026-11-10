@@ -33,6 +33,7 @@ import {
   getReligionLabel,
   getAlcoholLabel,
   getRelationshipStatusLabel,
+  getRelationshipGoalLabel,
 } from '@/lib/profileTranslations';
 import { countries } from '@/lib/constants';
 import HeartLoader from '@/components/HeartLoader';
@@ -186,13 +187,11 @@ export default function ProfileScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
-        base64: true,
       });
 
       const asset = result.canceled ? null : result.assets?.[0];
       if (!asset?.uri) return;
-      const base64 = typeof asset.base64 === 'string' && asset.base64.length > 0 ? asset.base64 : undefined;
-      await uploadPhoto(base64 ? undefined : asset.uri, base64);
+      await uploadPhoto(asset.uri);
     } catch (error: any) {
       const message = language === 'tr'
         ? 'Resim seçilirken hata oluştu'
@@ -206,14 +205,12 @@ export default function ProfileScreen() {
     }
   };
 
-  const uploadPhoto = async (uri?: string, base64?: string) => {
+  const uploadPhoto = async (uri: string) => {
     if (!user?.id) return;
-    const source = base64 ?? uri;
-    if (!source) return;
     try {
       setUploading(true);
 
-      const publicUrl = await uploadGalleryPhoto(user.id, source, photos.length, !!base64);
+      const publicUrl = await uploadGalleryPhoto(user.id, uri, photos.length);
 
       const { error } = await supabase
         .from('photos')
@@ -544,7 +541,31 @@ export default function ProfileScreen() {
                 <View style={styles.nameRow}>
                   <Text style={styles.userName}>{displayProfile.full_name}</Text>
                   {displayProfile.verification_status === 'verified' ? (
-                    <VerifiedBadge size={20} verified />
+                    <VerifiedBadge
+                      size={20}
+                      verified
+                      onPress={() =>
+                        Alert.alert(
+                          language === 'tr' ? 'Hesabınız doğrulandı' : 'Account verified',
+                          language === 'tr'
+                            ? 'Mavi rozetiniz profilinizde ve keşfet kartınızda görünüyor.'
+                            : 'Your blue badge is shown on your profile and explore card.'
+                        )
+                      }
+                    />
+                  ) : displayProfile.verification_status === 'pending' ? (
+                    <TouchableOpacity
+                      style={styles.pendingBadge}
+                      onPress={() =>
+                        Alert.alert(
+                          language === 'tr' ? 'Doğrulama inceleniyor' : 'Verification in review',
+                          language === 'tr'
+                            ? 'Yüz doğrulamanız alındı ve inceleniyor. Onaylandığında mavi rozetiniz otomatik olarak eklenecek; tekrar doğrulama yapmanıza gerek yok.'
+                            : 'Your face verification was received and is being reviewed. The blue badge will be added automatically once approved.'
+                        )
+                      }>
+                      <Text style={styles.pendingBadgeText}>{language === 'tr' ? 'İnceleniyor' : 'In review'}</Text>
+                    </TouchableOpacity>
                   ) : (
                     <VerifiedBadge
                       size={20}
@@ -919,6 +940,17 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             )}
+
+            {displayProfile.relationship_goal && (
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                  {language === 'tr' ? 'İlişki Arayışı:' : 'Relationship Goal:'}
+                </Text>
+                <Text style={[styles.infoValue, { color: theme.text }]}>
+                  {getRelationshipGoalLabel(displayProfile.relationship_goal, language)}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -943,6 +975,7 @@ export default function ProfileScreen() {
           alcohol_consumption: displayProfile.alcohol_consumption ?? null,
           religion: displayProfile.religion ?? null,
           relationship_status: displayProfile.relationship_status ?? null,
+          relationship_goal: displayProfile.relationship_goal ?? null,
         }}
         userId={user?.id || ''}
         onUpdate={refreshProfile}
@@ -1064,6 +1097,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 4,
+  },
+  pendingBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: 'rgba(245,158,11,0.9)',
+  },
+  pendingBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   onlineIndicator: {
     width: 12,

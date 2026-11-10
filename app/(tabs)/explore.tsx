@@ -20,7 +20,9 @@ import { getEffectiveSubscription } from '@/lib/subscription';
 import FilterModal, { FilterOptions } from '@/components/FilterModal';
 import ProfileModal from '@/components/ProfileModal';
 import MatchCelebrationModal from '@/components/MatchCelebrationModal';
-import SwipeableExploreCard from '@/components/SwipeableExploreCard';
+import SwipeDeck, { type SwipeDeckHandle } from '@/components/SwipeDeck';
+import BouncyButton from '@/components/BouncyButton';
+import { LinearGradient } from 'expo-linear-gradient';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { getProfessionLabel, getGenderLabel } from '@/lib/profileTranslations';
 import HeartLoader from '@/components/HeartLoader';
@@ -47,6 +49,7 @@ type UserProfile = {
   smoking_habit: string | null;
   children_status: string | null;
   relationship_status: string | null;
+  relationship_goal: string | null;
   is_verified: boolean;
   face_verified?: boolean;
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
@@ -88,6 +91,7 @@ export default function ExploreScreen() {
     smokingHabit: [],
     childrenStatus: [],
     relationshipStatus: [],
+    relationshipGoals: [],
     verifiedOnly: false,
     onlineOnly: false,
     countries: [],
@@ -95,6 +99,7 @@ export default function ExploreScreen() {
   });
 
   const fetchSeq = useRef(0);
+  const deckRef = useRef<SwipeDeckHandle>(null);
 
   const fetchPremiumStatus = useCallback(async () => {
     const sub = await getEffectiveSubscription(user?.id);
@@ -246,6 +251,7 @@ export default function ExploreScreen() {
             'smoking_habit',
             'children_status',
             'relationship_status',
+            'relationship_goal',
             'verification_status',
             'is_verified',
             'face_verified',
@@ -268,6 +274,7 @@ export default function ExploreScreen() {
         if (filters.smokingHabit.length > 0) baseQuery = baseQuery.in('smoking_habit', filters.smokingHabit);
         if (filters.childrenStatus.length > 0) baseQuery = baseQuery.in('children_status', filters.childrenStatus);
         if (filters.relationshipStatus.length > 0) baseQuery = baseQuery.in('relationship_status', filters.relationshipStatus);
+        if (filters.relationshipGoals.length > 0) baseQuery = baseQuery.in('relationship_goal', filters.relationshipGoals);
       }
 
       const blocksPromise = user?.id
@@ -591,6 +598,59 @@ export default function ExploreScreen() {
   };
 
   const currentUser = users[currentIndex];
+  const nextUser = users[currentIndex + 1];
+
+  const renderCard = (u: UserProfile) => (
+    <View style={styles.card}>
+      {u.profile_picture ? (
+        <Image source={{ uri: u.profile_picture }} style={styles.cardImage} />
+      ) : (
+        <View style={[styles.cardImage, styles.cardImagePlaceholder, { backgroundColor: theme.primary }]}>
+          <Text style={styles.profileImagePlaceholderText}>{u.full_name?.charAt(0) || '?'}</Text>
+        </View>
+      )}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.88)']}
+        locations={[0.45, 0.65, 1]}
+        style={styles.cardGradient}
+        pointerEvents="none"
+      />
+      <View style={styles.cardInfo} pointerEvents="none">
+        <View style={styles.userNameRow}>
+          <Text style={styles.userName} numberOfLines={1}>
+            {u.full_name}
+            <Text style={styles.userAge}>  {calculateAge(u.birth_date)}</Text>
+          </Text>
+          {u.verification_status === 'verified' && <VerifiedBadge size={22} verified />}
+        </View>
+        {isUserOnlineNow(u.is_online, u.last_seen) && (
+          <View style={styles.onlineRow}>
+            <View style={styles.onlineIndicator} />
+            <Text style={styles.onlineText}>{language === 'tr' ? 'Şu an çevrimiçi' : 'Online now'}</Text>
+          </View>
+        )}
+        {u.city ? (
+          <View style={styles.locationRow}>
+            <MapPin size={15} color="rgba(255,255,255,0.85)" />
+            <Text style={styles.location}>
+              {u.city}
+              {u.country ? `, ${u.country.replace(/\b\w/g, (c) => c.toUpperCase())}` : ''}
+            </Text>
+          </View>
+        ) : null}
+        <View style={styles.chipsRow}>
+          {u.profession ? <Text style={styles.chip}>{getProfessionLabel(u.profession, language)}</Text> : null}
+          {u.height ? <Text style={styles.chip}>{u.height} cm</Text> : null}
+          <Text style={styles.chip}>{getGenderLabel(u.gender, language)}</Text>
+        </View>
+        {u.bio ? (
+          <Text style={styles.bio} numberOfLines={2}>
+            {u.bio}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
@@ -612,89 +672,35 @@ export default function ExploreScreen() {
         </View>
       ) : currentUser ? (
         <View style={styles.cardContainer}>
-          <SwipeableExploreCard
-            onSwipeLeft={handlePass}
-            onSwipeRight={() => handleLike()}>
-            <TouchableOpacity
-              style={[styles.card, { backgroundColor: theme.cardBackground }]}
-              onPress={() => setProfileModalVisible(true)}
-              activeOpacity={0.9}>
-              {currentUser.profile_picture ? (
-              <Image
-                source={{ uri: currentUser.profile_picture }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={[styles.profileImagePlaceholder, { backgroundColor: theme.primary }]}>
-                <Text style={styles.profileImagePlaceholderText}>
-                  {currentUser.full_name?.charAt(0) || '?'}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.cardInfo}>
-              <View style={styles.userNameRow}>
-                <Text style={[styles.userName, { color: theme.text }]}>
-                  {currentUser.full_name}, {calculateAge(currentUser.birth_date)}
-                </Text>
-                {currentUser.verification_status === 'verified' && (
-                  <VerifiedBadge size={18} verified />
-                )}
-                {isUserOnlineNow(currentUser.is_online, currentUser.last_seen) && <View style={styles.onlineIndicator} />}
-              </View>
-              <Text style={[styles.genderText, { color: theme.textSecondary }]}>
-                {getGenderLabel(currentUser.gender, language)}
-              </Text>
-              {currentUser.city && (
-                <View style={styles.locationRow}>
-                  <MapPin size={16} color={theme.textSecondary} />
-                  <Text style={[styles.location, { color: theme.textSecondary }]}>
-                    {currentUser.city}, {currentUser.country ? currentUser.country.replace(/\b\w/g, (c) => c.toUpperCase()) : ''}
-                  </Text>
-                </View>
-              )}
-              {currentUser.bio && (
-                <Text style={[styles.bio, { color: theme.textSecondary }]} numberOfLines={3}>
-                  {currentUser.bio}
-                </Text>
-              )}
-              <View style={styles.detailsContainer}>
-                {currentUser.height && (
-                  <Text style={[styles.detailText, { color: theme.textSecondary }]}>
-                    {language === 'tr' ? 'Boy' : 'Height'}: {currentUser.height} cm
-                  </Text>
-                )}
-                {currentUser.profession && (
-                  <Text style={[styles.detailText, { color: theme.textSecondary }]}>
-                    {language === 'tr' ? 'Meslek' : 'Profession'}: {getProfessionLabel(currentUser.profession, language)}
-                  </Text>
-                )}
-                <Text style={[styles.detailText, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Cinsiyet' : 'Gender'}: {getGenderLabel(currentUser.gender, language)}
-                </Text>
-              </View>
-            </View>
-            </TouchableOpacity>
-          </SwipeableExploreCard>
+          <SwipeDeck
+            ref={deckRef}
+            cardKey={currentUser.id}
+            top={renderCard(currentUser)}
+            next={nextUser ? renderCard(nextUser) : undefined}
+            onSwiped={(dir) => (dir === 'right' ? handleLike() : handlePass())}
+            onTap={() => setProfileModalVisible(true)}
+            likeLabel={language === 'tr' ? 'BEĞEN' : 'LIKE'}
+            nopeLabel={language === 'tr' ? 'GEÇ' : 'NOPE'}
+          />
 
           <View style={styles.actions}>
-            <TouchableOpacity
+            <BouncyButton
               style={[styles.actionButton, styles.passButton]}
-              onPress={handlePass}>
-              <X size={32} color="#FF6B6B" />
-            </TouchableOpacity>
+              onPress={() => deckRef.current?.swipe('left')}>
+              <X size={32} color="#EF4444" strokeWidth={3} />
+            </BouncyButton>
             {isPremium && (
-              <TouchableOpacity
+              <BouncyButton
                 style={[styles.actionButton, styles.messageButton]}
                 onPress={handleMessageFromExplore}>
-                <MessageCircle size={28} color="#FFFFFF" />
-              </TouchableOpacity>
+                <MessageCircle size={26} color="#FFFFFF" />
+              </BouncyButton>
             )}
-            <TouchableOpacity
+            <BouncyButton
               style={[styles.actionButton, styles.likeButton]}
-              onPress={handleLike}>
-              <Heart size={32} color="#4CAF50" />
-            </TouchableOpacity>
+              onPress={() => deckRef.current?.swipe('right')}>
+              <Heart size={32} color="#22C55E" fill="#22C55E" />
+            </BouncyButton>
           </View>
         </View>
       ) : (
@@ -777,103 +783,132 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    backgroundColor: '#1F2937',
   },
-  profileImage: {
+  cardImage: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
-    height: '60%',
+    height: '100%',
     resizeMode: 'cover',
   },
-  profileImagePlaceholder: {
-    width: '100%',
-    height: '60%',
+  cardImagePlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   profileImagePlaceholderText: {
-    fontSize: 64,
-    fontWeight: '700',
+    fontSize: 96,
+    fontWeight: '800',
     color: '#FFFFFF',
   },
+  cardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
   cardInfo: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     padding: 20,
+    paddingBottom: 24,
   },
   userNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   userName: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    flexShrink: 1,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
+  userAge: {
+    fontSize: 26,
+    fontWeight: '400',
+    color: '#FFFFFF',
+  },
+  onlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
   },
   onlineIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4ECB71',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#22C55E',
   },
-  genderText: {
+  onlineText: {
+    color: '#FFFFFF',
     fontSize: 14,
-    marginBottom: 8,
+    fontWeight: '600',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   location: {
-    fontSize: 14,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  chip: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   bio: {
     fontSize: 14,
-    marginBottom: 12,
     lineHeight: 20,
-  },
-  detailsContainer: {
-    gap: 4,
-  },
-  detailText: {
-    fontSize: 14,
+    color: 'rgba(255,255,255,0.88)',
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 40,
-    paddingVertical: 20,
+    alignItems: 'center',
+    gap: 28,
+    paddingTop: 18,
+    paddingBottom: 6,
   },
   actionButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  passButton: {
-    borderWidth: 2,
-    borderColor: '#FF6B6B',
-  },
-  likeButton: {
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-  },
+  passButton: {},
+  likeButton: {},
   messageButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#1D9BF0',
-    borderWidth: 0,
   },
   emptyContainer: {
     flex: 1,

@@ -1,112 +1,91 @@
-import * as FileSystemLegacy from 'expo-file-system/legacy';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
 
 const BUCKET = 'avatars';
 
+// Phone photos are often 5-15 MB; the bucket limit is 5 MB.
+// Every upload is resized to at most MAX_SIDE px and re-encoded as JPEG.
+const MAX_SIDE = 1080;
+const JPEG_QUALITY = 0.7;
+const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024;
+
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const binary = atob(base64);
+  const clean = base64.includes(',') ? base64.slice(base64.indexOf(',') + 1) : base64;
+  const binary = atob(clean);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes.buffer;
 }
 
-/** URI veya base64 ile avatar yükler; base64 varsa dosya okumaya gerek yok. */
-async function uriOrBase64ToArrayBuffer(
-  uri: string,
-  base64?: string | null
-): Promise<{ buffer: ArrayBuffer; mime: string }> {
-  if (base64 && base64.length > 0) {
-    return { buffer: base64ToArrayBuffer(base64), mime: 'image/jpeg' };
-  }
-  if (uri.startsWith('file://')) {
-    const base64Data = await FileSystemLegacy.readAsStringAsync(uri, {
-      encoding: FileSystemLegacy.EncodingType.Base64,
+/** Resizes and compresses an image (file://, content://, blob: or data: URI) into a JPEG buffer. */
+export async function compressImage(uri: string, maxSide = MAX_SIDE): Promise<ArrayBuffer> {
+  let quality = JPEG_QUALITY;
+  let side = maxSide;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await manipulateAsync(uri, [{ resize: { width: side } }], {
+      compress: quality,
+      format: SaveFormat.JPEG,
+      base64: true,
     });
-    return { buffer: base64ToArrayBuffer(base64Data), mime: 'image/jpeg' };
+    if (!result.base64) throw new Error('Resim işlenemedi. Lütfen başka bir fotoğraf seçin.');
+    const buffer = base64ToArrayBuffer(result.base64);
+    if (buffer.byteLength <= MAX_UPLOAD_BYTES) return buffer;
+    quality -= 0.2;
+    side = Math.round(side * 0.75);
   }
-  const response = await fetch(uri, { method: 'GET' });
-  if (typeof response.arrayBuffer === 'function') {
-    const buffer = await response.arrayBuffer();
-    return { buffer, mime: response.headers.get('content-type') || 'image/jpeg' };
-  }
-  throw new Error('Resim okunamadı. Lütfen galeriden tekrar seçin.');
+  throw new Error('Fotoğraf çok büyük. Lütfen başka bir fotoğraf seçin.');
 }
 
-function base64ToBufferAndMime(base64: string): { buffer: ArrayBuffer; mime: string } {
-  return { buffer: base64ToArrayBuffer(base64), mime: 'image/jpeg' };
+async function uploadToBucket(path: string, localUri: string, upsert: boolean): Promise<string> {
+  const buffer = await compressImage(localUri);
+  const { data, error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
+    contentType: 'image/jpeg',
+    upsert,
+  });
+  if (error) throw error;
+  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
+  // Cache-buster so a replaced avatar is not served stale.
+  return upsert ? `${urlData.publicUrl}?v=${Date.now()}` : urlData.publicUrl;
 }
 
+/** Uploads the profile avatar (overwrites the previous one). */
 export async function uploadAvatarUri(
   userId: string,
   localUri: string,
-  filename: string = 'avatar.jpg',
-  base64?: string | null
+  filename: string = 'avatar.jpg'
 ): Promise<string> {
-  const path = `${userId}/${filename}`;
-  const { buffer, mime } = await uriOrBase64ToArrayBuffer(localUri, base64);
-
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, buffer, {
-      contentType: mime,
-      upsert: true,
-    });
-
-  if (error) throw error;
-
-  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
-  return urlData.publicUrl;
+  return uploadToBucket(`${userId}/${filename}`, localUri, true);
 }
 
-/**
- * Galeri fotoğrafı için benzersiz dosya adı (avatarlarla karışmasın).
- */
+/** Gallery photos get a unique name so they never overwrite the avatar. */
 export function galleryPhotoPath(userId: string, index: number): string {
   return `${userId}/gallery_${Date.now()}_${index}.jpg`;
 }
 
 export async function uploadGalleryPhoto(
   userId: string,
-  localUriOrBase64: string,
-  index: number,
-  isBase64 = false
+  localUri: string,
+  index: number
 ): Promise<string> {
-  const path = galleryPhotoPath(userId, index);
-  const { buffer, mime } = isBase64
-    ? base64ToBufferAndMime(localUriOrBase64)
-    : await uriOrBase64ToArrayBuffer(localUriOrBase64, null);
-
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, buffer, {
-      contentType: mime,
-      upsert: false,
-    });
-
-  if (error) throw error;
-
-  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
-  return urlData.publicUrl;
+  return uploadToBucket(galleryPhotoPath(userId, index), localUri, false);
 }
 
-/** Sohbet medyası: profil ile aynı mantık – avatars bucket, public URL, hızlı yükleme. */
+/** Chat images: same bucket and public URL as profile photos. */
 export async function uploadChatImage(
   sessionId: string,
   userId: string,
-  localUriOrBase64: string,
-  isBase64 = false
+  localUri: string
 ): Promise<string> {
-  const filename = `chat_${sessionId}_${Date.now()}.jpg`;
-  return uploadAvatarUri(userId, localUriOrBase64, filename, isBase64 ? localUriOrBase64 : undefined);
+  return uploadToBucket(`${userId}/chat_${sessionId}_${Date.now()}.jpg`, localUri, false);
 }
 
-/** Public URL'den Storage path çıkarır (…/object/public/bucket/path). */
+/** Extracts the storage path from a public URL (…/object/public/bucket/path). */
 function getStoragePathFromPublicUrl(publicUrl: string): string | null {
   const match = publicUrl.match(/\/object\/public\/[^/]+\/(.+?)(?:\?|$)/);
   return match ? match[1] : null;
 }
 
-/** Fotoğraf silindiğinde Storage'dan da kaldırır. */
+/** Removes a photo from storage when it is deleted. */
 export async function deletePhotoFromStorage(publicUrl: string): Promise<void> {
   const path = getStoragePathFromPublicUrl(publicUrl);
   if (!path) return;

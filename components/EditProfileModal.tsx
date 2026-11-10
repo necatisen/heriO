@@ -35,6 +35,7 @@ type Profile = {
   alcohol_consumption?: string | null;
   religion?: string | null;
   relationship_status?: string | null;
+  relationship_goal?: string | null;
 };
 
 type EditProfileModalProps = {
@@ -72,6 +73,7 @@ export default function EditProfileModal({
     alcohol_consumption: '',
     religion: '',
     relationship_status: '',
+    relationship_goal: '',
   });
   const [loading, setLoading] = useState(false);
   const [showEducationPicker, setShowEducationPicker] = useState(false);
@@ -85,6 +87,7 @@ export default function EditProfileModal({
   const [showAlcoholPicker, setShowAlcoholPicker] = useState(false);
   const [showChildrenPicker, setShowChildrenPicker] = useState(false);
   const [showRelationshipPicker, setShowRelationshipPicker] = useState(false);
+  const [showRelationshipGoalPicker, setShowRelationshipGoalPicker] = useState(false);
 
   const ageOptions = generateAgeOptions();
 
@@ -101,7 +104,51 @@ export default function EditProfileModal({
     { value: 'married', label: language === 'tr' ? 'Evli' : 'Married' },
     { value: 'divorced', label: language === 'tr' ? 'Boşanmış' : 'Divorced' },
     { value: 'widowed', label: language === 'tr' ? 'Dul' : 'Widowed' },
-    { value: 'complicated', label: language === 'tr' ? 'Karışık' : 'Complicated' },
+  ];
+
+  const relationshipGoalOptions = [
+    {
+      value: 'serious_long_term',
+      label:
+        language === 'tr'
+          ? 'Ciddi ilişki / uzun vadeli partner'
+          : 'Serious relationship / long-term partner',
+    },
+    {
+      value: 'marriage_focused',
+      label: language === 'tr' ? 'Evlilik odaklı' : 'Marriage focused',
+    },
+    {
+      value: 'slow_getting_to_know',
+      label:
+        language === 'tr'
+          ? 'Yavaş ilerleyen (önce tanışma)'
+          : 'Slow pace (get to know first)',
+    },
+    {
+      value: 'short_term_casual',
+      label: language === 'tr' ? 'Kısa süreli / casual' : 'Short-term / casual',
+    },
+    {
+      value: 'exploring',
+      label:
+        language === 'tr'
+          ? 'Belirsiz / keşif aşamasında'
+          : 'Unsure / exploring',
+    },
+    {
+      value: 'go_with_flow',
+      label:
+        language === 'tr' ? 'Akışına bırak' : 'Go with the flow',
+    },
+    {
+      value: 'friendship',
+      label: language === 'tr' ? 'Arkadaşlık' : 'Friendship',
+    },
+    {
+      value: 'relaxed',
+      label: language === 'tr' ? 'Rahat bir şeyler' : 'Something relaxed',
+    },
   ];
 
   const calculateAgeFromBirthDate = (birthDateStr: string | null | undefined): string => {
@@ -135,44 +182,56 @@ export default function EditProfileModal({
     { value: 'phd_doctorate', label: language === 'tr' ? 'PhD/Doktora' : 'PhD/Doctorate' },
   ];
 
+  const professionOptionsBase = [
+    { value: 'academic', labelTr: 'Akademisyen / Öğretmen', labelEn: 'Academic / Teacher' },
+    { value: 'artist', labelTr: 'Sanatçı', labelEn: 'Artist' },
+    { value: 'construction', labelTr: 'İnşaat çalışanı', labelEn: 'Construction Worker' },
+    { value: 'craftsman', labelTr: 'Usta / Zanaatkar', labelEn: 'Craftsman / Artisan' },
+    { value: 'customer_service', labelTr: 'Müşteri hizmetleri', labelEn: 'Customer Service' },
+    { value: 'data_analyst', labelTr: 'Veri analisti', labelEn: 'Data Analyst' },
+    { value: 'designer', labelTr: 'Tasarımcı (UI/UX, Grafik)', labelEn: 'Designer (UI/UX, Graphic)' },
+    { value: 'doctor', labelTr: 'Doktor / Sağlık çalışanı', labelEn: 'Doctor / Healthcare' },
+    { value: 'entrepreneur', labelTr: 'Girişimci', labelEn: 'Entrepreneur' },
+    { value: 'finance', labelTr: 'Finans / Bankacılık', labelEn: 'Finance / Banking' },
+    { value: 'freelancer', labelTr: 'Freelancer / Serbest çalışan', labelEn: 'Freelancer' },
+    { value: 'homemaker', labelTr: 'Ev hanımı / Ev yöneticisi', labelEn: 'Homemaker' },
+    { value: 'hr', labelTr: 'İnsan kaynakları', labelEn: 'Human Resources' },
+    { value: 'it_admin', labelTr: 'IT / Sistem yöneticisi', labelEn: 'IT / System Admin' },
+    { value: 'lawyer', labelTr: 'Avukat / Hukuk', labelEn: 'Lawyer / Legal' },
+    { value: 'manager', labelTr: 'Yönetici / Müdür', labelEn: 'Manager / Director' },
+    { value: 'musician', labelTr: 'Müzisyen', labelEn: 'Musician' },
+    { value: 'photographer', labelTr: 'Fotoğrafçı', labelEn: 'Photographer' },
+    { value: 'researcher', labelTr: 'Araştırmacı', labelEn: 'Researcher' },
+    { value: 'retired', labelTr: 'Emekli', labelEn: 'Retired' },
+    { value: 'sales', labelTr: 'Satış / Pazarlama', labelEn: 'Sales / Marketing' },
+    { value: 'self_employed', labelTr: 'Serbest meslek', labelEn: 'Self-employed' },
+    { value: 'software_dev', labelTr: 'Yazılım geliştirici', labelEn: 'Software Developer' },
+    { value: 'student', labelTr: 'Öğrenci', labelEn: 'Student' },
+    { value: 'technician', labelTr: 'Teknisyen', labelEn: 'Technician' },
+    { value: 'tourism', labelTr: 'Turizm / Otelcilik', labelEn: 'Tourism / Hospitality' },
+    { value: 'tradesman', labelTr: 'Esnaf', labelEn: 'Tradesman' },
+    { value: 'other', labelTr: 'Diğer', labelEn: 'Other' },
+  ] as const;
+
   const professionOptions = [
-    { value: 'student', label: language === 'tr' ? 'Öğrenci' : 'Student' },
-    { value: 'academic', label: language === 'tr' ? 'Akademisyen / Öğretmen' : 'Academic / Teacher' },
-    { value: 'researcher', label: language === 'tr' ? 'Araştırmacı' : 'Researcher' },
-    { value: 'engineer', label: language === 'tr' ? 'Mühendis' : 'Engineer' },
-    { value: 'doctor', label: language === 'tr' ? 'Doktor / Sağlık çalışanı' : 'Doctor / Healthcare' },
-    { value: 'lawyer', label: language === 'tr' ? 'Avukat / Hukuk' : 'Lawyer / Legal' },
-    { value: 'finance', label: language === 'tr' ? 'Finans / Bankacılık' : 'Finance / Banking' },
-    { value: 'manager', label: language === 'tr' ? 'Yönetici / Müdür' : 'Manager / Director' },
-    { value: 'hr', label: language === 'tr' ? 'İnsan kaynakları' : 'Human Resources' },
-    { value: 'software_dev', label: language === 'tr' ? 'Yazılım geliştirici' : 'Software Developer' },
-    { value: 'it_admin', label: language === 'tr' ? 'IT / Sistem yöneticisi' : 'IT / System Admin' },
-    { value: 'data_analyst', label: language === 'tr' ? 'Veri analisti' : 'Data Analyst' },
-    { value: 'designer', label: language === 'tr' ? 'Tasarımcı (UI/UX, Grafik)' : 'Designer (UI/UX, Graphic)' },
-    { value: 'sales', label: language === 'tr' ? 'Satış / Pazarlama' : 'Sales / Marketing' },
-    { value: 'entrepreneur', label: language === 'tr' ? 'Girişimci' : 'Entrepreneur' },
-    { value: 'tradesman', label: language === 'tr' ? 'Esnaf' : 'Tradesman' },
-    { value: 'tourism', label: language === 'tr' ? 'Turizm / Otelcilik' : 'Tourism / Hospitality' },
-    { value: 'customer_service', label: language === 'tr' ? 'Müşteri hizmetleri' : 'Customer Service' },
-    { value: 'artist', label: language === 'tr' ? 'Sanatçı' : 'Artist' },
-    { value: 'photographer', label: language === 'tr' ? 'Fotoğrafçı' : 'Photographer' },
-    { value: 'writer', label: language === 'tr' ? 'Yazar / İçerik üreticisi' : 'Writer / Content Creator' },
-    { value: 'musician', label: language === 'tr' ? 'Müzisyen' : 'Musician' },
-    { value: 'technician', label: language === 'tr' ? 'Teknisyen' : 'Technician' },
-    { value: 'craftsman', label: language === 'tr' ? 'Usta / Zanaatkar' : 'Craftsman / Artisan' },
-    { value: 'construction', label: language === 'tr' ? 'İnşaat çalışanı' : 'Construction Worker' },
-    { value: 'freelancer', label: language === 'tr' ? 'Freelancer / Serbest çalışan' : 'Freelancer' },
-    { value: 'self_employed', label: language === 'tr' ? 'Serbest meslek' : 'Self-employed' },
+    // "Çalışmıyor" seçeneğini başa sabitle
     { value: 'not_working', label: language === 'tr' ? 'Çalışmıyor' : 'Not Working' },
-    { value: 'retired', label: language === 'tr' ? 'Emekli' : 'Retired' },
-    { value: 'homemaker', label: language === 'tr' ? 'Ev hanımı / Ev yöneticisi' : 'Homemaker' },
-    { value: 'other', label: language === 'tr' ? 'Diğer' : 'Other' },
+    // Diğerlerini ada göre alfabetik sırayla ekle
+    ...[...professionOptionsBase].sort((a, b) => {
+      const la = (language === 'tr' ? a.labelTr : a.labelEn).toLowerCase();
+      const lb = (language === 'tr' ? b.labelTr : b.labelEn).toLowerCase();
+      return la.localeCompare(lb);
+    }).map((p) => ({
+      value: p.value,
+      label: language === 'tr' ? p.labelTr : p.labelEn,
+    })),
   ];
 
   const smokingOptions = [
     { value: 'yes', label: language === 'tr' ? 'Evet' : 'Yes' },
     { value: 'no', label: language === 'tr' ? 'Hayır' : 'No' },
     { value: 'sometimes', label: language === 'tr' ? 'Bazen' : 'Sometimes' },
+    { value: 'social', label: language === 'tr' ? 'Sosyal içici' : 'Social smoker' },
     { value: 'trying_to_quit', label: language === 'tr' ? 'Bırakmaya Çalışıyor' : 'Trying to Quit' },
   ];
 
@@ -205,6 +264,7 @@ export default function EditProfileModal({
       alcohol_consumption: p.alcohol_consumption ?? '',
       religion: p.religion ?? '',
       relationship_status: p.relationship_status ?? '',
+      relationship_goal: p.relationship_goal ?? '',
     });
   }, [visible, profile]);
 
@@ -246,6 +306,7 @@ export default function EditProfileModal({
         alcohol_consumption: formData.alcohol_consumption || null,
         religion: formData.religion || null,
         relationship_status: formData.relationship_status || null,
+        relationship_goal: formData.relationship_goal || null,
       };
 
       const birthDate = calculateBirthDateFromAge(formData.age);
@@ -704,7 +765,10 @@ export default function EditProfileModal({
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
-                onPress={() => setShowRelationshipPicker(!showRelationshipPicker)}>
+                onPress={() => {
+                  setShowRelationshipGoalPicker(false);
+                  setShowRelationshipPicker(!showRelationshipPicker);
+                }}>
                 <Text style={[styles.pickerButtonText, { color: formData.relationship_status ? theme.text : theme.textSecondary }]}>
                   {formData.relationship_status
                     ? (relationshipStatusOptions.find((o) => o.value === formData.relationship_status)?.label ?? formData.relationship_status)
@@ -720,6 +784,41 @@ export default function EditProfileModal({
                         style={[styles.pickerOption, { borderBottomColor: theme.border }, formData.relationship_status === option.value && { backgroundColor: theme.primary + '22' }]}
                         onPress={() => {
                           setFormData({ ...formData, relationship_status: option.value });
+                          setShowRelationshipPicker(false);
+                        }}>
+                        <Text style={[styles.pickerOptionText, { color: theme.text }]}>{option.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: theme.text }]}>
+                {language === 'tr' ? 'İlişki Arayışı' : 'Relationship Goal'}
+              </Text>
+              <TouchableOpacity
+                style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
+                onPress={() => {
+                  setShowRelationshipPicker(false);
+                  setShowRelationshipGoalPicker(!showRelationshipGoalPicker);
+                }}>
+                <Text style={[styles.pickerButtonText, { color: formData.relationship_goal ? theme.text : theme.textSecondary }]}>
+                  {formData.relationship_goal
+                    ? (relationshipGoalOptions.find((o) => o.value === formData.relationship_goal)?.label ?? formData.relationship_goal)
+                    : (language === 'tr' ? 'İlişki Arayışı Seçin' : 'Select Relationship Goal')}
+                </Text>
+              </TouchableOpacity>
+              {showRelationshipGoalPicker && (
+                <View style={[styles.pickerContainer, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
+                  <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
+                    {relationshipGoalOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option.value}
+                        style={[styles.pickerOption, { borderBottomColor: theme.border }, formData.relationship_goal === option.value && { backgroundColor: theme.primary + '22' }]}
+                        onPress={() => {
+                          setFormData({ ...formData, relationship_goal: option.value });
                           setShowRelationshipPicker(false);
                         }}>
                         <Text style={[styles.pickerOptionText, { color: theme.text }]}>{option.label}</Text>

@@ -163,6 +163,7 @@ export const getBodyTypeLabel = (value: string, language: string) => {
     muscular: { tr: 'Kaslı', en: 'Muscular' },
     curvy: { tr: 'Dolgun', en: 'Curvy' },
     heavyset: { tr: 'İri Yapılı', en: 'Heavyset' },
+    chubby: { tr: 'Tombul', en: 'Chubby' },
   };
   const label = bodyTypeMap[normKey(value)];
   return labelByLang(label, language, String(value ?? ''));
@@ -176,6 +177,45 @@ export const getRelationshipStatusLabel = (value: string, language: string) => {
     separated: { tr: 'Ayrı', en: 'Separated' },
   };
   const label = relationshipMap[normKey(value)];
+  return labelByLang(label, language, String(value ?? ''));
+};
+
+export const getRelationshipGoalLabel = (value: string, language: string) => {
+  const goalMap: Record<string, { tr: string; en: string }> = {
+    serious_long_term: {
+      tr: 'Ciddi ilişki / uzun vadeli partner',
+      en: 'Serious relationship / long-term partner',
+    },
+    marriage_focused: {
+      tr: 'Evlilik odaklı',
+      en: 'Marriage focused',
+    },
+    slow_getting_to_know: {
+      tr: 'Yavaş ilerleyen (önce tanışma)',
+      en: 'Slow pace (get to know first)',
+    },
+    short_term_casual: {
+      tr: 'Kısa süreli / casual',
+      en: 'Short-term / casual',
+    },
+    exploring: {
+      tr: 'Belirsiz / keşif aşamasında',
+      en: 'Unsure / exploring',
+    },
+    go_with_flow: {
+      tr: 'Akışına bırak',
+      en: 'Go with the flow',
+    },
+    friendship: {
+      tr: 'Arkadaşlık',
+      en: 'Friendship',
+    },
+    relaxed: {
+      tr: 'Rahat bir şeyler',
+      en: 'Something relaxed',
+    },
+  };
+  const label = goalMap[normKey(value)];
   return labelByLang(label, language, String(value ?? ''));
 };
 

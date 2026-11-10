@@ -32,6 +32,7 @@ export type FilterOptions = {
   smokingHabit: string[];
   childrenStatus: string[];
   relationshipStatus: string[];
+  relationshipGoals: string[];
   verifiedOnly: boolean;
   onlineOnly: boolean;
   countries: string[];
@@ -83,6 +84,7 @@ export default function FilterModal({
     smokingHabit: language === 'tr' ? 'Sigara Alışkanlığı' : 'Smoking Habit',
     children: language === 'tr' ? 'Çocuk' : 'Children',
     relationshipStatus: language === 'tr' ? 'İlişki Durumu' : 'Relationship Status',
+    relationshipGoal: language === 'tr' ? 'İlişki Arayışı' : 'Relationship Goal',
     verifiedProfiles: language === 'tr' ? 'Yalnızca Doğrulanmış Profiller' : 'Verified Profiles Only',
     onlineUsers: language === 'tr' ? 'Yalnızca Çevrimiçi Kullanıcılar' : 'Online Users Only',
     country: language === 'tr' ? 'Ülke' : 'Country',
@@ -148,6 +150,51 @@ export default function FilterModal({
     { value: 'separated', label: language === 'tr' ? 'Ayrı' : 'Separated' },
   ];
 
+  const relationshipGoalOptions = [
+    {
+      value: 'serious_long_term',
+      label:
+        language === 'tr'
+          ? 'Ciddi ilişki / uzun vadeli partner'
+          : 'Serious relationship / long-term partner',
+    },
+    {
+      value: 'marriage_focused',
+      label: language === 'tr' ? 'Evlilik odaklı' : 'Marriage focused',
+    },
+    {
+      value: 'slow_getting_to_know',
+      label:
+        language === 'tr'
+          ? 'Yavaş ilerleyen (önce tanışma)'
+          : 'Slow pace (get to know first)',
+    },
+    {
+      value: 'short_term_casual',
+      label: language === 'tr' ? 'Kısa süreli / casual' : 'Short-term / casual',
+    },
+    {
+      value: 'exploring',
+      label:
+        language === 'tr'
+          ? 'Belirsiz / keşif aşamasında'
+          : 'Unsure / exploring',
+    },
+    {
+      value: 'go_with_flow',
+      label:
+        language === 'tr' ? 'Akışına bırak' : 'Go with the flow',
+    },
+    {
+      value: 'friendship',
+      label: language === 'tr' ? 'Arkadaşlık' : 'Friendship',
+    },
+    {
+      value: 'relaxed',
+      label: language === 'tr' ? 'Rahat bir şeyler' : 'Something relaxed',
+    },
+  ];
+
   const toggleFilter = (key: keyof FilterOptions, value: string) => {
     const currentValues = filters[key] as string[];
     setFilters({
@@ -171,6 +218,7 @@ export default function FilterModal({
       smokingHabit: [],
       childrenStatus: [],
       relationshipStatus: [],
+      relationshipGoals: [],
       verifiedOnly: false,
       onlineOnly: false,
       countries: [],
@@ -210,6 +258,37 @@ export default function FilterModal({
                       styles.optionText,
                       { color: theme.text },
                       filters.relationshipStatus.includes(option.value) && {
+                        color: '#FFFFFF',
+                      },
+                    ]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              {t.relationshipGoal}
+            </Text>
+            <View style={styles.optionsGrid}>
+              {relationshipGoalOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.optionButton,
+                    { backgroundColor: theme.cardBackground },
+                    filters.relationshipGoals.includes(option.value) && {
+                      backgroundColor: theme.primary,
+                    },
+                  ]}
+                  onPress={() => toggleFilter('relationshipGoals', option.value)}>
+                  <Text
+                    style={[
+                      styles.optionText,
+                      { color: theme.text },
+                      filters.relationshipGoals.includes(option.value) && {
                         color: '#FFFFFF',
                       },
                     ]}>

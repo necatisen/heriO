@@ -28,6 +28,7 @@ type Profile = {
   body_type?: string | null;
   profession: string | null;
   relationship_status: string | null;
+  relationship_goal?: string | null;
   education: string | null;
   nationality: string | null;
   languages?: string[];
@@ -211,6 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           preferred_language: userData.preferred_language || 'tr',
           religion: userData.religion ?? '',
           relationship_status: userData.relationship_status ?? '',
+          relationship_goal: userData.relationship_goal ?? '',
         },
       },
     });

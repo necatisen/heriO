@@ -11,7 +11,13 @@ def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 react {
     entryFile = file(["node", "-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"].execute(null, rootDir).text.trim())
     reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
-    hermesCommand = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
+    // Prefer hermes-compiler's hermesc (see https://github.com/expo/expo/issues/42056) — the copy under
+    // react-native/sdks often fails to execute on Linux CI (e.g. EAS) with "problem occurred starting process".
+    try {
+        hermesCommand = new File(["node", "--print", "require.resolve('hermes-compiler/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/hermesc/%OS-BIN%/hermesc"
+    } catch (Exception e) {
+        hermesCommand = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
+    }
     codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
 
     enableBundleCompression = (findProperty('android.enableBundleCompression') ?: false).toBoolean()
@@ -88,16 +94,20 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace 'com.necatisen.nschatapp'
+    
     defaultConfig {
         applicationId 'com.necatisen.nschatapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+        // Version comes from app.json (expo.version / expo.android.versionCode).
+        // VERSION_CODE / VERSION_NAME gradle properties can still override it.
+        def _appJson = new groovy.json.JsonSlurper().parse(file("../../app.json"))
         def _vcRaw = project.findProperty('VERSION_CODE')?.toString()
         def _vcDigits = _vcRaw ? _vcRaw.replaceAll(/[^0-9]/, '') : null
-        versionCode (_vcDigits ? Integer.parseInt(_vcDigits) : 5)
+        versionCode (_vcDigits ? Integer.parseInt(_vcDigits) : (_appJson.expo.android.versionCode as Integer))
 
         def _vnRaw = project.findProperty('VERSION_NAME')?.toString()
-        versionName (_vnRaw ? _vnRaw : "1.0.4")
+        versionName (_vnRaw ? _vnRaw : _appJson.expo.version.toString())
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

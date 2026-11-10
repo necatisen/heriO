@@ -386,3 +386,8 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+# The project signs user tokens with ES256; the gateway's legacy JWT check rejects them.
+# This function validates the user itself via auth.getUser().
+[functions.verification-pipeline]
+verify_jwt = false

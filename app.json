@@ -2,14 +2,13 @@
   "expo": {
     "name": "herio",
     "slug": "nschatapp",
-    "version": "1.0.4",
+    "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/heriokalp-logo.png",
+      "image": "./assets/images/splash-heart.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -22,8 +21,8 @@
       }
     },
     "android": {
-      "package": "com.necatisen.heriO",
-      "versionCode": 5
+      "package": "com.necatisen.nschatapp",
+      "versionCode": 2026110701
     },
     "web": {
       "bundler": "metro",

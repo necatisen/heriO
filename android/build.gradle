@@ -20,5 +20,19 @@ allprojects {
   }
 }
 
+// Older native libraries (e.g. @react-native-ml-kit/face-detection) don't declare
+// an Android `namespace`, which AGP 8+ requires. Fill it in from their manifest.
+subprojects { sub ->
+  sub.plugins.withId('com.android.library') {
+    if (sub.android.namespace == null) {
+      def manifest = sub.file('src/main/AndroidManifest.xml')
+      if (manifest.exists()) {
+        def pkg = new groovy.xml.XmlSlurper().parse(manifest).@package.text()
+        if (pkg) sub.android.namespace = pkg
+      }
+    }
+  }
+}
+
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"

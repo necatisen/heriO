@@ -16,6 +16,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import * as SecureStore from 'expo-secure-store';
 import { HerioLogo } from '@/components/HerioLogo';
+import Constants from 'expo-constants';
+
+const APP_VERSION = Constants.expoConfig?.version ?? '';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -235,6 +238,10 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
           </View>
+
+          {APP_VERSION ? (
+            <Text style={styles.versionText}>v{APP_VERSION}</Text>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -456,5 +463,11 @@ const styles = StyleSheet.create({
     color: '#006600',
     fontSize: 14,
     fontWeight: '600',
+  },
+  versionText: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
   },
 });

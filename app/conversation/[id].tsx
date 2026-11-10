@@ -793,12 +793,7 @@ export default function ConversationScreen() {
             if (creditError) throw creditError;
             setCredits((c) => c - 1);
           }
-          const attachmentUrl = await uploadChatImage(
-            sessionId,
-            user!.id,
-            asset.base64 ?? asset.uri,
-            !!asset.base64
-          );
+          const attachmentUrl = await uploadChatImage(sessionId, user!.id, asset.uri);
           const messageData: any = {
             session_id: sessionId,
             sender_id: user?.id,

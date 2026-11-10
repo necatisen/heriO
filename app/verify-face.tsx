@@ -1,6 +1,12 @@
 /**
- * Banka tarzı yüz doğrulama: Buton yok, AI kamera ile sağ/sola/orta hareketi otomatik tespit eder.
- * Talimatlar sadece ekranda yazı ile verilir. Algılandığında mavi halka dolanır.
+ * Bank-style face verification (liveness check).
+ *
+ * 1. The user aligns their face inside the oval; a reference selfie is taken.
+ * 2. Random-order challenges: turn left, turn right, blink, smile.
+ *    Every challenge is measured on-device with Google ML Kit (head angle,
+ *    eye-open and smile probabilities). There is no "demo" auto-pass.
+ * 3. The selfie + one frame per challenge go to the verification-pipeline
+ *    edge function, which stores them for review / face match.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -13,124 +19,254 @@ import {
   Alert,
   Dimensions,
   StatusBar,
+  Platform,
+  Animated,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import Svg, { Circle, Defs, Mask, Rect, Ellipse } from 'react-native-svg';
-import { Camera, ArrowLeft, BadgeCheck, X } from 'lucide-react-native';
+import Svg, { Defs, Mask, Rect, Ellipse } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
+import * as Speech from 'expo-speech';
+import * as FileSystemLegacy from 'expo-file-system/legacy';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import FaceDetection, { type Face } from '@react-native-ml-kit/face-detection';
+import {
+  ArrowLeft,
+  BadgeCheck,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Smile,
+  ScanFace,
+  ShieldCheck,
+  Volume2,
+  VolumeX,
+  X,
+  RotateCcw,
+} from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { submitVerification, checkLivenessStep, type LivenessStep } from '@/lib/verification';
+import { submitVerification } from '@/lib/verification';
 
-const VERIFIED_BLUE = '#1D9BF0';
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-/** Sadece doğru pozda çekim için aralık uzatıldı; sürekli denklanşör patlamasın diye tek seferde kontrol. */
-const LIVENESS_POLL_INTERVAL_MS = 3200;
+const BLUE = '#1D9BF0';
+const GREEN = '#22C55E';
+const AMBER = '#F59E0B';
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-type Step = 'intro' | 'camera' | 'liveness_right' | 'liveness_left' | 'liveness_blink' | 'submitting' | 'done';
+const OVAL_W = SCREEN_W * 0.72;
+const OVAL_H = OVAL_W * 1.32;
+const OVAL_CX = SCREEN_W / 2;
+const OVAL_CY = SCREEN_H * 0.4;
 
-const LIVENESS_STEPS: {
-  step: Step;
-  apiStep: LivenessStep;
-  titleTr: string;
-  titleEn: string;
-  hintTr: string;
-  hintEn: string;
-}[] = [
-  {
-    step: 'liveness_right',
-    apiStep: 'right',
-    titleTr: 'Başınızı sağa çevirin',
-    titleEn: 'Turn your head to the right',
-    hintTr: 'Pozu alın; sistem doğru pozda tek çekim yapar. Algılandığında bir sonraki talimat gelir.',
-    hintEn: 'Hold the pose; the system captures once when the pose is detected. Next instruction will appear when detected.',
+// Detection thresholds (ML Kit head euler angles are in degrees).
+const ALIGN_MAX_YAW = 12;
+const ALIGN_MAX_PITCH = 15;
+const ALIGN_FRAMES_NEEDED = 2;
+const TURN_MIN_YAW = 22;
+const EYE_CLOSED = 0.3;
+const EYE_OPEN = 0.6;
+const SMILE_MIN = 0.75;
+const FACE_MIN_RATIO = 0.3; // face width / short image side
+const FACE_MAX_RATIO = 0.9;
+const CHALLENGE_TIMEOUT_MS = 12000;
+const FACE_LOST_FRAMES_LIMIT = 4;
+
+type Phase = 'intro' | 'align' | 'challenge' | 'submitting' | 'success' | 'failed';
+type ChallengeKind = 'turn_left' | 'turn_right' | 'blink' | 'smile';
+
+type Feedback =
+  | 'none'
+  | 'no_face'
+  | 'multiple_faces'
+  | 'too_far'
+  | 'too_close'
+  | 'look_straight'
+  | 'hold_still';
+
+const TEXT = {
+  tr: {
+    align: 'Yüzünüzü ovalin içine yerleştirin',
+    turn_left: 'Başınızı yavaşça sola çevirin',
+    turn_right: 'Başınızı yavaşça sağa çevirin',
+    blink: 'Gözlerinizi kapatıp açın',
+    smile: 'Kameraya gülümseyin',
+    no_face: 'Yüz algılanamadı',
+    multiple_faces: 'Kadrajda yalnızca siz olmalısınız',
+    too_far: 'Biraz yaklaşın',
+    too_close: 'Biraz uzaklaşın',
+    look_straight: 'Doğrudan kameraya bakın',
+    hold_still: 'Sabit durun…',
+    done: 'Harika!',
   },
-  {
-    step: 'liveness_left',
-    apiStep: 'left',
-    titleTr: 'Başınızı sola çevirin',
-    titleEn: 'Turn your head to the left',
-    hintTr: 'Pozu alın; doğru pozda tek çekim yapılır.',
-    hintEn: 'Hold the pose; single capture when pose is correct.',
+  en: {
+    align: 'Place your face inside the oval',
+    turn_left: 'Slowly turn your head left',
+    turn_right: 'Slowly turn your head right',
+    blink: 'Close and open your eyes',
+    smile: 'Smile at the camera',
+    no_face: 'No face detected',
+    multiple_faces: 'Only you should be in the frame',
+    too_far: 'Move a little closer',
+    too_close: 'Move a little back',
+    look_straight: 'Look straight at the camera',
+    hold_still: 'Hold still…',
+    done: 'Great!',
   },
-  {
-    step: 'liveness_blink',
-    apiStep: 'blink',
-    titleTr: 'Kameraya bakın',
-    titleEn: 'Look at the camera',
-    hintTr: 'Yüzünüzü kameraya dönün. Algılandığında 3 adım tamamlanır ve işleniyor ekranına geçilir.',
-    hintEn: 'Face the camera. When detected, all 3 steps complete and you will see the processing screen.',
-  },
-];
+};
 
-const RING_R = 140;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R;
-
-// Taslak: oval maske ve alttaki dairesel ilerleme
-const OVAL_MASK_WIDTH = SCREEN_WIDTH * 0.7;
-const OVAL_MASK_HEIGHT = OVAL_MASK_WIDTH * 1.3;
-const OVAL_MASK_X = (SCREEN_WIDTH - OVAL_MASK_WIDTH) / 2;
-const OVAL_MASK_Y = SCREEN_HEIGHT * 0.4 - OVAL_MASK_HEIGHT / 2;
-const PROGRESS_RADIUS = 40;
-const PROGRESS_STROKE = 8;
-const PROGRESS_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RADIUS;
-
-function localizeVerificationFailureMessage(raw: string, isTr: boolean): string {
-  const msg = String(raw || '').trim();
-  const lower = msg.toLowerCase();
-
-  // Supabase Edge Function common errors
-  if (
-    lower.includes('request function was not found') ||
-    (lower.includes('function') && lower.includes('was not found')) ||
-    lower.includes('/functions/v1/')
-  ) {
-    return isTr
-      ? 'Doğrulama servisi bulunamadı (Edge Function). Lütfen daha sonra tekrar deneyin.'
-      : 'Verification service was not found (Edge Function). Please try again later.';
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
+  return a;
+}
 
+function buildChallenges(): ChallengeKind[] {
+  return shuffle<ChallengeKind>(['turn_left', 'turn_right', 'blink', 'smile']);
+}
+
+function eyesOpen(face: Face): number {
+  const l = face.leftEyeOpenProbability ?? 1;
+  const r = face.rightEyeOpenProbability ?? 1;
+  return Math.min(l, r);
+}
+
+async function safeDelete(uri?: string | null) {
+  if (!uri) return;
+  try {
+    await FileSystemLegacy.deleteAsync(uri, { idempotent: true });
+  } catch {}
+}
+
+async function toBase64Jpeg(uri: string, width: number, quality: number): Promise<string> {
+  const r = await manipulateAsync(uri, [{ resize: { width } }], {
+    compress: quality,
+    format: SaveFormat.JPEG,
+    base64: true,
+  });
+  return `data:image/jpeg;base64,${r.base64}`;
+}
+
+function failureMessage(raw: string, code: string | undefined, isTr: boolean): string {
+  const lower = String(raw || '').toLowerCase();
+  if (code === 'no_profile_photo') {
+    return isTr
+      ? 'Doğrulamadan önce profilinize yüzünüzün net göründüğü bir fotoğraf ekleyin.'
+      : 'Add a clear profile photo of your face before verifying.';
+  }
+  if (code === 'face_mismatch') {
+    return isTr
+      ? 'Yüzünüz profil fotoğrafınızla eşleşmedi. Kendi fotoğrafınızı kullandığınızdan emin olun.'
+      : 'Your face did not match your profile photo.';
+  }
   if (lower.includes('not authenticated') || lower.includes('jwt') || lower.includes('unauthorized')) {
-    return isTr
-      ? 'Oturumunuz doğrulanamadı. Lütfen çıkış yapıp tekrar giriş yapın.'
-      : 'Your session could not be verified. Please sign out and sign in again.';
+    return isTr ? 'Oturumunuz doğrulanamadı. Çıkış yapıp tekrar giriş yapın.' : 'Session expired. Please sign in again.';
   }
-
-  if (lower.includes('network request failed') || lower.includes('failed to fetch') || lower.includes('fetch failed')) {
-    return isTr
-      ? 'İnternet bağlantısı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.'
-      : 'Could not connect to the internet. Check your connection and try again.';
+  if (lower.includes('network request failed') || lower.includes('failed to fetch')) {
+    return isTr ? 'İnternet bağlantısı kurulamadı.' : 'No internet connection.';
   }
-
-  // Fall back to original
-  return msg;
+  if (lower.includes('was not found') || lower.includes('/functions/v1/')) {
+    return isTr ? 'Doğrulama servisine ulaşılamadı. Daha sonra tekrar deneyin.' : 'Verification service unavailable.';
+  }
+  return raw || (isTr ? 'Doğrulama tamamlanamadı.' : 'Verification failed.');
 }
 
 export default function VerifyFaceScreen() {
   const router = useRouter();
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
+  const existingStatus = profile?.verification_status;
   const { language } = useLanguage();
-  const [step, setStep] = useState<Step>('intro');
-  const [selfieBase64, setSelfieBase64] = useState<string | null>(null);
-  const [livenessFrames, setLivenessFrames] = useState<string[]>([]);
-  const [resultMessage, setResultMessage] = useState<string>('');
-  const [verificationSuccess, setVerificationSuccess] = useState(false);
-  const [livenessStatus, setLivenessStatus] = useState<'idle' | 'no_face' | 'multiple_faces' | 'analyzing'>('idle');
-  const [livenessProgress, setLivenessProgress] = useState(0); // 0..3, adım tamamlandıkça artar (mavi halka)
-  const [livenessDetectedFeedback, setLivenessDetectedFeedback] = useState<string | null>(null); // "Sağa çevrildi algılandı" vb.
-  const [submittingSeconds, setSubmittingSeconds] = useState(0);
-  const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<CameraView>(null);
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const livenessFramesRef = useRef<string[]>([]);
-  /** API yokken (503 vb.) yine de 1→2→3 ilerleyebilmek için: yüz görünür kaç tick sayacı */
-  const demoAdvanceTicksRef = useRef(0);
-
   const isTr = language === 'tr';
+  const T = isTr ? TEXT.tr : TEXT.en;
 
-  const handleOpenCamera = async () => {
+  const [permission, requestPermission] = useCameraPermissions();
+  const [phase, setPhase] = useState<Phase>('intro');
+  const [challenges, setChallenges] = useState<ChallengeKind[]>([]);
+  const [challengeIndex, setChallengeIndex] = useState(0);
+  const [feedback, setFeedback] = useState<Feedback>('none');
+  const [faceOk, setFaceOk] = useState(false);
+  const [resultMessage, setResultMessage] = useState('');
+  const [voiceOn, setVoiceOn] = useState(true);
+  const [cameraReady, setCameraReady] = useState(false);
+
+  const cameraRef = useRef<CameraView>(null);
+  const phaseRef = useRef<Phase>('intro');
+  const challengesRef = useRef<ChallengeKind[]>([]);
+  const indexRef = useRef(0);
+  const alignCountRef = useRef(0);
+  const lostCountRef = useRef(0);
+  const eyesClosedSeenRef = useRef(false);
+  const firstTurnSignRef = useRef<number | null>(null);
+  const challengeStartRef = useRef(0);
+  const selfieUriRef = useRef<string | null>(null);
+  const frameUrisRef = useRef<string[]>([]);
+
+  // Animations
+  const pulse = useRef(new Animated.Value(0)).current;
+  const instructionAnim = useRef(new Animated.Value(1)).current;
+  const arrowAnim = useRef(new Animated.Value(0)).current;
+  const successScale = useRef(new Animated.Value(0)).current;
+
+  const setPhaseBoth = (p: Phase) => {
+    phaseRef.current = p;
+    setPhase(p);
+  };
+
+  const speak = useCallback(
+    (text: string) => {
+      if (!voiceOn) return;
+      Speech.stop();
+      Speech.speak(text, { language: isTr ? 'tr-TR' : 'en-US', rate: 1.0 });
+    },
+    [voiceOn, isTr]
+  );
+
+  const flashSuccess = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    pulse.setValue(0);
+    Animated.timing(pulse, { toValue: 1, duration: 650, easing: Easing.out(Easing.quad), useNativeDriver: false }).start();
+    instructionAnim.setValue(0);
+    Animated.spring(instructionAnim, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }).start();
+  }, [pulse, instructionAnim]);
+
+  // Looping arrow nudge for turn challenges
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(arrowAnim, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(arrowAnim, { toValue: 0, duration: 600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [arrowAnim]);
+
+  const cleanupFiles = useCallback(async () => {
+    await safeDelete(selfieUriRef.current);
+    for (const u of frameUrisRef.current) await safeDelete(u);
+    selfieUriRef.current = null;
+    frameUrisRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      phaseRef.current = 'intro';
+      Speech.stop();
+      cleanupFiles();
+    };
+  }, [cleanupFiles]);
+
+  const start = async () => {
     if (!user?.id) return;
+    if (Platform.OS === 'web') {
+      Alert.alert('', isTr ? 'Yüz doğrulama yalnızca mobil uygulamada yapılabilir.' : 'Face verification is only available in the mobile app.');
+      return;
+    }
     if (!permission?.granted) {
       const { granted } = await requestPermission();
       if (!granted) {
@@ -141,397 +277,456 @@ export default function VerifyFaceScreen() {
         return;
       }
     }
-    setStep('camera');
-    setLivenessFrames([]);
-    livenessFramesRef.current = [];
-    setLivenessStatus('idle');
-    setLivenessProgress(0);
-    setLivenessDetectedFeedback(null);
-    demoAdvanceTicksRef.current = 0;
+    await cleanupFiles();
+    const list = buildChallenges();
+    challengesRef.current = list;
+    setChallenges(list);
+    indexRef.current = 0;
+    setChallengeIndex(0);
+    alignCountRef.current = 0;
+    lostCountRef.current = 0;
+    eyesClosedSeenRef.current = false;
+    firstTurnSignRef.current = null;
+    setFeedback('none');
+    setFaceOk(false);
+    setResultMessage('');
+    setPhaseBoth('align');
+    speak(T.align);
   };
 
-  const captureFrame = useCallback(async (): Promise<string | null> => {
-    if (!cameraRef.current) return null;
-    try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.75,
-        base64: true,
-        skipProcessing: true,
-        shutterSound: false,
-      });
-      if (photo?.base64) return `data:image/jpeg;base64,${photo.base64}`;
-    } catch (_) {}
-    return null;
-  }, []);
-
-  const handleCaptureSelfie = async () => {
-    const base64 = await captureFrame();
-    if (base64) {
-      setSelfieBase64(base64);
-      setLivenessProgress(0);
-      setLivenessDetectedFeedback(null);
-      demoAdvanceTicksRef.current = 0;
-      setStep('liveness_right');
-    } else {
-      Alert.alert(isTr ? 'Hata' : 'Error', isTr ? 'Fotoğraf alınamadı.' : 'Could not capture photo.');
-    }
-  };
-
-  const runSubmission = useCallback(
-    async (frames: string[]) => {
-      if (!selfieBase64) {
-        setResultMessage(isTr ? 'Selfie bulunamadı.' : 'Selfie not found.');
-        setStep('done');
-        return;
-      }
-      const result = await submitVerification(selfieBase64, frames.length >= 2, frames);
-      await refreshProfile();
-      setVerificationSuccess(result.success);
-      setResultMessage(
-        result.success ? result.message : localizeVerificationFailureMessage(result.message, isTr)
-      );
-      setStep('done');
+  const fail = useCallback(
+    (message: string) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      setResultMessage(message);
+      setPhaseBoth('failed');
+      Speech.stop();
     },
-    [selfieBase64, isTr, refreshProfile]
+    []
   );
 
-  useEffect(() => {
-    if (step !== 'liveness_right' && step !== 'liveness_left' && step !== 'liveness_blink') return;
+  const submit = useCallback(async () => {
+    setPhaseBoth('submitting');
+    Speech.stop();
+    try {
+      const selfieUri = selfieUriRef.current;
+      if (!selfieUri) throw new Error(isTr ? 'Selfie alınamadı.' : 'Selfie missing.');
+      const selfie = await toBase64Jpeg(selfieUri, 720, 0.85);
+      const frames: string[] = [];
+      for (const u of frameUrisRef.current) frames.push(await toBase64Jpeg(u, 480, 0.7));
 
-    const current = LIVENESS_STEPS.find((s) => s.step === step);
-    if (!current) return;
-
-    const runCheck = async () => {
-      const base64 = await captureFrame();
-      if (!base64) return;
-
-      setLivenessStatus('analyzing');
-      const result = await checkLivenessStep(base64, current.apiStep);
-
-      if (result.noFace) {
-        setLivenessStatus('no_face');
-        demoAdvanceTicksRef.current = 0;
-        return;
+      const result = await submitVerification(selfie, true, frames);
+      await refreshProfile();
+      await cleanupFiles();
+      if (result.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        setResultMessage(
+          result.verification_status === 'verified'
+            ? isTr ? 'Hesabınız doğrulandı. Mavi rozetiniz profilinize eklendi.' : 'Your account is verified.'
+            : isTr
+              ? 'Canlılık testini geçtiniz. Fotoğraf eşleştirmesi incelendikten sonra mavi rozetiniz eklenecek.'
+              : 'Liveness check passed. You will get the blue badge after review.'
+        );
+        successScale.setValue(0);
+        Animated.spring(successScale, { toValue: 1, friction: 5, tension: 70, useNativeDriver: true }).start();
+        setPhaseBoth('success');
+      } else {
+        fail(failureMessage(result.message, result.code, isTr));
       }
-      if (result.multipleFaces) {
-        setLivenessStatus('multiple_faces');
-        demoAdvanceTicksRef.current = 0;
-        return;
-      }
-      setLivenessStatus('idle');
+    } catch (e: any) {
+      fail(failureMessage(e?.message ?? '', undefined, isTr));
+    }
+  }, [cleanupFiles, fail, isTr, refreshProfile, successScale]);
 
-      const nextRaw = result.next != null ? String(result.next).toLowerCase() : '';
-      const isComplete = result.complete === true && (nextRaw === 'left' || nextRaw === 'blink' || nextRaw === 'submit');
-
-      if (isComplete) {
-        demoAdvanceTicksRef.current = 0;
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
+  /** Evaluates one detection result against the current phase / challenge. */
+  const handleDetection = useCallback(
+    async (faces: Face[], photo: { uri: string; width: number; height: number }) => {
+      let keepPhoto = false;
+      try {
+        if (faces.length === 0) {
+          lostCountRef.current += 1;
+          alignCountRef.current = 0;
+          setFaceOk(false);
+          setFeedback('no_face');
+          if (phaseRef.current === 'challenge' && lostCountRef.current >= FACE_LOST_FRAMES_LIMIT) {
+            fail(isTr ? 'Yüzünüz kadrajdan çıktı. Lütfen tekrar deneyin.' : 'Your face left the frame. Please try again.');
+          }
+          return;
         }
+        if (faces.length > 1) {
+          alignCountRef.current = 0;
+          setFaceOk(false);
+          setFeedback('multiple_faces');
+          if (phaseRef.current === 'challenge') {
+            fail(isTr ? 'Kadrajda birden fazla yüz algılandı.' : 'More than one face was detected.');
+          }
+          return;
+        }
+        lostCountRef.current = 0;
+        const face = faces[0];
+        const shortSide = Math.min(photo.width, photo.height) || 1;
+        const ratio = face.frame.width / shortSide;
+        const yaw = face.rotationY;
+        const pitch = face.rotationX;
 
-        const nextFrames = [...livenessFramesRef.current, base64];
-        livenessFramesRef.current = nextFrames;
-        setLivenessFrames(nextFrames);
-
-        if (nextRaw === 'submit') {
-          setLivenessDetectedFeedback(null);
-          setLivenessProgress(3);
-          setStep('submitting');
-          runSubmission(nextFrames);
+        if (phaseRef.current === 'align') {
+          const problem: Feedback | null =
+            ratio < FACE_MIN_RATIO
+              ? 'too_far'
+              : ratio > FACE_MAX_RATIO
+                ? 'too_close'
+                : Math.abs(yaw) > ALIGN_MAX_YAW || Math.abs(pitch) > ALIGN_MAX_PITCH || eyesOpen(face) < EYE_OPEN
+                  ? 'look_straight'
+                  : null;
+          if (problem) {
+            alignCountRef.current = 0;
+            setFaceOk(false);
+            setFeedback(problem);
+            return;
+          }
+          setFaceOk(true);
+          setFeedback('hold_still');
+          alignCountRef.current += 1;
+          if (alignCountRef.current >= ALIGN_FRAMES_NEEDED) {
+            // Take a sharper reference selfie for face matching.
+            const hq = await cameraRef.current?.takePictureAsync({ quality: 0.85, shutterSound: false });
+            selfieUriRef.current = hq?.uri ?? photo.uri;
+            if (!hq?.uri) keepPhoto = true;
+            setFeedback('none');
+            flashSuccess();
+            indexRef.current = 0;
+            setChallengeIndex(0);
+            challengeStartRef.current = Date.now();
+            eyesClosedSeenRef.current = false;
+            setPhaseBoth('challenge');
+            speak(T[challengesRef.current[0]]);
+          }
           return;
         }
 
-        if (current.apiStep === 'right') {
-          setLivenessDetectedFeedback(isTr ? 'Sağa çevrildi algılandı.' : 'Turn to the right detected.');
-        } else if (current.apiStep === 'left') {
-          setLivenessDetectedFeedback(isTr ? 'Sola çevrildi algılandı.' : 'Turn to the left detected.');
+        if (phaseRef.current !== 'challenge') return;
+        setFaceOk(true);
+        setFeedback('none');
+
+        if (Date.now() - challengeStartRef.current > CHALLENGE_TIMEOUT_MS) {
+          fail(isTr ? 'Süre doldu. Talimatları takip ederek tekrar deneyin.' : 'Time is up. Please try again.');
+          return;
         }
-        const nextStep = nextRaw === 'left' ? 'liveness_left' : nextRaw === 'blink' ? 'liveness_blink' : step;
-        setLivenessProgress((p) => p + 1);
-        setStep(nextStep);
-        return;
-      }
 
-      // API kullanılamıyorsa (503 / Face API not configured): yüz görünürse demo modda 1→2→3 ilerle
-      if (result.error) {
-        demoAdvanceTicksRef.current += 1;
-        if (demoAdvanceTicksRef.current >= 2) {
-          demoAdvanceTicksRef.current = 0;
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
+        const current = challengesRef.current[indexRef.current];
+        let passed = false;
+        // Front camera images can be mirrored depending on the device, so a turn
+        // counts on either side as long as the two turns go in opposite directions.
+        if (current === 'turn_left' || current === 'turn_right') {
+          const other = current === 'turn_left' ? 'turn_right' : 'turn_left';
+          const otherDone = challengesRef.current.slice(0, indexRef.current).includes(other);
+          if (Math.abs(yaw) >= TURN_MIN_YAW) {
+            if (!otherDone) {
+              firstTurnSignRef.current = Math.sign(yaw);
+              passed = true;
+            } else if (firstTurnSignRef.current !== null && Math.sign(yaw) === -firstTurnSignRef.current) {
+              passed = true;
+            }
           }
-          const nextFrames = [...livenessFramesRef.current, base64];
-          livenessFramesRef.current = nextFrames;
-          setLivenessFrames(nextFrames);
+        } else if (current === 'blink') {
+          const open = eyesOpen(face);
+          if (open < EYE_CLOSED) eyesClosedSeenRef.current = true;
+          else if (eyesClosedSeenRef.current && open > EYE_OPEN) passed = true;
+        } else if (current === 'smile') {
+          passed = (face.smilingProbability ?? 0) >= SMILE_MIN;
+        }
 
-          if (current.apiStep === 'blink') {
-            setLivenessDetectedFeedback(null);
-            setLivenessProgress(3);
-            setStep('submitting');
-            runSubmission(nextFrames);
+        if (passed) {
+          frameUrisRef.current.push(photo.uri);
+          keepPhoto = true;
+          flashSuccess();
+          const next = indexRef.current + 1;
+          if (next >= challengesRef.current.length) {
+            setChallengeIndex(next);
+            await submit();
             return;
           }
-          if (current.apiStep === 'right') {
-            setLivenessDetectedFeedback(isTr ? 'Sağa çevrildi algılandı.' : 'Turn to the right detected.');
-            setLivenessProgress((p) => p + 1);
-            setStep('liveness_left');
-          } else if (current.apiStep === 'left') {
-            setLivenessDetectedFeedback(isTr ? 'Sola çevrildi algılandı.' : 'Turn to the left detected.');
-            setLivenessProgress((p) => p + 1);
-            setStep('liveness_blink');
-          }
+          indexRef.current = next;
+          setChallengeIndex(next);
+          eyesClosedSeenRef.current = false;
+          challengeStartRef.current = Date.now();
+          speak(T[challengesRef.current[next]]);
         }
-      } else {
-        demoAdvanceTicksRef.current = 0;
+      } finally {
+        if (!keepPhoto) safeDelete(photo.uri);
       }
-    };
+    },
+    [T, fail, flashSuccess, isTr, speak, submit]
+  );
 
-    pollIntervalRef.current = setInterval(runCheck, LIVENESS_POLL_INTERVAL_MS);
+  // Detection loop: grab a low-quality frame, run ML Kit, repeat.
+  useEffect(() => {
+    if ((phase !== 'align' && phase !== 'challenge') || !cameraReady) return;
+    let cancelled = false;
+    (async () => {
+      while (!cancelled && (phaseRef.current === 'align' || phaseRef.current === 'challenge')) {
+        try {
+          const photo = await cameraRef.current?.takePictureAsync({
+            quality: 0.3,
+            skipProcessing: true,
+            shutterSound: false,
+          });
+          if (!photo?.uri || cancelled) {
+            if (photo?.uri) safeDelete(photo.uri);
+            continue;
+          }
+          const faces = await FaceDetection.detect(photo.uri, {
+            performanceMode: 'fast',
+            classificationMode: 'all',
+            minFaceSize: 0.15,
+          });
+          if (cancelled) {
+            safeDelete(photo.uri);
+            break;
+          }
+          await handleDetection(faces, photo);
+        } catch (e) {
+          console.warn('face detection loop error', e);
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+    })();
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
+      cancelled = true;
     };
-  }, [step, captureFrame, runSubmission, isTr]);
+    // handleDetection is stable enough per phase; re-running on every render would restart the loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, cameraReady]);
 
-  // Algılandı mesajını 2.5 sn sonra kaldır; bir sonraki talimat (sola/kameraya bak) kalır
-  useEffect(() => {
-    if (!livenessDetectedFeedback) return;
-    const t = setTimeout(() => setLivenessDetectedFeedback(null), 2500);
-    return () => clearTimeout(t);
-  }, [livenessDetectedFeedback]);
+  // ───────────────────────── UI ─────────────────────────
 
-  const handleDone = () => {
-    router.back();
-  };
-
-  // Submitting ekranında saniye sayacı
-  useEffect(() => {
-    if (step !== 'submitting') return;
-    setSubmittingSeconds(0);
-    const t = setInterval(() => setSubmittingSeconds((s) => s + 1), 1000);
-    return () => clearInterval(t);
-  }, [step]);
-
-  const currentLivenessStep = LIVENESS_STEPS.find((s) => s.step === step);
-  const isLivenessWithCamera =
-    step === 'liveness_right' || step === 'liveness_left' || step === 'liveness_blink';
-
-  if (step === 'intro') {
+  // Already submitted or approved: show the status instead of asking again.
+  if (phase === 'intro' && (existingStatus === 'pending' || existingStatus === 'verified')) {
+    const verified = existingStatus === 'verified';
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.light, styles.center]} edges={['top', 'bottom']}>
+        <View style={[styles.heroCircle, { backgroundColor: verified ? 'rgba(29,155,240,0.12)' : 'rgba(245,158,11,0.12)' }]}>
+          {verified ? <BadgeCheck size={72} color={BLUE} strokeWidth={1.5} /> : <ShieldCheck size={68} color={AMBER} strokeWidth={1.5} />}
+        </View>
+        <Text style={styles.title}>
+          {verified ? (isTr ? 'Hesabınız doğrulandı' : 'Account verified') : isTr ? 'Doğrulama inceleniyor' : 'Verification in review'}
+        </Text>
+        <Text style={styles.subtitle}>
+          {verified
+            ? isTr
+              ? 'Mavi rozetiniz profilinizde görünüyor.'
+              : 'Your blue badge is visible on your profile.'
+            : isTr
+              ? 'Yüz doğrulamanız alındı. Onaylandığında mavi rozetiniz otomatik eklenecek; tekrar doğrulama yapmanıza gerek yok.'
+              : 'We received your verification. The blue badge will be added automatically once approved.'}
+        </Text>
+        <View style={{ width: '100%', paddingHorizontal: 24, marginTop: 24 }}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
+            <Text style={styles.primaryBtnText}>{isTr ? 'Tamam' : 'OK'}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (phase === 'intro') {
+    return (
+      <SafeAreaView style={styles.light} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={24} color="#333" />
+          <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+            <ArrowLeft size={24} color="#111" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isTr ? 'Hesabı doğrula' : 'Verify account'}</Text>
-          <View style={styles.headerRight} />
+          <Text style={styles.headerTitle}>{isTr ? 'Kimlik doğrulama' : 'Identity check'}</Text>
+          <View style={styles.iconBtn} />
         </View>
-        <View style={styles.content}>
-          <View style={styles.iconCircle}>
-            <BadgeCheck size={64} color={VERIFIED_BLUE} strokeWidth={1.5} />
+        <View style={styles.introBody}>
+          <View style={styles.heroCircle}>
+            <ScanFace size={72} color={BLUE} strokeWidth={1.4} />
           </View>
-          <Text style={styles.title}>
-            {isTr ? 'Profilinizi doğrulayın' : 'Verify your profile'}
-          </Text>
-          <Text style={styles.description}>
+          <Text style={styles.title}>{isTr ? 'Yüz doğrulama' : 'Face verification'}</Text>
+          <Text style={styles.subtitle}>
             {isTr
-              ? 'Selfie çektikten sonra ekrandaki talimatları izleyin. Başınızı sağa ve sola çevirin; yapay zeka hareketinizi otomatik algılar. Buton kullanılmaz.'
-              : 'After taking a selfie, follow the on-screen instructions. Turn your head right and left; AI detects your movement automatically. No buttons.'}
+              ? 'Gerçek bir kişi olduğunuzu ve profil fotoğrafınızın size ait olduğunu doğrulayalım. Yaklaşık 20 saniye sürer.'
+              : "Let's confirm you're a real person and your profile photo is you. Takes about 20 seconds."}
           </Text>
-          <TouchableOpacity style={styles.button} onPress={handleOpenCamera} activeOpacity={0.85}>
-            <Camera size={24} color="#FFFFFF" />
-            <Text style={styles.buttonText}>{isTr ? 'Kamerayı aç' : 'Open camera'}</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (step === 'camera') {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={[styles.header, { backgroundColor: '#1a1a1a' }]}>
-          <TouchableOpacity onPress={() => setStep('intro')} style={styles.backButton}>
-            <ArrowLeft size={24} color="#FFF" />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: '#FFF' }]}>
-            {isTr ? 'Selfie çek' : 'Take selfie'}
-          </Text>
-          <View style={styles.headerRight} />
-        </View>
-        <View style={styles.cameraWrap}>
-          <CameraView ref={cameraRef} style={styles.camera} facing="front" />
-          <View style={styles.cameraOverlay}>
-            <View style={styles.faceFrame} />
-            <Text style={styles.faceFrameHint}>
-              {isTr ? 'Yüzünüzü çerçeve içine alın' : 'Position your face in the frame'}
-            </Text>
+          <View style={styles.tips}>
+            {[
+              { icon: <ScanFace size={20} color={BLUE} />, tr: 'Yüzünüzü ovale yerleştirin', en: 'Fit your face in the oval' },
+              { icon: <ChevronLeft size={20} color={BLUE} />, tr: 'Ekrandaki hareketleri yapın', en: 'Follow the on-screen moves' },
+              { icon: <Eye size={20} color={BLUE} />, tr: 'İyi aydınlatılmış bir ortamda olun', en: 'Be in a well-lit place' },
+              { icon: <ShieldCheck size={20} color={BLUE} />, tr: 'Gözlük ve şapka çıkarın', en: 'Remove glasses and hats' },
+            ].map((tip, i) => (
+              <View key={i} style={styles.tipRow}>
+                <View style={styles.tipIcon}>{tip.icon}</View>
+                <Text style={styles.tipText}>{isTr ? tip.tr : tip.en}</Text>
+              </View>
+            ))}
           </View>
         </View>
-        <View style={styles.cameraActions}>
-          <TouchableOpacity style={styles.captureButton} onPress={handleCaptureSelfie} activeOpacity={0.9}>
-            <Text style={styles.captureButtonText}>{isTr ? 'Çek' : 'Capture'}</Text>
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={start} activeOpacity={0.85}>
+            <Camera size={22} color="#FFF" />
+            <Text style={styles.primaryBtnText}>{isTr ? 'Başla' : 'Start'}</Text>
           </TouchableOpacity>
+          <Text style={styles.privacy}>
+            {isTr
+              ? 'Görüntüleriniz yalnızca doğrulama için kullanılır ve profilinizde gösterilmez.'
+              : 'Images are only used for verification and never shown on your profile.'}
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Taslak: oval yüz maskesi, üstte status/instruction, altta dairesel ilerleme, sol üstte İptal
-  if (isLivenessWithCamera && currentLivenessStep) {
-    const stepIndex = step === 'liveness_right' ? 1 : step === 'liveness_left' ? 2 : 3;
-    const progressValue = livenessProgress / 3; // 0..1
-    const statusText =
-      livenessStatus === 'analyzing'
-        ? isTr ? 'Analiz ediliyor...' : 'Analyzing...'
-        : livenessStatus === 'no_face'
-          ? isTr ? 'Yüzünüzü ovalin içine yerleştirin' : 'Position your face in the oval'
-          : livenessStatus === 'multiple_faces'
-            ? isTr ? 'Sadece sizin yüzünüz görünmeli' : 'Only your face should be visible'
-            : isTr ? `Adım ${stepIndex}/3` : `Step ${stepIndex}/3`;
-    const instructionText = livenessDetectedFeedback
-      ? livenessDetectedFeedback
-      : isTr ? currentLivenessStep.titleTr : currentLivenessStep.titleEn;
+  if (phase === 'align' || phase === 'challenge') {
+    const current = challenges[challengeIndex];
+    const totalSteps = challenges.length + 1;
+    const doneSteps = phase === 'align' ? 0 : challengeIndex + 1;
+    const instruction = phase === 'align' ? T.align : current ? T[current] : T.done;
+    const hint = feedback !== 'none' ? T[feedback] : '';
+    const ringColor = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [faceOk ? GREEN : '#FFFFFF', GREEN, faceOk ? GREEN : '#FFFFFF'] });
+    const ringWidth = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [4, 9, 4] });
+    const arrowShift = arrowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 14] });
 
     return (
-      <View style={styles.livenessFullScreen}>
+      <View style={styles.dark}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
-        <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="front" />
-        {/* Oval maske: dışı karartılmış, ortada oval alan kamerayı gösterir */}
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT} style={StyleSheet.absoluteFill}>
-            <Defs>
-              <Mask id="ovalMask">
-                <Rect x={0} y={0} width={SCREEN_WIDTH} height={SCREEN_HEIGHT} fill="white" />
-                <Ellipse
-                  cx={OVAL_MASK_X + OVAL_MASK_WIDTH / 2}
-                  cy={OVAL_MASK_Y + OVAL_MASK_HEIGHT / 2}
-                  rx={OVAL_MASK_WIDTH / 2}
-                  ry={OVAL_MASK_HEIGHT / 2}
-                  fill="black"
-                />
-              </Mask>
-            </Defs>
-            <Rect
-              x={0}
-              y={0}
-              width={SCREEN_WIDTH}
-              height={SCREEN_HEIGHT}
-              fill="rgba(0, 0, 0, 0.7)"
-              mask="url(#ovalMask)"
-            />
-          </Svg>
-          {/* Üst: status + talimat */}
-          <View style={styles.overlayContent}>
-            <Text style={styles.overlayStatus}>{statusText}</Text>
-            <Text style={styles.overlayInstruction}>{instructionText}</Text>
-          </View>
-          {/* Altta dairesel ilerleme çubuğu (taslak) */}
-          <View style={styles.progressContainer}>
-            <Svg
-              width={PROGRESS_RADIUS * 2 + PROGRESS_STROKE * 2}
-              height={PROGRESS_RADIUS * 2 + PROGRESS_STROKE * 2}
-              style={{ transform: [{ rotate: '-90deg' }] }}
-            >
-              <Circle
-                cx={PROGRESS_RADIUS + PROGRESS_STROKE}
-                cy={PROGRESS_RADIUS + PROGRESS_STROKE}
-                r={PROGRESS_RADIUS}
-                stroke="#E0E0E0"
-                strokeWidth={PROGRESS_STROKE}
-                fill="none"
-              />
-              <Circle
-                cx={PROGRESS_RADIUS + PROGRESS_STROKE}
-                cy={PROGRESS_RADIUS + PROGRESS_STROKE}
-                r={PROGRESS_RADIUS}
-                stroke={livenessProgress > 0 ? '#4CAF50' : '#E0E0E0'}
-                strokeWidth={PROGRESS_STROKE}
-                fill="none"
-                strokeDasharray={PROGRESS_CIRCUMFERENCE}
-                strokeDashoffset={PROGRESS_CIRCUMFERENCE - progressValue * PROGRESS_CIRCUMFERENCE}
-                strokeLinecap="round"
-              />
-            </Svg>
-          </View>
-          {/* Sol üst: İptal butonu (taslak) */}
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          facing="front"
+          animateShutter={false}
+          onCameraReady={() => setCameraReady(true)}
+        />
+        <Svg width={SCREEN_W} height={SCREEN_H} style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Defs>
+            <Mask id="oval">
+              <Rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} fill="white" />
+              <Ellipse cx={OVAL_CX} cy={OVAL_CY} rx={OVAL_W / 2} ry={OVAL_H / 2} fill="black" />
+            </Mask>
+          </Defs>
+          <Rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} fill="rgba(5,10,20,0.78)" mask="url(#oval)" />
+        </Svg>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.ovalRing,
+            { borderColor: ringColor as any, borderWidth: ringWidth as any },
+          ]}
+        />
+
+        {/* Turn arrows */}
+        {phase === 'challenge' && (current === 'turn_left' || current === 'turn_right') && (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.arrow,
+              current === 'turn_left'
+                ? { left: 6, transform: [{ translateX: Animated.multiply(arrowShift, -1) }] }
+                : { right: 6, transform: [{ translateX: arrowShift }] },
+            ]}>
+            {current === 'turn_left' ? <ChevronLeft size={56} color="#FFF" /> : <ChevronRight size={56} color="#FFF" />}
+          </Animated.View>
+        )}
+
+        <SafeAreaView style={styles.overlayTop} edges={['top']} pointerEvents="box-none">
           <TouchableOpacity
-            style={styles.cancelButton}
+            style={styles.glassBtn}
             onPress={() => {
-              setLivenessDetectedFeedback(null);
-              if (pollIntervalRef.current) {
-                clearInterval(pollIntervalRef.current);
-                pollIntervalRef.current = null;
-              }
-              if (step === 'liveness_right') {
-                setStep('camera');
-                setLivenessProgress(0);
-              } else if (step === 'liveness_left') {
-                setStep('liveness_right');
-                setLivenessProgress(0);
-              } else {
-                setStep('liveness_left');
-                setLivenessProgress(1);
-              }
-              const prev = livenessFramesRef.current.slice(0, -1);
-              livenessFramesRef.current = prev;
-              setLivenessFrames(prev);
-            }}
-          >
-            <X size={24} color="#FFF" />
-            <Text style={styles.cancelButtonText}>{isTr ? 'İptal' : 'Cancel'}</Text>
+              Speech.stop();
+              cleanupFiles();
+              setPhaseBoth('intro');
+            }}>
+            <X size={22} color="#FFF" />
           </TouchableOpacity>
+          <View style={styles.progressRow}>
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <View key={i} style={[styles.progressDot, i < doneSteps && styles.progressDotDone, i === doneSteps && styles.progressDotActive]} />
+            ))}
+          </View>
+          <TouchableOpacity
+            style={styles.glassBtn}
+            onPress={() => {
+              if (voiceOn) Speech.stop();
+              setVoiceOn((v) => !v);
+            }}>
+            {voiceOn ? <Volume2 size={20} color="#FFF" /> : <VolumeX size={20} color="#FFF" />}
+          </TouchableOpacity>
+        </SafeAreaView>
+
+        <View style={styles.instructionWrap} pointerEvents="none">
+          <Animated.View
+            style={[
+              styles.instructionCard,
+              {
+                opacity: instructionAnim,
+                transform: [{ scale: instructionAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }],
+              },
+            ]}>
+            <View style={styles.instructionIcon}>
+              {phase === 'align' ? (
+                <ScanFace size={26} color="#FFF" />
+              ) : current === 'blink' ? (
+                <Eye size={26} color="#FFF" />
+              ) : current === 'smile' ? (
+                <Smile size={26} color="#FFF" />
+              ) : current === 'turn_left' ? (
+                <ChevronLeft size={26} color="#FFF" />
+              ) : (
+                <ChevronRight size={26} color="#FFF" />
+              )}
+            </View>
+            <Text style={styles.instructionText}>{instruction}</Text>
+            <Text style={[styles.hintText, { color: feedback === 'hold_still' ? GREEN : AMBER }]}>{hint || ' '}</Text>
+          </Animated.View>
+          <Text style={styles.stepText}>
+            {isTr ? `Adım ${Math.min(doneSteps + 1, totalSteps)} / ${totalSteps}` : `Step ${Math.min(doneSteps + 1, totalSteps)} of ${totalSteps}`}
+          </Text>
         </View>
       </View>
     );
   }
 
-  if (step === 'submitting') {
+  if (phase === 'submitting') {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.content}>
-          <ActivityIndicator size="large" color={VERIFIED_BLUE} style={styles.loader} />
-          <Text style={styles.title}>
-            {isTr ? 'İşleniyor' : 'Processing'}
-          </Text>
-          <Text style={styles.submittingSubtitle}>
-            {isTr ? 'Resim doğrulanıyor' : 'Verifying image'}
-          </Text>
-          <Text style={styles.timerText}>
-            {submittingSeconds} {isTr ? 'sn' : 's'}
-          </Text>
-          <Text style={[styles.description, { marginTop: 8 }]}>
-            {isTr ? 'Yüz eşleştirme ve canlılık kontrolü' : 'Face match and liveness check'}
-          </Text>
+      <SafeAreaView style={[styles.light, styles.center]} edges={['top', 'bottom']}>
+        <View style={styles.heroCircle}>
+          <ActivityIndicator size="large" color={BLUE} />
         </View>
+        <Text style={styles.title}>{isTr ? 'Doğrulanıyor' : 'Verifying'}</Text>
+        <Text style={styles.subtitle}>
+          {isTr ? 'Canlılık ve yüz eşleştirme sonuçları gönderiliyor…' : 'Sending liveness and face match results…'}
+        </Text>
       </SafeAreaView>
     );
   }
 
+  const success = phase === 'success';
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.content}>
-        <View style={styles.iconCircle}>
-          <BadgeCheck
-            size={64}
-            color={verificationSuccess ? VERIFIED_BLUE : '#8E8E93'}
-            strokeWidth={1.5}
-          />
-        </View>
-        <Text style={styles.title}>
-          {verificationSuccess
-            ? (isTr ? 'Doğrulama başarılı' : 'Verification successful')
-            : (isTr ? 'Doğrulama başarısız' : 'Verification failed')}
-        </Text>
-        <Text style={styles.description}>
-          {resultMessage || (verificationSuccess ? (isTr ? 'Hesabınız doğrulandı.' : 'Your account has been verified.') : '')}
-        </Text>
-        <TouchableOpacity style={styles.button} onPress={handleDone} activeOpacity={0.85}>
-          <Text style={styles.buttonText}>{isTr ? 'Tamam' : 'OK'}</Text>
+    <SafeAreaView style={[styles.light, styles.center]} edges={['top', 'bottom']}>
+      <Animated.View
+        style={[
+          styles.heroCircle,
+          { backgroundColor: success ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)' },
+          success && { transform: [{ scale: successScale }] },
+        ]}>
+        {success ? <BadgeCheck size={72} color={GREEN} strokeWidth={1.5} /> : <X size={64} color="#EF4444" />}
+      </Animated.View>
+      <Text style={styles.title}>
+        {success ? (isTr ? 'Doğrulama tamamlandı' : 'Verification complete') : isTr ? 'Doğrulama başarısız' : 'Verification failed'}
+      </Text>
+      <Text style={styles.subtitle}>{resultMessage}</Text>
+      <View style={{ width: '100%', paddingHorizontal: 24, gap: 12, marginTop: 24 }}>
+        {!success && (
+          <TouchableOpacity style={styles.primaryBtn} onPress={start} activeOpacity={0.85}>
+            <RotateCcw size={20} color="#FFF" />
+            <Text style={styles.primaryBtnText}>{isTr ? 'Tekrar dene' : 'Try again'}</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={success ? styles.primaryBtn : styles.secondaryBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.85}>
+          <Text style={success ? styles.primaryBtnText : styles.secondaryBtnText}>{isTr ? 'Profile dön' : 'Back to profile'}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -539,218 +734,128 @@ export default function VerifyFaceScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  light: { flex: 1, backgroundColor: '#F7F9FC' },
+  dark: { flex: 1, backgroundColor: '#000' },
+  center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
-  headerRight: { width: 40 },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(29, 155, 240, 0.12)',
+  headerTitle: { fontSize: 17, fontWeight: '600', color: '#111' },
+  iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  introBody: { flex: 1, alignItems: 'center', paddingHorizontal: 24, paddingTop: 24 },
+  heroCircle: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    backgroundColor: 'rgba(29,155,240,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
   },
-  title: { fontSize: 22, fontWeight: '700', color: '#333', marginBottom: 12, textAlign: 'center' },
-  description: {
-    fontSize: 15,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 40,
+  title: { fontSize: 24, fontWeight: '800', color: '#0F172A', textAlign: 'center', marginBottom: 10 },
+  subtitle: { fontSize: 15, color: '#475569', textAlign: 'center', lineHeight: 22 },
+  tips: { width: '100%', marginTop: 28, gap: 12 },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#FFF',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E8EEF5',
   },
-  button: {
+  tipIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(29,155,240,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tipText: { fontSize: 15, color: '#1E293B', flex: 1 },
+  footer: { paddingHorizontal: 24, paddingBottom: 16, gap: 12 },
+  primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: VERIFIED_BLUE,
+    backgroundColor: BLUE,
     paddingVertical: 16,
-    paddingHorizontal: 28,
-    borderRadius: 14,
+    borderRadius: 16,
   },
-  buttonText: { fontSize: 17, fontWeight: '600', color: '#FFFFFF' },
-  loader: { marginTop: 16 },
-  submittingSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
-  },
-  timerText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: VERIFIED_BLUE,
-    marginTop: 12,
-  },
-  cameraWrap: { flex: 1, width: SCREEN_WIDTH, overflow: 'hidden' },
-  camera: { flex: 1, width: '100%' },
-  cameraOverlay: {
-    ...StyleSheet.absoluteFillObject,
+  primaryBtnText: { fontSize: 17, fontWeight: '700', color: '#FFF' },
+  secondaryBtn: {
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
   },
-  /* Taslak: oval maske + status/instruction + altta dairesel ilerleme */
-  livenessFullScreen: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  overlayContent: {
+  secondaryBtnText: { fontSize: 16, fontWeight: '600', color: '#334155' },
+  privacy: { fontSize: 12, color: '#64748B', textAlign: 'center' },
+  ovalRing: {
     position: 'absolute',
-    top: 60,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-    padding: 20,
+    left: OVAL_CX - OVAL_W / 2,
+    top: OVAL_CY - OVAL_H / 2,
+    width: OVAL_W,
+    height: OVAL_H,
+    borderRadius: OVAL_W,
   },
-  overlayStatus: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  overlayInstruction: {
-    fontSize: 18,
-    color: '#FFF',
-    fontWeight: '500',
-    textAlign: 'center',
-    lineHeight: 26,
-  },
-  progressContainer: {
+  arrow: { position: 'absolute', top: OVAL_CY - 28 },
+  overlayTop: {
     position: 'absolute',
-    bottom: 50,
+    top: 0,
     left: 0,
     right: 0,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  cancelButtonText: {
-    fontSize: 14,
-    color: '#FFF',
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  ringWrapper: {
-    position: 'absolute',
+  glassBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  faceFrame: {
-    width: 240,
-    height: 300,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 12,
-  },
-  faceFrameHint: {
+  progressRow: { flexDirection: 'row', gap: 6 },
+  progressDot: { width: 22, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)' },
+  progressDotDone: { backgroundColor: GREEN },
+  progressDotActive: { backgroundColor: '#FFF' },
+  instructionWrap: {
     position: 'absolute',
-    bottom: 100,
-    color: '#FFF',
-    fontSize: 14,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  livenessTextWrap: {
-    position: 'absolute',
-    bottom: 70,
-    left: 24,
-    right: 24,
+    left: 20,
+    right: 20,
+    top: OVAL_CY + OVAL_H / 2 + 24,
     alignItems: 'center',
   },
-  livenessDetectedFeedback: {
-    color: '#7CEE7C',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 12,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  livenessTitle: {
-    color: '#FFF',
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 8,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  livenessHint: {
-    color: 'rgba(255,255,255,0.95)',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 12,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  statusMessage: {
-    color: '#FFCC00',
-    fontSize: 14,
-    fontWeight: '600',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  statusMessageAnalyzing: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 13,
-    fontStyle: 'italic',
-  },
-  cameraActions: {
-    paddingVertical: 24,
-    paddingHorizontal: 24,
-    backgroundColor: '#000',
+  instructionCard: {
+    width: '100%',
     alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  cameraActionsLiveness: {
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    backgroundColor: '#000',
+  instructionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: BLUE,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
   },
-  noButtonHint: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
-  },
-  captureButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: VERIFIED_BLUE,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-  },
-  captureButtonText: { fontSize: 17, fontWeight: '600', color: '#FFFFFF' },
+  instructionText: { color: '#FFF', fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  hintText: { fontSize: 14, fontWeight: '600', marginTop: 6, textAlign: 'center' },
+  stepText: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 10 },
 });
