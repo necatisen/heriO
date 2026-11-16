@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { PREMIUM_PLANS, type PremiumPlanId } from '@/lib/storeProducts';
 
+import { L } from '@/lib/l10n';
 export default function FakePaymentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: string; packId?: string; credits?: string; plan?: string }>();
@@ -54,7 +55,7 @@ export default function FakePaymentScreen() {
           { onConflict: 'user_id' }
         );
         if (error) {
-          setErrorMessage(language === 'tr' ? 'İşlem tamamlanamadı. Lütfen tekrar deneyin.' : 'Operation could not be completed. Please try again.');
+          setErrorMessage(L('İşlem tamamlanamadı. Lütfen tekrar deneyin.', 'Operation could not be completed. Please try again.'));
           setLoading(false);
           return;
         }
@@ -66,7 +67,7 @@ export default function FakePaymentScreen() {
           { onConflict: 'user_id' }
         );
         if (creditsError) {
-          setErrorMessage(language === 'tr' ? 'Kredi alınamadı. Tekrar deneyin.' : 'Credits could not be added. Please try again.');
+          setErrorMessage(L('Kredi alınamadı. Tekrar deneyin.', 'Credits could not be added. Please try again.'));
           setLoading(false);
           return;
         }
@@ -74,10 +75,10 @@ export default function FakePaymentScreen() {
           user_id: user.id,
           amount: credits,
           type: 'purchase',
-          description: language === 'tr' ? 'Kredi paketi (simülasyon)' : 'Credit pack (simulation)',
+          description: L('Kredi paketi (simülasyon)', 'Credit pack (simulation)'),
         });
         if (txError) {
-          setErrorMessage(language === 'tr' ? 'Kredi alınamadı. Tekrar deneyin.' : 'Credits could not be added. Please try again.');
+          setErrorMessage(L('Kredi alınamadı. Tekrar deneyin.', 'Credits could not be added. Please try again.'));
           setLoading(false);
           return;
         }
@@ -87,8 +88,8 @@ export default function FakePaymentScreen() {
       console.error('Fake payment update failed:', e);
       setErrorMessage(
         type === 'credits'
-          ? (language === 'tr' ? 'Kredi alınamadı. Tekrar deneyin.' : 'Credits could not be added. Please try again.')
-          : (language === 'tr' ? 'İşlem tamamlanamadı. Lütfen tekrar deneyin.' : 'Operation could not be completed. Please try again.')
+          ? (L('Kredi alınamadı. Tekrar deneyin.', 'Credits could not be added. Please try again.'))
+          : (L('İşlem tamamlanamadı. Lütfen tekrar deneyin.', 'Operation could not be completed. Please try again.'))
       );
     } finally {
       setLoading(false);
@@ -96,21 +97,15 @@ export default function FakePaymentScreen() {
   };
 
   const title =
-    language === 'tr' ? 'Ödeme simülasyonu' : 'Payment simulation';
+    L('Ödeme simülasyonu', 'Payment simulation');
   const subtitle =
-    language === 'tr'
-      ? 'Bu bir test ekranıdır. Gerçek ödeme entegre edildiğinde bu adım atlanacak.'
-      : 'This is a test screen. It will be replaced when real payment is integrated.';
-  const completeLabel = language === 'tr' ? 'Tamamla (test)' : 'Complete (test)';
-  const successTitle = language === 'tr' ? 'Tamamlandı' : 'Done';
+    L('Bu bir test ekranıdır. Gerçek ödeme entegre edildiğinde bu adım atlanacak.', 'This is a test screen. It will be replaced when real payment is integrated.');
+  const completeLabel = L('Tamamla (test)', 'Complete (test)');
+  const successTitle = L('Tamamlandı', 'Done');
   const successSub =
     type === 'premium'
-      ? language === 'tr'
-        ? 'Premium hesabınız aktif.'
-        : 'Your Premium account is active.'
-      : language === 'tr'
-        ? `${credits} kredi hesabınıza eklendi.`
-        : `${credits} credits added to your account.`;
+      ? L('Premium hesabınız aktif.', 'Your Premium account is active.')
+      : L('{0} kredi hesabınıza eklendi.', '{0} credits added to your account.', [credits]);
   const goToProfile = () => {
     router.navigate('/(tabs)/profile' as any);
   };
@@ -131,7 +126,7 @@ export default function FakePaymentScreen() {
           <Text style={[styles.successTitle, { color: theme.text }]}>{successTitle}</Text>
           <Text style={[styles.successSub, { color: theme.textSecondary }]}>{successSub}</Text>
           <Text style={[styles.redirectHint, { color: theme.textSecondary }]}>
-            {language === 'tr' ? 'Profilinize yönlendiriliyorsunuz...' : 'Redirecting to your profile...'}
+            {L('Profilinize yönlendiriliyorsunuz...', 'Redirecting to your profile...')}
           </Text>
         </View>
       </SafeAreaView>
@@ -145,12 +140,12 @@ export default function FakePaymentScreen() {
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>{subtitle}</Text>
         {type === 'premium' && (
           <Text style={[styles.detail, { color: theme.text }]}>
-            {language === 'tr' ? premiumDetailTr : premiumDetailEn}
+            {L(premiumDetailTr, premiumDetailEn)}
           </Text>
         )}
         {type === 'credits' && credits > 0 && (
           <Text style={[styles.detail, { color: theme.text }]}>
-            {language === 'tr' ? `${credits} kredi eklenecek.` : `${credits} credits will be added.`}
+            {L('{0} kredi eklenecek.', '{0} credits will be added.', [credits])}
           </Text>
         )}
         {errorMessage && (

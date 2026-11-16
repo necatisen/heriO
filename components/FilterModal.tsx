@@ -20,6 +20,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { countries, getCitiesForCountry } from '@/lib/constants';
 import ComboBox from '@/components/ComboBox';
 
+import { L } from '@/lib/l10n';
 export type FilterOptions = {
   gender: string[];
   ageRange: [number, number];
@@ -67,37 +68,37 @@ export default function FilterModal({
   const ageSliderLength = Math.max(220, Math.min(280, windowWidth - 120));
 
   const t = {
-    filters: language === 'tr' ? 'Filtreler' : 'Filters',
-    apply: language === 'tr' ? 'Uygula' : 'Apply',
-    reset: language === 'tr' ? 'Sıfırla' : 'Reset',
-    meetingPerson: language === 'tr' ? 'Tanışmak İstediği Kişi' : 'Looking For',
-    male: language === 'tr' ? 'Erkek' : 'Male',
-    female: language === 'tr' ? 'Kadın' : 'Female',
-    other: language === 'tr' ? 'Diğer' : 'Other',
-    ageRange: language === 'tr' ? 'Yaş Aralığı' : 'Age Range',
-    distance: language === 'tr' ? 'Mesafe' : 'Distance',
-    height: language === 'tr' ? 'Boy' : 'Height',
-    bodyType: language === 'tr' ? 'Vücut Tipi' : 'Body Type',
-    languages: language === 'tr' ? 'Diller' : 'Languages',
-    religion: language === 'tr' ? 'İnanç' : 'Religion',
-    alcoholConsumption: language === 'tr' ? 'Alkol Tüketimi' : 'Alcohol Consumption',
-    smokingHabit: language === 'tr' ? 'Sigara Alışkanlığı' : 'Smoking Habit',
-    children: language === 'tr' ? 'Çocuk' : 'Children',
-    relationshipStatus: language === 'tr' ? 'İlişki Durumu' : 'Relationship Status',
-    relationshipGoal: language === 'tr' ? 'İlişki Arayışı' : 'Relationship Goal',
-    verifiedProfiles: language === 'tr' ? 'Yalnızca Doğrulanmış Profiller' : 'Verified Profiles Only',
-    onlineUsers: language === 'tr' ? 'Yalnızca Çevrimiçi Kullanıcılar' : 'Online Users Only',
-    country: language === 'tr' ? 'Ülke' : 'Country',
-    city: language === 'tr' ? 'Şehir' : 'City',
+    filters: L('Filtreler', 'Filters'),
+    apply: L('Uygula', 'Apply'),
+    reset: L('Sıfırla', 'Reset'),
+    meetingPerson: L('Tanışmak İstediği Kişi', 'Looking For'),
+    male: L('Erkek', 'Male'),
+    female: L('Kadın', 'Female'),
+    other: L('Diğer', 'Other'),
+    ageRange: L('Yaş Aralığı', 'Age Range'),
+    distance: L('Mesafe', 'Distance'),
+    height: L('Boy', 'Height'),
+    bodyType: L('Vücut Tipi', 'Body Type'),
+    languages: L('Diller', 'Languages'),
+    religion: L('İnanç', 'Religion'),
+    alcoholConsumption: L('Alkol Tüketimi', 'Alcohol Consumption'),
+    smokingHabit: L('Sigara Alışkanlığı', 'Smoking Habit'),
+    children: L('Çocuk', 'Children'),
+    relationshipStatus: L('İlişki Durumu', 'Relationship Status'),
+    relationshipGoal: L('İlişki Arayışı', 'Relationship Goal'),
+    verifiedProfiles: L('Yalnızca Doğrulanmış Profiller', 'Verified Profiles Only'),
+    onlineUsers: L('Yalnızca Çevrimiçi Kullanıcılar', 'Online Users Only'),
+    country: L('Ülke', 'Country'),
+    city: L('Şehir', 'City'),
   };
 
   const bodyTypes = [
-    { value: 'slim', label: language === 'tr' ? 'İnce' : 'Slim' },
-    { value: 'average', label: language === 'tr' ? 'Ortalama' : 'Average' },
-    { value: 'athletic', label: language === 'tr' ? 'Atletik' : 'Athletic' },
-    { value: 'muscular', label: language === 'tr' ? 'Kaslı' : 'Muscular' },
-    { value: 'curvy', label: language === 'tr' ? 'Dolgun' : 'Curvy' },
-    { value: 'heavyset', label: language === 'tr' ? 'İri Yapılı' : 'Heavyset' },
+    { value: 'slim', label: L('İnce', 'Slim') },
+    { value: 'average', label: L('Ortalama', 'Average') },
+    { value: 'athletic', label: L('Atletik', 'Athletic') },
+    { value: 'muscular', label: L('Kaslı', 'Muscular') },
+    { value: 'curvy', label: L('Dolgun', 'Curvy') },
+    { value: 'heavyset', label: L('İri Yapılı', 'Heavyset') },
   ];
 
   const languageOptions = [
@@ -112,86 +113,80 @@ export default function FilterModal({
   ];
 
   const religionOptions = [
-    { value: 'muslim', label: language === 'tr' ? 'Müslüman' : 'Muslim' },
-    { value: 'christian', label: language === 'tr' ? 'Hristiyan' : 'Christian' },
-    { value: 'jewish', label: language === 'tr' ? 'Yahudi' : 'Jewish' },
-    { value: 'hindu', label: language === 'tr' ? 'Hindu' : 'Hindu' },
-    { value: 'buddhist', label: language === 'tr' ? 'Budist' : 'Buddhist' },
-    { value: 'atheist', label: language === 'tr' ? 'Ateist' : 'Atheist' },
-    { value: 'agnostic', label: language === 'tr' ? 'Agnostik' : 'Agnostic' },
-    { value: 'other', label: language === 'tr' ? 'Diğer' : 'Other' },
+    { value: 'muslim', label: L('Müslüman', 'Muslim') },
+    { value: 'christian', label: L('Hristiyan', 'Christian') },
+    { value: 'jewish', label: L('Yahudi', 'Jewish') },
+    { value: 'hindu', label: L('Hindu', 'Hindu') },
+    { value: 'buddhist', label: L('Budist', 'Buddhist') },
+    { value: 'atheist', label: L('Ateist', 'Atheist') },
+    { value: 'agnostic', label: L('Agnostik', 'Agnostic') },
+    { value: 'other', label: L('Diğer', 'Other') },
   ];
 
   const alcoholOptions = [
-    { value: 'yes', label: language === 'tr' ? 'Evet' : 'Yes' },
-    { value: 'no', label: language === 'tr' ? 'Hayır' : 'No' },
-    { value: 'sometimes', label: language === 'tr' ? 'Bazen' : 'Sometimes' },
-    { value: 'socially', label: language === 'tr' ? 'Sosyal Ortamlarda' : 'Socially' },
+    { value: 'yes', label: L('Evet', 'Yes') },
+    { value: 'no', label: L('Hayır', 'No') },
+    { value: 'sometimes', label: L('Bazen', 'Sometimes') },
+    { value: 'socially', label: L('Sosyal Ortamlarda', 'Socially') },
   ];
 
   const smokingOptions = [
-    { value: 'yes', label: language === 'tr' ? 'Evet' : 'Yes' },
-    { value: 'no', label: language === 'tr' ? 'Hayır' : 'No' },
-    { value: 'sometimes', label: language === 'tr' ? 'Bazen' : 'Sometimes' },
-    { value: 'trying_to_quit', label: language === 'tr' ? 'Bırakmaya Çalışıyor' : 'Trying to Quit' },
+    { value: 'yes', label: L('Evet', 'Yes') },
+    { value: 'no', label: L('Hayır', 'No') },
+    { value: 'sometimes', label: L('Bazen', 'Sometimes') },
+    { value: 'trying_to_quit', label: L('Bırakmaya Çalışıyor', 'Trying to Quit') },
   ];
 
   const childrenOptions = [
-    { value: 'no_children', label: language === 'tr' ? 'Çocuk Yok' : 'No Children' },
-    { value: 'has_children', label: language === 'tr' ? 'Çocuk Var' : 'Has Children' },
-    { value: 'want_children', label: language === 'tr' ? 'Çocuk İstiyor' : 'Wants Children' },
-    { value: 'dont_want', label: language === 'tr' ? 'Çocuk İstemiyor' : "Doesn't Want Children" },
+    { value: 'no_children', label: L('Çocuk Yok', 'No Children') },
+    { value: 'has_children', label: L('Çocuk Var', 'Has Children') },
+    { value: 'want_children', label: L('Çocuk İstiyor', 'Wants Children') },
+    { value: 'dont_want', label: L('Çocuk İstemiyor', 'Doesn\'t Want Children') },
   ];
 
   const relationshipOptions = [
-    { value: 'single', label: language === 'tr' ? 'Bekar' : 'Single' },
-    { value: 'divorced', label: language === 'tr' ? 'Boşanmış' : 'Divorced' },
-    { value: 'widowed', label: language === 'tr' ? 'Dul' : 'Widowed' },
-    { value: 'separated', label: language === 'tr' ? 'Ayrı' : 'Separated' },
+    { value: 'single', label: L('Bekar', 'Single') },
+    { value: 'divorced', label: L('Boşanmış', 'Divorced') },
+    { value: 'widowed', label: L('Dul', 'Widowed') },
+    { value: 'separated', label: L('Ayrı', 'Separated') },
   ];
 
   const relationshipGoalOptions = [
     {
       value: 'serious_long_term',
       label:
-        language === 'tr'
-          ? 'Ciddi ilişki / uzun vadeli partner'
-          : 'Serious relationship / long-term partner',
+        L('Ciddi ilişki / uzun vadeli partner', 'Serious relationship / long-term partner'),
     },
     {
       value: 'marriage_focused',
-      label: language === 'tr' ? 'Evlilik odaklı' : 'Marriage focused',
+      label: L('Evlilik odaklı', 'Marriage focused'),
     },
     {
       value: 'slow_getting_to_know',
       label:
-        language === 'tr'
-          ? 'Yavaş ilerleyen (önce tanışma)'
-          : 'Slow pace (get to know first)',
+        L('Yavaş ilerleyen (önce tanışma)', 'Slow pace (get to know first)'),
     },
     {
       value: 'short_term_casual',
-      label: language === 'tr' ? 'Kısa süreli / casual' : 'Short-term / casual',
+      label: L('Kısa süreli / casual', 'Short-term / casual'),
     },
     {
       value: 'exploring',
       label:
-        language === 'tr'
-          ? 'Belirsiz / keşif aşamasında'
-          : 'Unsure / exploring',
+        L('Belirsiz / keşif aşamasında', 'Unsure / exploring'),
     },
     {
       value: 'go_with_flow',
       label:
-        language === 'tr' ? 'Akışına bırak' : 'Go with the flow',
+        L('Akışına bırak', 'Go with the flow'),
     },
     {
       value: 'friendship',
-      label: language === 'tr' ? 'Arkadaşlık' : 'Friendship',
+      label: L('Arkadaşlık', 'Friendship'),
     },
     {
       value: 'relaxed',
-      label: language === 'tr' ? 'Rahat bir şeyler' : 'Something relaxed',
+      label: L('Rahat bir şeyler', 'Something relaxed'),
     },
   ];
 
@@ -328,7 +323,7 @@ export default function FilterModal({
 
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {t.ageRange}: {filters.ageRange[0]} - {filters.ageRange[1]} {language === 'tr' ? 'yaş' : 'years'}
+              {t.ageRange}: {filters.ageRange[0]} - {filters.ageRange[1]} {L('yaş', 'years')}
             </Text>
             <View style={styles.multiSliderRow}>
               <Text style={[styles.sliderLabel, { color: theme.textSecondary }]}>18</Text>
@@ -421,7 +416,7 @@ export default function FilterModal({
             <ComboBox
               options={countries.map((c: CountryOption) => ({
                 value: c.value,
-                label: c.label[language === 'tr' ? 'tr' : 'en'],
+                label: L(c.label.tr, c.label.en),
               }))}
               selectedValue={filters.countries[0] || ''}
               onValueChange={(value) => {
@@ -440,7 +435,7 @@ export default function FilterModal({
                   };
                 });
               }}
-              placeholder={language === 'tr' ? 'Ülke seçin' : 'Select country'}
+              placeholder={L('Ülke seçin', 'Select country')}
             />
           </View>
 
@@ -456,7 +451,7 @@ export default function FilterModal({
                     cities: value ? [String(value)] : [],
                   })
                 }
-                placeholder={language === 'tr' ? 'Şehir seçin' : 'Select city'}
+                placeholder={L('Şehir seçin', 'Select city')}
               />
             ) : (
               <TextInput
@@ -472,9 +467,7 @@ export default function FilterModal({
                   })
                 }
                 placeholder={
-                  language === 'tr'
-                    ? 'Şehir yazın (örn. New York)'
-                    : 'Type a city (e.g. New York)'
+                  L('Şehir yazın (örn. New York)', 'Type a city (e.g. New York)')
                 }
                 placeholderTextColor={theme.textSecondary}
               />

@@ -9,7 +9,7 @@ type HeartLoaderProps = {
 };
 
 export default function HeartLoader({
-  size = 72,
+  size = 56,
   color = '#FF4D6D',
   style,
 }: HeartLoaderProps) {

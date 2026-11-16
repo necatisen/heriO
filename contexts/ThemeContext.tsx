@@ -25,10 +25,10 @@ export interface Theme {
 }
 
 const lightTheme: Theme = {
-  primary: '#4A90E2',
-  primaryLight: '#E8F4FF',
-  secondary: '#50C9E9',
-  background: '#F5F5F5',
+  primary: '#5B4BFF',
+  primaryLight: '#EEEBFF',
+  secondary: '#FF3D8B',
+  background: '#F6F5FB',
   surface: '#FFFFFF',
   text: '#1A1A1A',
   textSecondary: '#666666',
@@ -39,29 +39,29 @@ const lightTheme: Theme = {
   cardBackground: '#FFFFFF',
   inputBackground: '#F8F8F8',
   inputBorder: '#E0E0E0',
-  headerGradient: ['#4A90E2', '#50C9E9'],
+  headerGradient: ['#3D5AFE', '#8B3DFF', '#FF3D8B'],
   tabBarBackground: '#FFFFFF',
-  tabBarBorder: '#E0E0E0',
+  tabBarBorder: '#ECEAF5',
 };
 
 const darkTheme: Theme = {
-  primary: '#4A90E2',
-  primaryLight: '#1C2C3B',
-  secondary: '#50C9E9',
-  background: '#121212',
-  surface: '#1E1E1E',
+  primary: '#7C6CFF',
+  primaryLight: '#1E2050',
+  secondary: '#FF3D8B',
+  background: '#0B0E24',
+  surface: '#141838',
   text: '#FFFFFF',
   textSecondary: '#B0B0B0',
-  border: '#333333',
+  border: '#232A5A',
   error: '#FF6B6B',
   success: '#4CAF50',
   warning: '#FFA726',
-  cardBackground: '#2A2A2A',
-  inputBackground: '#2A2A2A',
-  inputBorder: '#444444',
-  headerGradient: ['#1E1E1E', '#2A2A2A'],
-  tabBarBackground: '#1E1E1E',
-  tabBarBorder: '#333333',
+  cardBackground: '#161B3D',
+  inputBackground: '#1B2047',
+  inputBorder: '#2A3066',
+  headerGradient: ['#141838', '#1E1A4D'],
+  tabBarBackground: '#0F1330',
+  tabBarBorder: '#1F2550',
 };
 
 const coloredTheme: Theme = {

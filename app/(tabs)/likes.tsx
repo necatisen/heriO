@@ -22,10 +22,14 @@ import MatchCelebrationModal from '@/components/MatchCelebrationModal';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useMemo } from 'react';
 import HeartLoader from '@/components/HeartLoader';
+import { BRAND } from '@/lib/brand';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { isUserOnlineNow } from '@/lib/dateFormat';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
 
+import { L } from '@/lib/l10n';
 type LikeUser = {
   id: string;
   full_name: string;
@@ -400,13 +404,11 @@ export default function LikesScreen() {
   const handleUserClick = async (userId: string) => {
     if (!isPremium) {
       Alert.alert(
-        language === 'tr' ? 'Premium gerekli' : 'Premium required',
-        language === 'tr'
-          ? 'Bilgileri görebilmeniz için Premium olmalısınız.'
-          : 'You need to be Premium to view this profile.',
+        L('Premium gerekli', 'Premium required'),
+        L('Bilgileri görebilmeniz için Premium olmalısınız.', 'You need to be Premium to view this profile.'),
         [
-          { text: language === 'tr' ? 'Tamam' : 'OK', style: 'cancel' },
-          { text: language === 'tr' ? 'Premium al' : 'Get Premium', onPress: () => router.push('/store/premium') },
+          { text: L('Tamam', 'OK'), style: 'cancel' },
+          { text: L('Premium al', 'Get Premium'), onPress: () => router.push('/store/premium') },
         ]
       );
       return;
@@ -455,11 +457,11 @@ export default function LikesScreen() {
       if (error) throw error;
 
       Alert.alert(
-        language === 'tr' ? 'Başarılı' : 'Success',
-        language === 'tr' ? 'Arkadaşlık isteği gönderildi' : 'Friend request sent'
+        L('Başarılı', 'Success'),
+        L('Arkadaşlık isteği gönderildi', 'Friend request sent')
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send friend request');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Arkadaşlık isteği gönderilemedi', 'Failed to send friend request'));
     }
   };
 
@@ -541,8 +543,8 @@ export default function LikesScreen() {
       setProfileModalVisible(false);
     } catch (e: any) {
       Alert.alert(
-        language === 'tr' ? 'Hata' : 'Error',
-        e?.message || (language === 'tr' ? 'Beğeni gönderilemedi.' : 'Could not send like.')
+        L('Hata', 'Error'),
+        e?.message || (L('Beğeni gönderilemedi.', 'Could not send like.'))
       );
     }
   };
@@ -629,7 +631,7 @@ export default function LikesScreen() {
       });
       await fetchLikesReceived();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create match');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Eşleşme oluşturulamadı', 'Failed to create match'));
     }
   };
 
@@ -663,7 +665,7 @@ export default function LikesScreen() {
 
       router.push(`/conversation/${sessionId}?friendId=${friendId}`);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to start chat');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Sohbet başlatılamadı', 'Failed to start chat'));
     }
   };
 
@@ -775,7 +777,7 @@ export default function LikesScreen() {
               <View style={styles.watermarkCenter}>
                 <Crown size={28} color="rgba(0,0,0,0.45)" />
                 <Text style={styles.watermarkHint}>
-                  {language === 'tr' ? 'Bilgileri görmek için Premium' : 'Premium to view'}
+                  {L('Bilgileri görmek için Premium', 'Premium to view')}
                 </Text>
               </View>
               </View>
@@ -789,24 +791,24 @@ export default function LikesScreen() {
 
   const getEmptyMessage = () => {
     if (activeTab === 'received') {
-      return language === 'tr' ? 'Henüz beğeni almadınız' : 'No likes received yet';
+      return L('Henüz beğeni almadınız', 'No likes received yet');
     }
     if (activeTab === 'sent') {
-      return language === 'tr' ? 'Henüz kimseyi beğenmediniz' : 'No likes sent yet';
+      return L('Henüz kimseyi beğenmediniz', 'No likes sent yet');
     }
-    return language === 'tr' ? 'Henüz ziyaretçi yok' : 'No visitors yet';
+    return L('Henüz ziyaretçi yok', 'No visitors yet');
   };
 
   const getActiveTitle = () => {
-    if (activeTab === 'received') return language === 'tr' ? 'Seni Beğenenler' : 'People Who Like You';
-    if (activeTab === 'sent') return language === 'tr' ? 'Beğendiğin Profiller' : 'Profiles You Liked';
-    return language === 'tr' ? 'Profil Ziyaretçileri' : 'Profile Visitors';
+    if (activeTab === 'received') return L('Seni Beğenenler', 'People Who Like You');
+    if (activeTab === 'sent') return L('Beğendiğin Profiller', 'Profiles You Liked');
+    return L('Profil Ziyaretçileri', 'Profile Visitors');
   };
 
   const getActiveSubtitle = () => {
-    if (activeTab === 'received') return language === 'tr' ? 'Yeni beğenileri keşfet ve eşleşmeye başla.' : 'Discover new likes and start matching.';
-    if (activeTab === 'sent') return language === 'tr' ? 'İlgi gösterdiğin kişileri buradan takip et.' : 'Track people you have shown interest in.';
-    return language === 'tr' ? 'Profilini görüntüleyen kişileri burada gör.' : 'See who visited your profile here.';
+    if (activeTab === 'received') return L('Yeni beğenileri keşfet ve eşleşmeye başla.', 'Discover new likes and start matching.');
+    if (activeTab === 'sent') return L('İlgi gösterdiğin kişileri buradan takip et.', 'Track people you have shown interest in.');
+    return L('Profilini görüntüleyen kişileri burada gör.', 'See who visited your profile here.');
   };
 
   return (
@@ -830,7 +832,7 @@ export default function LikesScreen() {
                 styles.tabText,
                 activeTab === 'received' && styles.activeTabText,
               ]}>
-              {language === 'tr' ? 'Beğeniler' : 'Who liked me'}
+              {L('Beğeniler', 'Who liked me')}
             </Text>
           </TouchableOpacity>
 
@@ -846,7 +848,7 @@ export default function LikesScreen() {
                 styles.tabText,
                 activeTab === 'sent' && styles.activeTabText,
               ]}>
-              {language === 'tr' ? 'Beğendiklerim' : 'Who I liked'}
+              {L('Beğendiklerim', 'Who I liked')}
             </Text>
           </TouchableOpacity>
 
@@ -862,7 +864,7 @@ export default function LikesScreen() {
                 styles.tabText,
                 activeTab === 'visitors' && styles.activeTabText,
               ]}>
-              {language === 'tr' ? 'Ziyaretçiler' : 'Visitors'}
+              {L('Ziyaretçiler', 'Visitors')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -873,28 +875,36 @@ export default function LikesScreen() {
           <HeartLoader />
         </View>
       ) : currentData.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          {activeTab === 'received' && <Heart size={80} color="#CCCCCC" />}
-          {activeTab === 'visitors' && <Eye size={80} color="#CCCCCC" />}
-          {activeTab === 'sent' && <ThumbsUp size={80} color="#CCCCCC" />}
+        <Animated.View key={`empty-${activeTab}`} entering={FadeInDown.duration(450)} style={styles.emptyContainer}>
+          <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.emptyIconWrap}>
+            {activeTab === 'received' && <Heart size={38} color="#FFFFFF" fill="#FFFFFF" />}
+            {activeTab === 'visitors' && <Eye size={38} color="#FFFFFF" />}
+            {activeTab === 'sent' && <ThumbsUp size={38} color="#FFFFFF" />}
+          </LinearGradient>
           <Text style={styles.emptyText}>{getEmptyMessage()}</Text>
-        </View>
+        </Animated.View>
       ) : (
         <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
           <View style={styles.masonryWrap}>
             <View style={styles.masonryColumn}>
               {leftColumn.map(({ item, height }, index) => (
-                <View key={`l-${item.id}-${index}`} style={styles.masonryItem}>
+                <Animated.View
+                  key={`l-${activeTab}-${item.id}-${index}`}
+                  entering={FadeInDown.delay(Math.min(index, 8) * 90).springify().damping(16)}
+                  style={styles.masonryItem}>
                   {renderCard(item, columnWidth, height)}
-                </View>
+                </Animated.View>
               ))}
             </View>
             <View style={{ width: columnGap }} />
             <View style={styles.masonryColumn}>
               {rightColumn.map(({ item, height }, index) => (
-                <View key={`r-${item.id}-${index}`} style={styles.masonryItem}>
+                <Animated.View
+                  key={`r-${activeTab}-${item.id}-${index}`}
+                  entering={FadeInDown.delay(45 + Math.min(index, 8) * 90).springify().damping(16)}
+                  style={styles.masonryItem}>
                   {renderCard(item, columnWidth, height)}
-                </View>
+                </Animated.View>
               ))}
             </View>
           </View>
@@ -991,7 +1001,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   activeTab: {
-    backgroundColor: '#FF6B9D',
+    backgroundColor: '#8B3DFF',
   },
   tabText: {
     fontSize: 12,
@@ -1096,7 +1106,7 @@ const styles = StyleSheet.create({
     width: 25,
     height: 25,
     borderRadius: 19,
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#101828',
@@ -1104,6 +1114,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 10,
     elevation: 6,
+  },
+  emptyIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
   emptyContainer: {
     alignItems: 'center',

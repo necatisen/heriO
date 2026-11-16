@@ -11,13 +11,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BRAND } from '@/lib/brand';
 import { Mail, Lock, ArrowLeft, Globe, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import * as SecureStore from 'expo-secure-store';
-import { HerioLogo } from '@/components/HerioLogo';
+import { BrandLogo } from '@/components/BrandLogo';
 import Constants from 'expo-constants';
 
+import { L } from '@/lib/l10n';
 const APP_VERSION = Constants.expoConfig?.version ?? '';
 
 export default function LoginScreen() {
@@ -97,7 +99,7 @@ export default function LoginScreen() {
       setLoading(true);
       await signIn(email, password);
       await saveCredentials();
-      const successMessage = language === 'tr' ? 'Giriş başarılı! Yönlendiriliyor...' : 'Login successful! Redirecting...';
+      const successMessage = L('Giriş başarılı! Yönlendiriliyor...', 'Login successful! Redirecting...');
       setSuccess(successMessage);
       setTimeout(() => {
         router.replace('/(tabs)');
@@ -106,13 +108,13 @@ export default function LoginScreen() {
       console.error('Login error:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
       if (error.message?.includes('Invalid login credentials')) {
-        setError(language === 'tr' ? 'E-posta veya şifre hatalı' : 'Email or password is incorrect');
+        setError(L('E-posta veya şifre hatalı', 'Email or password is incorrect'));
       } else if (error.message?.includes('Email not confirmed')) {
-        setError(language === 'tr' ? 'E-posta adresiniz doğrulanmamış' : 'Email not confirmed');
+        setError(L('E-posta adresiniz doğrulanmamış', 'Email not confirmed'));
       } else if (error.message?.includes('Database error')) {
-        setError(language === 'tr' ? 'Veritabanı hatası. Lütfen daha sonra tekrar deneyin.' : 'Database error. Please try again later.');
+        setError(L('Veritabanı hatası. Lütfen daha sonra tekrar deneyin.', 'Database error. Please try again later.'));
       } else {
-        setError(error.message || error.error_description || (language === 'tr' ? 'Giriş yapılamadı. Lütfen tekrar deneyin.' : 'Login failed. Please try again.'));
+        setError(error.message || error.error_description || (L('Giriş yapılamadı. Lütfen tekrar deneyin.', 'Login failed. Please try again.')));
       }
     } finally {
       setLoading(false);
@@ -125,12 +127,12 @@ export default function LoginScreen() {
     try {
       await signInWithGoogle();
     } catch (error: any) {
-      setError(error.message || 'Google ile giriş başarısız oldu');
+      setError(error.message || L('Google ile giriş başarısız oldu', 'Google sign-in failed'));
     }
   };
 
   return (
-    <LinearGradient colors={['#4A90E2', '#50C9E9']} style={styles.container}>
+    <LinearGradient colors={BRAND.night} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
@@ -144,7 +146,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <HerioLogo size="lg" variant="light" style={styles.logoMark} />
+            <BrandLogo size="md" glow style={styles.logoMark} />
           </View>
 
           <View style={styles.formContainer}>
@@ -160,7 +162,7 @@ export default function LoginScreen() {
               </View>
             ) : null}
             <View style={styles.inputContainer}>
-              <Mail size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Mail size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.email}
@@ -173,7 +175,7 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Lock size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Lock size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.password}
@@ -218,14 +220,14 @@ export default function LoginScreen() {
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>{t.or}</Text>
               <View style={styles.dividerLine} />
             </View>
 
             <TouchableOpacity
               style={styles.googleButton}
               onPress={handleGoogleLogin}>
-              <Globe size={20} color="#4A90E2" />
+              <Globe size={20} color="#5B4BFF" />
               <Text style={styles.googleButtonText}>
                 {t.continueWithGoogle}
               </Text>
@@ -310,7 +312,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   languageButtonTextActive: {
-    color: '#4A90E2',
+    color: '#5B4BFF',
   },
   formContainer: {
     backgroundColor: '#FFFFFF',
@@ -355,12 +357,12 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 5,
     borderWidth: 2,
-    borderColor: '#4A90E2',
+    borderColor: '#5B4BFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
   },
   checkmark: {
     color: '#FFFFFF',
@@ -373,16 +375,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   forgotPassword: {
-    color: '#4A90E2',
+    color: '#5B4BFF',
     fontSize: 14,
     fontWeight: '600',
   },
   loginButton: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
     paddingVertical: 18,
     borderRadius: 15,
     alignItems: 'center',
-    shadowColor: '#4A90E2',
+    shadowColor: '#5B4BFF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -436,7 +438,7 @@ const styles = StyleSheet.create({
   registerLink: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#4A90E2',
+    color: '#5B4BFF',
   },
   errorContainer: {
     backgroundColor: '#FFE5E5',

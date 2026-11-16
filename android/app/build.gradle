@@ -93,10 +93,10 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.necatisen.nschatapp'
+    namespace 'com.necatisen.birthchat'
     
     defaultConfig {
-        applicationId 'com.necatisen.nschatapp'
+        applicationId 'com.necatisen.birthchat'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Version comes from app.json (expo.version / expo.android.versionCode).

@@ -1,3 +1,4 @@
+import { L } from '@/lib/l10n';
 /** DB'den gelen değeri map anahtarına çevirir (Engineer -> engineer, "Body Type" -> body_type). */
 function normKey(v: string | null | undefined): string {
   return String(v ?? '')
@@ -10,8 +11,8 @@ function normKey(v: string | null | undefined): string {
 /** Seçilen dile göre etiket döndürür (tr / tr-* ile Türkçe, diğer diller için en fallback). */
 function labelByLang(label: { tr: string; en: string } | undefined, language: string, raw: string): string {
   if (!label) return raw;
-  const isTr = typeof language === 'string' && language.toLowerCase().startsWith('tr');
-  return isTr ? label.tr : label.en;
+  void language; // current UI language is applied by L()
+  return L(label.tr, label.en);
 }
 
 export const getEducationLabel = (value: string, language: string) => {

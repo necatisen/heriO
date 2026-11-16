@@ -51,6 +51,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { submitVerification } from '@/lib/verification';
 
+import { L, localeTag } from '@/lib/l10n';
 const BLUE = '#1D9BF0';
 const GREEN = '#22C55E';
 const AMBER = '#F59E0B';
@@ -155,25 +156,21 @@ async function toBase64Jpeg(uri: string, width: number, quality: number): Promis
 function failureMessage(raw: string, code: string | undefined, isTr: boolean): string {
   const lower = String(raw || '').toLowerCase();
   if (code === 'no_profile_photo') {
-    return isTr
-      ? 'Doğrulamadan önce profilinize yüzünüzün net göründüğü bir fotoğraf ekleyin.'
-      : 'Add a clear profile photo of your face before verifying.';
+    return L('Doğrulamadan önce profilinize yüzünüzün net göründüğü bir fotoğraf ekleyin.', 'Add a clear profile photo of your face before verifying.');
   }
   if (code === 'face_mismatch') {
-    return isTr
-      ? 'Yüzünüz profil fotoğrafınızla eşleşmedi. Kendi fotoğrafınızı kullandığınızdan emin olun.'
-      : 'Your face did not match your profile photo.';
+    return L('Yüzünüz profil fotoğrafınızla eşleşmedi. Kendi fotoğrafınızı kullandığınızdan emin olun.', 'Your face did not match your profile photo.');
   }
   if (lower.includes('not authenticated') || lower.includes('jwt') || lower.includes('unauthorized')) {
-    return isTr ? 'Oturumunuz doğrulanamadı. Çıkış yapıp tekrar giriş yapın.' : 'Session expired. Please sign in again.';
+    return L('Oturumunuz doğrulanamadı. Çıkış yapıp tekrar giriş yapın.', 'Session expired. Please sign in again.');
   }
   if (lower.includes('network request failed') || lower.includes('failed to fetch')) {
-    return isTr ? 'İnternet bağlantısı kurulamadı.' : 'No internet connection.';
+    return L('İnternet bağlantısı kurulamadı.', 'No internet connection.');
   }
   if (lower.includes('was not found') || lower.includes('/functions/v1/')) {
-    return isTr ? 'Doğrulama servisine ulaşılamadı. Daha sonra tekrar deneyin.' : 'Verification service unavailable.';
+    return L('Doğrulama servisine ulaşılamadı. Daha sonra tekrar deneyin.', 'Verification service unavailable.');
   }
-  return raw || (isTr ? 'Doğrulama tamamlanamadı.' : 'Verification failed.');
+  return raw || (L('Doğrulama tamamlanamadı.', 'Verification failed.'));
 }
 
 export default function VerifyFaceScreen() {
@@ -182,7 +179,9 @@ export default function VerifyFaceScreen() {
   const existingStatus = profile?.verification_status;
   const { language } = useLanguage();
   const isTr = language === 'tr';
-  const T = isTr ? TEXT.tr : TEXT.en;
+  const T = Object.fromEntries(
+    (Object.keys(TEXT.tr) as (keyof typeof TEXT.tr)[]).map((k) => [k, L(TEXT.tr[k], TEXT.en[k])])
+  ) as Record<keyof typeof TEXT.tr, string>;
 
   const [permission, requestPermission] = useCameraPermissions();
   const [phase, setPhase] = useState<Phase>('intro');
@@ -221,7 +220,7 @@ export default function VerifyFaceScreen() {
     (text: string) => {
       if (!voiceOn) return;
       Speech.stop();
-      Speech.speak(text, { language: isTr ? 'tr-TR' : 'en-US', rate: 1.0 });
+      Speech.speak(text, { language: localeTag(), rate: 1.0 });
     },
     [voiceOn, isTr]
   );
@@ -264,15 +263,15 @@ export default function VerifyFaceScreen() {
   const start = async () => {
     if (!user?.id) return;
     if (Platform.OS === 'web') {
-      Alert.alert('', isTr ? 'Yüz doğrulama yalnızca mobil uygulamada yapılabilir.' : 'Face verification is only available in the mobile app.');
+      Alert.alert('', L('Yüz doğrulama yalnızca mobil uygulamada yapılabilir.', 'Face verification is only available in the mobile app.'));
       return;
     }
     if (!permission?.granted) {
       const { granted } = await requestPermission();
       if (!granted) {
         Alert.alert(
-          isTr ? 'Kamera izni' : 'Camera permission',
-          isTr ? 'Yüz doğrulaması için kameraya erişim gereklidir.' : 'Camera access is required for face verification.'
+          L('Kamera izni', 'Camera permission'),
+          L('Yüz doğrulaması için kameraya erişim gereklidir.', 'Camera access is required for face verification.')
         );
         return;
       }
@@ -309,7 +308,7 @@ export default function VerifyFaceScreen() {
     Speech.stop();
     try {
       const selfieUri = selfieUriRef.current;
-      if (!selfieUri) throw new Error(isTr ? 'Selfie alınamadı.' : 'Selfie missing.');
+      if (!selfieUri) throw new Error(L('Selfie alınamadı.', 'Selfie missing.'));
       const selfie = await toBase64Jpeg(selfieUri, 720, 0.85);
       const frames: string[] = [];
       for (const u of frameUrisRef.current) frames.push(await toBase64Jpeg(u, 480, 0.7));
@@ -321,10 +320,8 @@ export default function VerifyFaceScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         setResultMessage(
           result.verification_status === 'verified'
-            ? isTr ? 'Hesabınız doğrulandı. Mavi rozetiniz profilinize eklendi.' : 'Your account is verified.'
-            : isTr
-              ? 'Canlılık testini geçtiniz. Fotoğraf eşleştirmesi incelendikten sonra mavi rozetiniz eklenecek.'
-              : 'Liveness check passed. You will get the blue badge after review.'
+            ? L('Hesabınız doğrulandı. Mavi rozetiniz profilinize eklendi.', 'Your account is verified.')
+            : L('Canlılık testini geçtiniz. Fotoğraf eşleştirmesi incelendikten sonra mavi rozetiniz eklenecek.', 'Liveness check passed. You will get the blue badge after review.')
         );
         successScale.setValue(0);
         Animated.spring(successScale, { toValue: 1, friction: 5, tension: 70, useNativeDriver: true }).start();
@@ -348,7 +345,7 @@ export default function VerifyFaceScreen() {
           setFaceOk(false);
           setFeedback('no_face');
           if (phaseRef.current === 'challenge' && lostCountRef.current >= FACE_LOST_FRAMES_LIMIT) {
-            fail(isTr ? 'Yüzünüz kadrajdan çıktı. Lütfen tekrar deneyin.' : 'Your face left the frame. Please try again.');
+            fail(L('Yüzünüz kadrajdan çıktı. Lütfen tekrar deneyin.', 'Your face left the frame. Please try again.'));
           }
           return;
         }
@@ -357,7 +354,7 @@ export default function VerifyFaceScreen() {
           setFaceOk(false);
           setFeedback('multiple_faces');
           if (phaseRef.current === 'challenge') {
-            fail(isTr ? 'Kadrajda birden fazla yüz algılandı.' : 'More than one face was detected.');
+            fail(L('Kadrajda birden fazla yüz algılandı.', 'More than one face was detected.'));
           }
           return;
         }
@@ -408,7 +405,7 @@ export default function VerifyFaceScreen() {
         setFeedback('none');
 
         if (Date.now() - challengeStartRef.current > CHALLENGE_TIMEOUT_MS) {
-          fail(isTr ? 'Süre doldu. Talimatları takip ederek tekrar deneyin.' : 'Time is up. Please try again.');
+          fail(L('Süre doldu. Talimatları takip ederek tekrar deneyin.', 'Time is up. Please try again.'));
           return;
         }
 
@@ -508,20 +505,16 @@ export default function VerifyFaceScreen() {
           {verified ? <BadgeCheck size={72} color={BLUE} strokeWidth={1.5} /> : <ShieldCheck size={68} color={AMBER} strokeWidth={1.5} />}
         </View>
         <Text style={styles.title}>
-          {verified ? (isTr ? 'Hesabınız doğrulandı' : 'Account verified') : isTr ? 'Doğrulama inceleniyor' : 'Verification in review'}
+          {verified ? (L('Hesabınız doğrulandı', 'Account verified')) : L('Doğrulama inceleniyor', 'Verification in review')}
         </Text>
         <Text style={styles.subtitle}>
           {verified
-            ? isTr
-              ? 'Mavi rozetiniz profilinizde görünüyor.'
-              : 'Your blue badge is visible on your profile.'
-            : isTr
-              ? 'Yüz doğrulamanız alındı. Onaylandığında mavi rozetiniz otomatik eklenecek; tekrar doğrulama yapmanıza gerek yok.'
-              : 'We received your verification. The blue badge will be added automatically once approved.'}
+            ? L('Mavi rozetiniz profilinizde görünüyor.', 'Your blue badge is visible on your profile.')
+            : L('Yüz doğrulamanız alındı. Onaylandığında mavi rozetiniz otomatik eklenecek; tekrar doğrulama yapmanıza gerek yok.', 'We received your verification. The blue badge will be added automatically once approved.')}
         </Text>
         <View style={{ width: '100%', paddingHorizontal: 24, marginTop: 24 }}>
           <TouchableOpacity style={styles.primaryBtn} onPress={() => router.back()} activeOpacity={0.85}>
-            <Text style={styles.primaryBtnText}>{isTr ? 'Tamam' : 'OK'}</Text>
+            <Text style={styles.primaryBtnText}>{L('Tamam', 'OK')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -535,18 +528,16 @@ export default function VerifyFaceScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
             <ArrowLeft size={24} color="#111" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isTr ? 'Kimlik doğrulama' : 'Identity check'}</Text>
+          <Text style={styles.headerTitle}>{L('Kimlik doğrulama', 'Identity check')}</Text>
           <View style={styles.iconBtn} />
         </View>
         <View style={styles.introBody}>
           <View style={styles.heroCircle}>
             <ScanFace size={72} color={BLUE} strokeWidth={1.4} />
           </View>
-          <Text style={styles.title}>{isTr ? 'Yüz doğrulama' : 'Face verification'}</Text>
+          <Text style={styles.title}>{L('Yüz doğrulama', 'Face verification')}</Text>
           <Text style={styles.subtitle}>
-            {isTr
-              ? 'Gerçek bir kişi olduğunuzu ve profil fotoğrafınızın size ait olduğunu doğrulayalım. Yaklaşık 20 saniye sürer.'
-              : "Let's confirm you're a real person and your profile photo is you. Takes about 20 seconds."}
+            {L('Gerçek bir kişi olduğunuzu ve profil fotoğrafınızın size ait olduğunu doğrulayalım. Yaklaşık 20 saniye sürer.', 'Let\'s confirm you\'re a real person and your profile photo is you. Takes about 20 seconds.')}
           </Text>
           <View style={styles.tips}>
             {[
@@ -557,7 +548,7 @@ export default function VerifyFaceScreen() {
             ].map((tip, i) => (
               <View key={i} style={styles.tipRow}>
                 <View style={styles.tipIcon}>{tip.icon}</View>
-                <Text style={styles.tipText}>{isTr ? tip.tr : tip.en}</Text>
+                <Text style={styles.tipText}>{L(tip.tr, tip.en)}</Text>
               </View>
             ))}
           </View>
@@ -565,12 +556,10 @@ export default function VerifyFaceScreen() {
         <View style={styles.footer}>
           <TouchableOpacity style={styles.primaryBtn} onPress={start} activeOpacity={0.85}>
             <Camera size={22} color="#FFF" />
-            <Text style={styles.primaryBtnText}>{isTr ? 'Başla' : 'Start'}</Text>
+            <Text style={styles.primaryBtnText}>{L('Başla', 'Start')}</Text>
           </TouchableOpacity>
           <Text style={styles.privacy}>
-            {isTr
-              ? 'Görüntüleriniz yalnızca doğrulama için kullanılır ve profilinizde gösterilmez.'
-              : 'Images are only used for verification and never shown on your profile.'}
+            {L('Görüntüleriniz yalnızca doğrulama için kullanılır ve profilinizde gösterilmez.', 'Images are only used for verification and never shown on your profile.')}
           </Text>
         </View>
       </SafeAreaView>
@@ -679,7 +668,7 @@ export default function VerifyFaceScreen() {
             <Text style={[styles.hintText, { color: feedback === 'hold_still' ? GREEN : AMBER }]}>{hint || ' '}</Text>
           </Animated.View>
           <Text style={styles.stepText}>
-            {isTr ? `Adım ${Math.min(doneSteps + 1, totalSteps)} / ${totalSteps}` : `Step ${Math.min(doneSteps + 1, totalSteps)} of ${totalSteps}`}
+            {L('Adım {0} / {1}', 'Step {0} of {1}', [Math.min(doneSteps + 1, totalSteps), totalSteps])}
           </Text>
         </View>
       </View>
@@ -692,9 +681,9 @@ export default function VerifyFaceScreen() {
         <View style={styles.heroCircle}>
           <ActivityIndicator size="large" color={BLUE} />
         </View>
-        <Text style={styles.title}>{isTr ? 'Doğrulanıyor' : 'Verifying'}</Text>
+        <Text style={styles.title}>{L('Doğrulanıyor', 'Verifying')}</Text>
         <Text style={styles.subtitle}>
-          {isTr ? 'Canlılık ve yüz eşleştirme sonuçları gönderiliyor…' : 'Sending liveness and face match results…'}
+          {L('Canlılık ve yüz eşleştirme sonuçları gönderiliyor…', 'Sending liveness and face match results…')}
         </Text>
       </SafeAreaView>
     );
@@ -712,21 +701,21 @@ export default function VerifyFaceScreen() {
         {success ? <BadgeCheck size={72} color={GREEN} strokeWidth={1.5} /> : <X size={64} color="#EF4444" />}
       </Animated.View>
       <Text style={styles.title}>
-        {success ? (isTr ? 'Doğrulama tamamlandı' : 'Verification complete') : isTr ? 'Doğrulama başarısız' : 'Verification failed'}
+        {success ? (L('Doğrulama tamamlandı', 'Verification complete')) : L('Doğrulama başarısız', 'Verification failed')}
       </Text>
       <Text style={styles.subtitle}>{resultMessage}</Text>
       <View style={{ width: '100%', paddingHorizontal: 24, gap: 12, marginTop: 24 }}>
         {!success && (
           <TouchableOpacity style={styles.primaryBtn} onPress={start} activeOpacity={0.85}>
             <RotateCcw size={20} color="#FFF" />
-            <Text style={styles.primaryBtnText}>{isTr ? 'Tekrar dene' : 'Try again'}</Text>
+            <Text style={styles.primaryBtnText}>{L('Tekrar dene', 'Try again')}</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
           style={success ? styles.primaryBtn : styles.secondaryBtn}
           onPress={() => router.back()}
           activeOpacity={0.85}>
-          <Text style={success ? styles.primaryBtnText : styles.secondaryBtnText}>{isTr ? 'Profile dön' : 'Back to profile'}</Text>
+          <Text style={success ? styles.primaryBtnText : styles.secondaryBtnText}>{L('Profile dön', 'Back to profile')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

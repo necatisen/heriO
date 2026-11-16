@@ -18,6 +18,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import BouncyButton from '@/components/BouncyButton';
 
+import { L } from '@/lib/l10n';
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const AVATAR = Math.min(132, SCREEN_W * 0.34);
 
@@ -136,12 +137,10 @@ export default function MatchCelebrationModal({ visible, matchedUser, sessionId,
         ))}
 
         <Animated.View style={[styles.titleWrap, titleStyle]}>
-          <Text style={styles.titleSmall}>{isTr ? 'Tebrikler!' : 'Congrats!'}</Text>
-          <Text style={styles.title}>{isTr ? 'Eşleştiniz!' : "It's a Match!"}</Text>
+          <Text style={styles.titleSmall}>{L('Tebrikler!', 'Congrats!')}</Text>
+          <Text style={styles.title}>{L('Eşleştiniz!', 'It\'s a Match!')}</Text>
           <Text style={styles.subtitle}>
-            {isTr
-              ? `Sen ve ${matchedUser.full_name} birbirinizi beğendiniz.`
-              : `You and ${matchedUser.full_name} liked each other.`}
+            {L('Sen ve {0} birbirinizi beğendiniz.', 'You and {0} liked each other.', [matchedUser.full_name])}
           </Text>
         </Animated.View>
 
@@ -160,10 +159,10 @@ export default function MatchCelebrationModal({ visible, matchedUser, sessionId,
         <Animated.View style={[styles.actions, ctaStyle]}>
           <BouncyButton style={styles.chatButton} onPress={handleStartChat} pressedScale={0.95}>
             <MessageCircle size={22} color="#FF5E8A" />
-            <Text style={styles.chatButtonText}>{isTr ? 'Mesaj gönder' : 'Send a message'}</Text>
+            <Text style={styles.chatButtonText}>{L('Mesaj gönder', 'Send a message')}</Text>
           </BouncyButton>
           <BouncyButton style={styles.dismiss} onPress={onClose} pressedScale={0.95} haptic={false}>
-            <Text style={styles.dismissText}>{isTr ? 'Keşfetmeye devam et' : 'Keep swiping'}</Text>
+            <Text style={styles.dismissText}>{L('Keşfetmeye devam et', 'Keep swiping')}</Text>
           </BouncyButton>
         </Animated.View>
       </LinearGradient>

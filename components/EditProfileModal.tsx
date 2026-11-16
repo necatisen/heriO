@@ -18,6 +18,7 @@ import { religionOptions, alcoholConsumptionOptions, generateAgeOptions, getCiti
 import ComboBox from '@/components/ComboBox';
 import { FullScreenModal } from '@/components/FullScreenModal';
 
+import { L } from '@/lib/l10n';
 type Profile = {
   full_name?: string | null;
   username?: string | null;
@@ -92,62 +93,56 @@ export default function EditProfileModal({
   const ageOptions = generateAgeOptions();
 
   const childrenOptions = [
-    { value: 'want_someday', label: language === 'tr' ? 'Bir Gün İstiyor' : 'Want Someday' },
-    { value: 'dont_want', label: language === 'tr' ? 'İstemiyor' : "Don't Want" },
-    { value: 'have', label: language === 'tr' ? 'Sahibim' : 'Have' },
-    { value: 'want_more', label: language === 'tr' ? 'Daha Fazla İstiyorum' : 'Want More' },
-    { value: 'dont_want_more', label: language === 'tr' ? 'Daha Fazla İstemiyorum' : "Don't Want More" },
+    { value: 'want_someday', label: L('Bir Gün İstiyor', 'Want Someday') },
+    { value: 'dont_want', label: L('İstemiyor', 'Don\'t Want') },
+    { value: 'have', label: L('Sahibim', 'Have') },
+    { value: 'want_more', label: L('Daha Fazla İstiyorum', 'Want More') },
+    { value: 'dont_want_more', label: L('Daha Fazla İstemiyorum', 'Don\'t Want More') },
   ];
 
   const relationshipStatusOptions = [
-    { value: 'single', label: language === 'tr' ? 'Bekar' : 'Single' },
-    { value: 'married', label: language === 'tr' ? 'Evli' : 'Married' },
-    { value: 'divorced', label: language === 'tr' ? 'Boşanmış' : 'Divorced' },
-    { value: 'widowed', label: language === 'tr' ? 'Dul' : 'Widowed' },
+    { value: 'single', label: L('Bekar', 'Single') },
+    { value: 'married', label: L('Evli', 'Married') },
+    { value: 'divorced', label: L('Boşanmış', 'Divorced') },
+    { value: 'widowed', label: L('Dul', 'Widowed') },
   ];
 
   const relationshipGoalOptions = [
     {
       value: 'serious_long_term',
       label:
-        language === 'tr'
-          ? 'Ciddi ilişki / uzun vadeli partner'
-          : 'Serious relationship / long-term partner',
+        L('Ciddi ilişki / uzun vadeli partner', 'Serious relationship / long-term partner'),
     },
     {
       value: 'marriage_focused',
-      label: language === 'tr' ? 'Evlilik odaklı' : 'Marriage focused',
+      label: L('Evlilik odaklı', 'Marriage focused'),
     },
     {
       value: 'slow_getting_to_know',
       label:
-        language === 'tr'
-          ? 'Yavaş ilerleyen (önce tanışma)'
-          : 'Slow pace (get to know first)',
+        L('Yavaş ilerleyen (önce tanışma)', 'Slow pace (get to know first)'),
     },
     {
       value: 'short_term_casual',
-      label: language === 'tr' ? 'Kısa süreli / casual' : 'Short-term / casual',
+      label: L('Kısa süreli / casual', 'Short-term / casual'),
     },
     {
       value: 'exploring',
       label:
-        language === 'tr'
-          ? 'Belirsiz / keşif aşamasında'
-          : 'Unsure / exploring',
+        L('Belirsiz / keşif aşamasında', 'Unsure / exploring'),
     },
     {
       value: 'go_with_flow',
       label:
-        language === 'tr' ? 'Akışına bırak' : 'Go with the flow',
+        L('Akışına bırak', 'Go with the flow'),
     },
     {
       value: 'friendship',
-      label: language === 'tr' ? 'Arkadaşlık' : 'Friendship',
+      label: L('Arkadaşlık', 'Friendship'),
     },
     {
       value: 'relaxed',
-      label: language === 'tr' ? 'Rahat bir şeyler' : 'Something relaxed',
+      label: L('Rahat bir şeyler', 'Something relaxed'),
     },
   ];
 
@@ -171,15 +166,15 @@ export default function EditProfileModal({
   };
 
   const educationOptions = [
-    { value: 'no_diploma', label: language === 'tr' ? 'Diploması Yok' : 'No Diploma' },
-    { value: 'private_school', label: language === 'tr' ? 'Özel Okul' : 'Private School' },
-    { value: 'currently_in_high_school', label: language === 'tr' ? 'Halen Lisede' : 'Currently in High School' },
-    { value: 'associate_degree', label: language === 'tr' ? 'Ön Lisans' : 'Associate Degree' },
-    { value: 'high_school_graduate', label: language === 'tr' ? 'Lise Mezunu' : 'High School Graduate' },
-    { value: 'currently_in_university', label: language === 'tr' ? 'Halen Yüksek Okulda' : 'Currently in University' },
-    { value: 'university_graduate', label: language === 'tr' ? 'Üniversite Mezunu' : 'University Graduate' },
-    { value: 'masters_degree', label: language === 'tr' ? 'Yüksek Lisans' : 'Master\'s Degree' },
-    { value: 'phd_doctorate', label: language === 'tr' ? 'PhD/Doktora' : 'PhD/Doctorate' },
+    { value: 'no_diploma', label: L('Diploması Yok', 'No Diploma') },
+    { value: 'private_school', label: L('Özel Okul', 'Private School') },
+    { value: 'currently_in_high_school', label: L('Halen Lisede', 'Currently in High School') },
+    { value: 'associate_degree', label: L('Ön Lisans', 'Associate Degree') },
+    { value: 'high_school_graduate', label: L('Lise Mezunu', 'High School Graduate') },
+    { value: 'currently_in_university', label: L('Halen Yüksek Okulda', 'Currently in University') },
+    { value: 'university_graduate', label: L('Üniversite Mezunu', 'University Graduate') },
+    { value: 'masters_degree', label: L('Yüksek Lisans', 'Master\'s Degree') },
+    { value: 'phd_doctorate', label: L('PhD/Doktora', 'PhD/Doctorate') },
   ];
 
   const professionOptionsBase = [
@@ -215,33 +210,33 @@ export default function EditProfileModal({
 
   const professionOptions = [
     // "Çalışmıyor" seçeneğini başa sabitle
-    { value: 'not_working', label: language === 'tr' ? 'Çalışmıyor' : 'Not Working' },
+    { value: 'not_working', label: L('Çalışmıyor', 'Not Working') },
     // Diğerlerini ada göre alfabetik sırayla ekle
     ...[...professionOptionsBase].sort((a, b) => {
-      const la = (language === 'tr' ? a.labelTr : a.labelEn).toLowerCase();
-      const lb = (language === 'tr' ? b.labelTr : b.labelEn).toLowerCase();
+      const la = L(a.labelTr, a.labelEn).toLowerCase();
+      const lb = L(b.labelTr, b.labelEn).toLowerCase();
       return la.localeCompare(lb);
     }).map((p) => ({
       value: p.value,
-      label: language === 'tr' ? p.labelTr : p.labelEn,
+      label: L(p.labelTr, p.labelEn),
     })),
   ];
 
   const smokingOptions = [
-    { value: 'yes', label: language === 'tr' ? 'Evet' : 'Yes' },
-    { value: 'no', label: language === 'tr' ? 'Hayır' : 'No' },
-    { value: 'sometimes', label: language === 'tr' ? 'Bazen' : 'Sometimes' },
-    { value: 'social', label: language === 'tr' ? 'Sosyal içici' : 'Social smoker' },
-    { value: 'trying_to_quit', label: language === 'tr' ? 'Bırakmaya Çalışıyor' : 'Trying to Quit' },
+    { value: 'yes', label: L('Evet', 'Yes') },
+    { value: 'no', label: L('Hayır', 'No') },
+    { value: 'sometimes', label: L('Bazen', 'Sometimes') },
+    { value: 'social', label: L('Sosyal içici', 'Social smoker') },
+    { value: 'trying_to_quit', label: L('Bırakmaya Çalışıyor', 'Trying to Quit') },
   ];
 
   const bodyTypeOptions = [
-    { value: 'slim', label: language === 'tr' ? 'İnce' : 'Slim' },
-    { value: 'average', label: language === 'tr' ? 'Ortalama' : 'Average' },
-    { value: 'athletic', label: language === 'tr' ? 'Atletik' : 'Athletic' },
-    { value: 'muscular', label: language === 'tr' ? 'Kaslı' : 'Muscular' },
-    { value: 'curvy', label: language === 'tr' ? 'Dolgun' : 'Curvy' },
-    { value: 'heavyset', label: language === 'tr' ? 'İri Yapılı' : 'Heavyset' },
+    { value: 'slim', label: L('İnce', 'Slim') },
+    { value: 'average', label: L('Ortalama', 'Average') },
+    { value: 'athletic', label: L('Atletik', 'Athletic') },
+    { value: 'muscular', label: L('Kaslı', 'Muscular') },
+    { value: 'curvy', label: L('Dolgun', 'Curvy') },
+    { value: 'heavyset', label: L('İri Yapılı', 'Heavyset') },
   ];
 
   useEffect(() => {
@@ -337,25 +332,23 @@ export default function EditProfileModal({
 
       if (error) throw error;
 
-      const message = language === 'tr' ? 'Profil güncellendi' : 'Profile updated';
+      const message = L('Profil güncellendi', 'Profile updated');
       if (Platform.OS === 'web') {
         alert(message);
       } else {
-        Alert.alert(language === 'tr' ? 'Başarılı' : 'Success', message);
+        Alert.alert(L('Başarılı', 'Success'), message);
       }
 
       onUpdate();
       onClose();
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      const message = language === 'tr'
-        ? 'Profil güncellenirken hata oluştu'
-        : 'Error updating profile';
+      const message = L('Profil güncellenirken hata oluştu', 'Error updating profile');
 
       if (Platform.OS === 'web') {
         alert(message);
       } else {
-        Alert.alert('Error', message);
+        Alert.alert(L('Hata', 'Error'), message);
       }
     } finally {
       setLoading(false);
@@ -374,7 +367,7 @@ export default function EditProfileModal({
     >
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
-              {language === 'tr' ? 'Profili Düzenle' : 'Edit Profile'}
+              {L('Profili Düzenle', 'Edit Profile')}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={theme.text} />
@@ -384,19 +377,19 @@ export default function EditProfileModal({
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Ad Soyad' : 'Full name'}
+                {L('Ad Soyad', 'Full name')}
               </Text>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
                 value={formData.full_name}
                 onChangeText={(text) => setFormData({ ...formData, full_name: text })}
-                placeholder={language === 'tr' ? 'Ad Soyad' : 'Full name'}
+                placeholder={L('Ad Soyad', 'Full name')}
                 placeholderTextColor={theme.textSecondary}
               />
             </View>
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Kullanıcı adı' : 'Username'}
+                {L('Kullanıcı adı', 'Username')}
               </Text>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
@@ -409,15 +402,15 @@ export default function EditProfileModal({
             </View>
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Yaş' : 'Age'}
+                {L('Yaş', 'Age')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
                 onPress={() => setShowAgePicker(!showAgePicker)}>
                 <Text style={[styles.pickerButtonText, { color: formData.age ? theme.text : theme.textSecondary }]}>
                   {formData.age
-                    ? `${formData.age} ${language === 'tr' ? 'yaş' : 'years'}`
-                    : (language === 'tr' ? 'Yaş Seçin' : 'Select Age')}
+                    ? `${formData.age} ${L('yaş', 'years')}`
+                    : (L('Yaş Seçin', 'Select Age'))}
                 </Text>
               </TouchableOpacity>
               {showAgePicker && (
@@ -440,7 +433,7 @@ export default function EditProfileModal({
             </View>
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Cinsiyet' : 'Gender'}
+                {L('Cinsiyet', 'Gender')}
               </Text>
               <View style={styles.genderRow}>
                 {(['male', 'female', 'other'] as const).map((g) => (
@@ -453,7 +446,7 @@ export default function EditProfileModal({
                     ]}
                     onPress={() => setFormData({ ...formData, gender: g })}>
                     <Text style={[styles.genderBtnText, { color: theme.text }, formData.gender === g && { color: theme.primary, fontWeight: '700' }]}>
-                      {language === 'tr' ? (g === 'male' ? 'Erkek' : g === 'female' ? 'Kadın' : 'Diğer') : g === 'male' ? 'Male' : g === 'female' ? 'Female' : 'Other'}
+                      {g === 'male' ? L('Erkek', 'Male') : g === 'female' ? L('Kadın', 'Female') : L('Diğer', 'Other')}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -461,7 +454,7 @@ export default function EditProfileModal({
             </View>
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Boy (cm)' : 'Height (cm)'}
+                {L('Boy (cm)', 'Height (cm)')}
               </Text>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
@@ -475,7 +468,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Kilo (kg)' : 'Weight (kg)'}
+                {L('Kilo (kg)', 'Weight (kg)')}
               </Text>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
@@ -489,7 +482,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Eğitim Durumu' : 'Education'}
+                {L('Eğitim Durumu', 'Education')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -497,7 +490,7 @@ export default function EditProfileModal({
                 <Text style={[styles.pickerButtonText, { color: formData.education ? theme.text : theme.textSecondary }]}>
                   {formData.education
                     ? getEducationLabel(formData.education)
-                    : (language === 'tr' ? 'Eğitim Durumu Seçin' : 'Select Education')}
+                    : (L('Eğitim Durumu Seçin', 'Select Education'))}
                 </Text>
               </TouchableOpacity>
               {showEducationPicker && (
@@ -532,7 +525,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Meslek' : 'Profession'}
+                {L('Meslek', 'Profession')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -540,7 +533,7 @@ export default function EditProfileModal({
                 <Text style={[styles.pickerButtonText, { color: formData.profession ? theme.text : theme.textSecondary }]}>
                   {formData.profession
                     ? getProfessionLabel(formData.profession)
-                    : (language === 'tr' ? 'Meslek Seçin' : 'Select Profession')}
+                    : (L('Meslek Seçin', 'Select Profession'))}
                 </Text>
               </TouchableOpacity>
               {showProfessionPicker && (
@@ -575,7 +568,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Sigara' : 'Smoking'}
+                {L('Sigara', 'Smoking')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -583,7 +576,7 @@ export default function EditProfileModal({
                 <Text style={[styles.pickerButtonText, { color: formData.smoking_habit ? theme.text : theme.textSecondary }]}>
                   {formData.smoking_habit
                     ? getSmokingLabel(formData.smoking_habit)
-                    : (language === 'tr' ? 'Sigara Durumu Seçin' : 'Select Smoking Status')}
+                    : (L('Sigara Durumu Seçin', 'Select Smoking Status'))}
                 </Text>
               </TouchableOpacity>
               {showSmokingPicker && (
@@ -618,7 +611,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Vücut Tipi' : 'Body Type'}
+                {L('Vücut Tipi', 'Body Type')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -626,7 +619,7 @@ export default function EditProfileModal({
                 <Text style={[styles.pickerButtonText, { color: formData.body_type ? theme.text : theme.textSecondary }]}>
                   {formData.body_type
                     ? getBodyTypeLabel(formData.body_type)
-                    : (language === 'tr' ? 'Vücut Tipi Seçin' : 'Select Body Type')}
+                    : (L('Vücut Tipi Seçin', 'Select Body Type'))}
                 </Text>
               </TouchableOpacity>
               {showBodyTypePicker && (
@@ -661,7 +654,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Din' : 'Religion'}
+                {L('Din', 'Religion')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -669,7 +662,7 @@ export default function EditProfileModal({
                 <Text style={[styles.pickerButtonText, { color: formData.religion ? theme.text : theme.textSecondary }]}>
                   {formData.religion
                     ? ((religionOptions.find((o) => o.value === formData.religion)?.label as { tr?: string; en?: string })?.tr && (religionOptions.find((o) => o.value === formData.religion)?.label as { tr?: string; en?: string })?.[language as 'tr' | 'en']) || (religionOptions.find((o) => o.value === formData.religion)?.label as { en?: string })?.en || formData.religion
-                    : (language === 'tr' ? 'Din Seçin' : 'Select Religion')}
+                    : (L('Din Seçin', 'Select Religion'))}
                 </Text>
               </TouchableOpacity>
               {showReligionPicker && (
@@ -695,7 +688,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Alkol' : 'Alcohol'}
+                {L('Alkol', 'Alcohol')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -703,7 +696,7 @@ export default function EditProfileModal({
                 <Text style={[styles.pickerButtonText, { color: formData.alcohol_consumption ? theme.text : theme.textSecondary }]}>
                   {formData.alcohol_consumption
                     ? ((alcoholConsumptionOptions.find((o) => o.value === formData.alcohol_consumption)?.label as { tr?: string; en?: string })?.[language as 'tr' | 'en']) || (alcoholConsumptionOptions.find((o) => o.value === formData.alcohol_consumption)?.label as { en?: string })?.en || formData.alcohol_consumption
-                    : (language === 'tr' ? 'Alkol Seçin' : 'Select Alcohol')}
+                    : (L('Alkol Seçin', 'Select Alcohol'))}
                 </Text>
               </TouchableOpacity>
               {showAlcoholPicker && (
@@ -729,7 +722,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Çocuk Durumu' : 'Children'}
+                {L('Çocuk Durumu', 'Children')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -737,7 +730,7 @@ export default function EditProfileModal({
                 <Text style={[styles.pickerButtonText, { color: formData.children_status ? theme.text : theme.textSecondary }]}>
                   {formData.children_status
                     ? (childrenOptions.find((o) => o.value === formData.children_status)?.label ?? formData.children_status)
-                    : (language === 'tr' ? 'Çocuk Durumu Seçin' : 'Select Children Status')}
+                    : (L('Çocuk Durumu Seçin', 'Select Children Status'))}
                 </Text>
               </TouchableOpacity>
               {showChildrenPicker && (
@@ -761,7 +754,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'İlişki Durumu' : 'Relationship Status'}
+                {L('İlişki Durumu', 'Relationship Status')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -772,7 +765,7 @@ export default function EditProfileModal({
                 <Text style={[styles.pickerButtonText, { color: formData.relationship_status ? theme.text : theme.textSecondary }]}>
                   {formData.relationship_status
                     ? (relationshipStatusOptions.find((o) => o.value === formData.relationship_status)?.label ?? formData.relationship_status)
-                    : (language === 'tr' ? 'İlişki Durumu Seçin' : 'Select Relationship Status')}
+                    : (L('İlişki Durumu Seçin', 'Select Relationship Status'))}
                 </Text>
               </TouchableOpacity>
               {showRelationshipPicker && (
@@ -796,7 +789,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'İlişki Arayışı' : 'Relationship Goal'}
+                {L('İlişki Arayışı', 'Relationship Goal')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -807,7 +800,7 @@ export default function EditProfileModal({
                 <Text style={[styles.pickerButtonText, { color: formData.relationship_goal ? theme.text : theme.textSecondary }]}>
                   {formData.relationship_goal
                     ? (relationshipGoalOptions.find((o) => o.value === formData.relationship_goal)?.label ?? formData.relationship_goal)
-                    : (language === 'tr' ? 'İlişki Arayışı Seçin' : 'Select Relationship Goal')}
+                    : (L('İlişki Arayışı Seçin', 'Select Relationship Goal'))}
                 </Text>
               </TouchableOpacity>
               {showRelationshipGoalPicker && (
@@ -831,7 +824,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Ülke' : 'Country'}
+                {L('Ülke', 'Country')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -844,9 +837,7 @@ export default function EditProfileModal({
                   {formData.country
                     ? ((countries.find((opt) => opt.value === formData.country)?.label as any)?.[language] ||
                         countries.find((opt) => opt.value === formData.country)?.label.en)
-                    : language === 'tr'
-                    ? 'Ülke Seçin'
-                    : 'Select Country'}
+                    : L('Ülke Seçin', 'Select Country')}
                 </Text>
               </TouchableOpacity>
               {showCountryPicker && (
@@ -881,7 +872,7 @@ export default function EditProfileModal({
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
-                {language === 'tr' ? 'Şehir' : 'City'}
+                {L('Şehir', 'City')}
               </Text>
               <TouchableOpacity
                 style={[styles.pickerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
@@ -897,12 +888,8 @@ export default function EditProfileModal({
                   {formData.city
                     ? formData.city
                     : !formData.country
-                    ? language === 'tr'
-                      ? 'Önce ülke seçin'
-                      : 'Select country first'
-                    : language === 'tr'
-                    ? 'Şehir Seçin'
-                    : 'Select City'}
+                    ? L('Önce ülke seçin', 'Select country first')
+                    : L('Şehir Seçin', 'Select City')}
                 </Text>
               </TouchableOpacity>
               {showCityPicker && getCitiesForCountry(formData.country).length > 0 && (
@@ -949,7 +936,7 @@ export default function EditProfileModal({
               onPress={onClose}
               disabled={loading}>
               <Text style={[styles.cancelBtnText, { color: theme.text }]}>
-                {language === 'tr' ? 'İptal' : 'Cancel'}
+                {L('İptal', 'Cancel')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -958,7 +945,7 @@ export default function EditProfileModal({
               disabled={loading}>
               <Save size={20} color="#FFFFFF" />
               <Text style={styles.saveBtnText}>
-                {loading ? (language === 'tr' ? 'Kaydediliyor...' : 'Saving...') : (language === 'tr' ? 'Kaydet' : 'Save')}
+                {loading ? (L('Kaydediliyor...', 'Saving...')) : (L('Kaydet', 'Save'))}
               </Text>
             </TouchableOpacity>
           </View>

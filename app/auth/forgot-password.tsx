@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { L } from '@/lib/l10n';
 import {
   View,
   Text,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BRAND } from '@/lib/brand';
 import { MessageCircle, Mail, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,7 +27,7 @@ export default function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email');
+      Alert.alert(L('Hata', 'Error'), L('Lütfen e-posta adresinizi girin', 'Please enter your email'));
       return;
     }
 
@@ -33,19 +35,19 @@ export default function ForgotPasswordScreen() {
       setLoading(true);
       await resetPassword(email);
       Alert.alert(
-        'Success',
-        t.checkEmail + '. Please check your email for a password reset link.',
-        [{ text: 'OK', onPress: () => router.back() }]
+        L('Başarılı', 'Success'),
+        L('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.', 'A password reset link has been sent to your email.'),
+        [{ text: L('Tamam', 'OK'), onPress: () => router.back() }]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Password reset failed');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Şifre sıfırlama başarısız oldu', 'Password reset failed'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <LinearGradient colors={['#4A90E2', '#50C9E9']} style={styles.container}>
+    <LinearGradient colors={BRAND.night} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
@@ -62,13 +64,13 @@ export default function ForgotPasswordScreen() {
             <MessageCircle size={64} color="#FFFFFF" />
             <Text style={styles.title}>{t.resetPassword}</Text>
             <Text style={styles.subtitle}>
-              Enter your email to receive a password reset link
+              {L('Şifre sıfırlama bağlantısı için e-posta adresinizi girin', 'Enter your email to receive a password reset link')}
             </Text>
           </View>
 
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
-              <Mail size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Mail size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.email}
@@ -85,13 +87,13 @@ export default function ForgotPasswordScreen() {
               onPress={handleResetPassword}
               disabled={loading}>
               <Text style={styles.resetButtonText}>
-                {loading ? 'Sending...' : t.sendResetLink}
+                {loading ? L('Gönderiliyor...', 'Sending...') : t.sendResetLink}
               </Text>
             </TouchableOpacity>
 
             <View style={styles.backToLoginContainer}>
               <Text style={styles.backToLoginText}>
-                Remember your password?{' '}
+                {L('Şifrenizi hatırladınız mı?', 'Remember your password?')}{' '}
               </Text>
               <TouchableOpacity onPress={() => router.push('/auth/login')}>
                 <Text style={styles.backToLoginLink}>{t.login}</Text>
@@ -171,11 +173,11 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   resetButton: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
     paddingVertical: 18,
     borderRadius: 15,
     alignItems: 'center',
-    shadowColor: '#4A90E2',
+    shadowColor: '#5B4BFF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -198,6 +200,6 @@ const styles = StyleSheet.create({
   backToLoginLink: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#4A90E2',
+    color: '#5B4BFF',
   },
 });

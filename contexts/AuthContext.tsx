@@ -4,6 +4,8 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { readCache, writeCache, clearCache } from '@/lib/cache';
+import { useLanguage, isSupportedLanguage } from '@/contexts/LanguageContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -70,44 +72,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const lastPresenceUpdateAtRef = useRef<number>(0);
+  const { language, applyAccountLanguage, userChoseLanguage } = useLanguage();
+  const languageSyncedForRef = useRef<string | null>(null);
+
+  // Language follows the account: on sign-in the saved language is applied, unless the
+  // user just picked one on this device (welcome screen) – then that choice is saved.
+  useEffect(() => {
+    if (!user?.id || !profile || profile.id !== user.id) return;
+    if (languageSyncedForRef.current === user.id) return;
+    languageSyncedForRef.current = user.id;
+    const saved = profile.preferred_language;
+    if (userChoseLanguage() || !isSupportedLanguage(saved)) {
+      if (saved !== language) {
+        supabase.from('profiles').update({ preferred_language: language }).eq('id', user.id).then(() => {});
+        setProfile((p) => (p ? { ...p, preferred_language: language } : p));
+      }
+    } else if (saved !== language) {
+      applyAccountLanguage(saved);
+    }
+  }, [user?.id, profile, language, applyAccountLanguage, userChoseLanguage]);
+
+  // Later changes (settings) are saved to the account so every device uses them.
+  useEffect(() => {
+    if (!user?.id || languageSyncedForRef.current !== user.id) return;
+    if (profile?.preferred_language === language) return;
+    supabase.from('profiles').update({ preferred_language: language }).eq('id', user.id).then(() => {});
+    setProfile((p) => (p ? { ...p, preferred_language: language } : p));
+  }, [language, user?.id]);
 
   useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        } else {
-          setLoading(false);
-        }
-      })
-      .catch(async (err) => {
-        // Invalid/expired refresh token: clear local session so app opens cleanly.
-        console.warn('Initial session check failed:', (err as any)?.message || err);
-        try {
-          await supabase.auth.signOut();
-        } catch {
-          // Ignore signOut failures; we still reset local state.
-        }
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-      });
+    if (!user) languageSyncedForRef.current = null;
+  }, [user]);
 
+  // Startup must not wait for the network: the session comes from local storage, the
+  // profile is shown from cache immediately and refreshed in the background.
+  useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        const uid = session.user.id;
+        readCache<Profile>(`profile:${uid}`).then((cached) => {
+          if (cached) setProfile((p) => p ?? cached);
+          setLoading(false);
+        });
+        // TOKEN_REFRESHED fires often and never changes the profile.
+        if (event !== 'TOKEN_REFRESHED') fetchProfile(uid);
       } else {
         setProfile(null);
         setLoading(false);
+        if (event === 'SIGNED_OUT') clearCache();
       }
+    });
+
+    // onAuthStateChange always emits INITIAL_SESSION; this only guards a broken stored token.
+    supabase.auth.getSession().catch(async (err) => {
+      console.warn('Initial session check failed:', (err as any)?.message || err);
+      try {
+        await supabase.auth.signOut();
+      } catch {}
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -151,28 +180,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.id]);
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      console.log('Fetching profile for user:', userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+  const profileRequestRef = useRef<{ userId: string; promise: Promise<void> } | null>(null);
 
-      if (error) {
-        console.error('Profile fetch error:', error);
-        throw error;
+  // Concurrent calls for the same user share one request.
+  const fetchProfile = (userId: string): Promise<void> => {
+    if (profileRequestRef.current?.userId === userId) return profileRequestRef.current.promise;
+    const promise = (async () => {
+      try {
+        const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+        if (error) throw error;
+        setProfile(data);
+        if (data) writeCache(`profile:${userId}`, data);
+      } catch (error) {
+        // Keep the cached profile on network errors instead of blanking the UI.
+        console.error('Error fetching profile:', error);
+      } finally {
+        profileRequestRef.current = null;
+        setLoading(false);
       }
-
-      console.log('Profile data:', data);
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      setProfile(null);
-    } finally {
-      setLoading(false);
-    }
+    })();
+    profileRequestRef.current = { userId, promise };
+    return promise;
   };
 
   const signIn = async (email: string, password: string) => {
@@ -280,6 +308,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
+      // Explicit refresh (e.g. after an update) must not reuse an older in-flight request.
+      profileRequestRef.current = null;
       await fetchProfile(user.id);
     }
   };

@@ -7,15 +7,16 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { PREMIUM_BENEFITS, PREMIUM_PLANS, type PremiumPlanId } from '@/lib/storeProducts';
 
+import { L } from '@/lib/l10n';
 export default function PremiumScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { language } = useLanguage();
   const [selectedPlan, setSelectedPlan] = useState<PremiumPlanId>('yearly');
 
-  const benefits = PREMIUM_BENEFITS[language === 'tr' ? 'tr' : 'en'];
-  const title = language === 'tr' ? 'Premium' : 'Premium';
-  const ctaLabel = language === 'tr' ? 'Satın al' : 'Purchase';
+  const benefits = PREMIUM_BENEFITS.tr.map((tr, i) => L(tr, PREMIUM_BENEFITS.en[i]));
+  const title = L('Premium', 'Premium');
+  const ctaLabel = L('Satın al', 'Purchase');
 
   const selectedPlanDef = PREMIUM_PLANS.find((p) => p.id === selectedPlan) || PREMIUM_PLANS[0];
   const activeSummaryTr = `${selectedPlanDef.labelTr} premium aktif edilecek.`;
@@ -39,16 +40,16 @@ export default function PremiumScreen() {
         <View style={[styles.hero, { backgroundColor: theme.primary + '18' }]}>
           <Crown size={56} color={theme.primary} />
           <Text style={[styles.heroTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Sınırsız deneyim' : 'Unlimited experience'}
+            {L('Sınırsız deneyim', 'Unlimited experience')}
           </Text>
           <Text style={[styles.heroSub, { color: theme.textSecondary }]}>
-            {language === 'tr' ? 'Arkadaş olmadan da herkesle sohbet et, tüm filtreleri kullan.' : 'Chat with anyone without being friends, use all filters.'}
+            {L('Arkadaş olmadan da herkesle sohbet et, tüm filtreleri kullan.', 'Chat with anyone without being friends, use all filters.')}
           </Text>
         </View>
 
         <View style={[styles.benefitsCard, { backgroundColor: theme.cardBackground }]}>
           <Text style={[styles.benefitsTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Premium ile neler var?' : 'What’s included?'}
+            {L('Premium ile neler var?', 'What’s included?')}
           </Text>
           {benefits.map((item, i) => (
             <View key={i} style={styles.benefitRow}>
@@ -59,11 +60,11 @@ export default function PremiumScreen() {
         </View>
 
         <Text style={[styles.plansTitle, { color: theme.text }]}>
-          {language === 'tr' ? 'Paket seçin' : 'Choose a plan'}
+          {L('Paket seçin', 'Choose a plan')}
         </Text>
         {PREMIUM_PLANS.map((p) => {
-          const label = language === 'tr' ? p.labelTr : p.labelEn;
-          const price = language === 'tr' ? p.priceTr : p.priceEn;
+          const label = L(p.labelTr, p.labelEn);
+          const price = L(p.priceTr, p.priceEn);
           const isSelected = selectedPlan === p.id;
           return (
             <TouchableOpacity
@@ -80,7 +81,7 @@ export default function PremiumScreen() {
               activeOpacity={0.8}>
               {p.popular && (
                 <View style={[styles.popularBadge, { backgroundColor: theme.primary }]}>
-                  <Text style={styles.popularBadgeText}>{language === 'tr' ? 'Önerilen' : 'Popular'}</Text>
+                  <Text style={styles.popularBadgeText}>{L('Önerilen', 'Popular')}</Text>
                 </View>
               )}
               <View style={styles.planCardInner}>
@@ -99,10 +100,10 @@ export default function PremiumScreen() {
         })}
         <View style={[styles.summaryCard, { backgroundColor: theme.primary + '18', borderColor: theme.primary + '44' }]}>
           <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
-            {language === 'tr' ? 'Seçilen paket' : 'Selected plan'}
+            {L('Seçilen paket', 'Selected plan')}
           </Text>
           <Text style={[styles.summaryText, { color: theme.text }]}>
-            {language === 'tr' ? activeSummaryTr : activeSummaryEn}
+            {L(activeSummaryTr, activeSummaryEn)}
           </Text>
         </View>
         <TouchableOpacity

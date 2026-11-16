@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getCountryLabel } from '@/lib/constants';
 import {
   View,
   Text,
@@ -11,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Location from 'expo-location';
-import { ListFilter as Filter, Heart, X, MapPin, MessageCircle } from 'lucide-react-native';
+import { ListFilter as Filter, Heart, X, MapPin, MessageCircle, Sparkles } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,8 +27,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { getProfessionLabel, getGenderLabel } from '@/lib/profileTranslations';
 import HeartLoader from '@/components/HeartLoader';
+import { peekCache, readCache, writeCache } from '@/lib/cache';
+import { compatibilityScore } from '@/lib/compatibility';
+import { BRAND } from '@/lib/brand';
 import { isUserOnlineNow } from '@/lib/dateFormat';
 
+import { L } from '@/lib/l10n';
 type UserProfile = {
   id: string;
   full_name: string;
@@ -68,8 +73,11 @@ export default function ExploreScreen() {
   const router = useRouter();
   const [isPremium, setIsPremium] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const exploreCacheKey = user ? `explore:${user.id}` : '';
+  const cachedUsers = exploreCacheKey ? peekCache<UserProfile[]>(exploreCacheKey) : undefined;
+  const [users, setUsers] = useState<UserProfile[]>(cachedUsers ?? []);
+  const [loading, setLoading] = useState(!cachedUsers);
+  const usersCountRef = useRef(cachedUsers?.length ?? 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -124,7 +132,6 @@ export default function ExploreScreen() {
 
   const resetAndFetch = useCallback(() => {
     if (!user) return;
-    setUsers([]);
     setCurrentIndex(0);
     setPage(0);
     setHasMore(true);
@@ -135,6 +142,16 @@ export default function ExploreScreen() {
     if (!user) return;
     resetAndFetch();
   }, [user?.id, isPremium, filters]);
+
+  useEffect(() => {
+    if (!exploreCacheKey || usersCountRef.current > 0) return;
+    readCache<UserProfile[]>(exploreCacheKey).then((c) => {
+      if (!c?.length || usersCountRef.current > 0) return;
+      usersCountRef.current = c.length;
+      setUsers(c);
+      setLoading(false);
+    });
+  }, [exploreCacheKey]);
 
   // Prefetch current + next few profile images for smoother first-time experience.
   useEffect(() => {
@@ -225,7 +242,8 @@ export default function ExploreScreen() {
     const seq = ++fetchSeq.current;
     try {
       if (mode === 'append') setLoadingMore(true);
-      else setLoading(true);
+      // Keep showing cached/previous cards while refreshing; spinner only when empty.
+      else if (usersCountRef.current === 0) setLoading(true);
       // Kick off independent queries in parallel for faster first paint.
       let baseQuery = supabase
         .from('profiles')
@@ -312,8 +330,8 @@ export default function ExploreScreen() {
       let filteredUsers = (data || []) as any[];
 
       if (user?.id) {
-        const blockedIds = new Set((blocks || []).map((b: any) => b.blocked_user_id));
-        const likedUserIds = new Set((likesSent || []).map((l: any) => l.liked_user_id));
+        const blockedIds = new Set<string>((blocks || []).map((b: any) => b.blocked_user_id));
+        const likedUserIds = new Set<string>((likesSent || []).map((l: any) => l.liked_user_id));
 
         const friendIds = new Set<string>();
         (friendsRows || []).forEach((r: any) => {
@@ -363,6 +381,8 @@ export default function ExploreScreen() {
           seen.add(u.id);
           deduped.push(u as UserProfile);
         }
+        usersCountRef.current = deduped.length;
+        if (mode === 'reset' && user?.id) writeCache(`explore:${user.id}`, deduped.slice(0, 20));
         return deduped;
       });
       if (mode === 'reset') setCurrentIndex(0);
@@ -397,11 +417,11 @@ export default function ExploreScreen() {
         } else {
           console.error('Error saving like:', likeError);
           if (Platform.OS === 'web') {
-            alert(language === 'tr' ? 'Beğeni gönderilemedi: ' + (likeError.message || '') : 'Could not send like: ' + (likeError.message || ''));
+            alert(L('Beğeni gönderilemedi: {0}', 'Could not send like: {0}', [likeError.message || '']));
           } else {
             Alert.alert(
-              language === 'tr' ? 'Beğeni hatası' : 'Like error',
-              likeError.message || (language === 'tr' ? 'Beğeni kaydedilemedi.' : 'Like could not be saved.')
+              L('Beğeni hatası', 'Like error'),
+              likeError.message || (L('Beğeni kaydedilemedi.', 'Like could not be saved.'))
             );
           }
         }
@@ -410,8 +430,8 @@ export default function ExploreScreen() {
       }
 
       if (!insertedLike?.id) {
-        if (Platform.OS === 'web') alert(language === 'tr' ? 'Beğeni kaydedilemedi.' : 'Like could not be saved.');
-        else Alert.alert(language === 'tr' ? 'Hata' : 'Error', language === 'tr' ? 'Beğeni kaydedilemedi.' : 'Like could not be saved.');
+        if (Platform.OS === 'web') alert(L('Beğeni kaydedilemedi.', 'Like could not be saved.'));
+        else Alert.alert(L('Hata', 'Error'), L('Beğeni kaydedilemedi.', 'Like could not be saved.'));
         setCurrentIndex(currentIndex + 1);
         return;
       }
@@ -510,9 +530,9 @@ export default function ExploreScreen() {
     } catch (error) {
       console.error('Error in handleLike:', error);
       if (Platform.OS === 'web') {
-        alert(language === 'tr' ? 'Bir hata oluştu.' : 'An error occurred.');
+        alert(L('Bir hata oluştu.', 'An error occurred.'));
       } else {
-        Alert.alert(language === 'tr' ? 'Hata' : 'Error', language === 'tr' ? 'Bir hata oluştu.' : 'An error occurred.');
+        Alert.alert(L('Hata', 'Error'), L('Bir hata oluştu.', 'An error occurred.'));
       }
     }
 
@@ -534,15 +554,15 @@ export default function ExploreScreen() {
 
       if (error) {
         if (error.code === '23505') {
-          alert(language === 'tr' ? 'Zaten arkadaşlık isteği gönderdiniz' : 'Friend request already sent');
+          alert(L('Zaten arkadaşlık isteği gönderdiniz', 'Friend request already sent'));
         } else {
           throw error;
         }
       } else {
-        alert(language === 'tr' ? 'Arkadaşlık isteği gönderildi' : 'Friend request sent');
+        alert(L('Arkadaşlık isteği gönderildi', 'Friend request sent'));
       }
     } catch (error: any) {
-      alert(error.message || 'Failed to send friend request');
+      alert(error.message || L('Arkadaşlık isteği gönderilemedi', 'Failed to send friend request'));
     }
   };
 
@@ -556,13 +576,11 @@ export default function ExploreScreen() {
     setIsPremium(hasPremium);
     if (!hasPremium) {
       Alert.alert(
-        language === 'tr' ? 'Premium almalısınız' : 'Premium required',
-        language === 'tr'
-          ? 'Filtre kullanmak için Premium üye olmalısınız.'
-          : 'You need Premium to use filters.',
+        L('Premium almalısınız', 'Premium required'),
+        L('Filtre kullanmak için Premium üye olmalısınız.', 'You need Premium to use filters.'),
         [
-          { text: language === 'tr' ? 'Tamam' : 'OK', style: 'cancel' },
-          { text: language === 'tr' ? 'Premium al' : 'Get Premium', onPress: () => router.push('/store/premium') },
+          { text: L('Tamam', 'OK'), style: 'cancel' },
+          { text: L('Premium al', 'Get Premium'), onPress: () => router.push('/store/premium') },
         ]
       );
       return;
@@ -592,8 +610,8 @@ export default function ExploreScreen() {
       if (error || !newSession?.id) throw error || new Error('Session not created');
       router.push(`/conversation/${newSession.id}?friendId=${currentUser.id}`);
     } catch (e: any) {
-      if (Platform.OS === 'web') alert(e?.message || 'Failed to open chat');
-      else Alert.alert(language === 'tr' ? 'Hata' : 'Error', e?.message || (language === 'tr' ? 'Sohbet açılamadı.' : 'Could not open chat.'));
+      if (Platform.OS === 'web') alert(e?.message || L('Sohbet açılamadı', 'Failed to open chat'));
+      else Alert.alert(L('Hata', 'Error'), e?.message || (L('Sohbet açılamadı.', 'Could not open chat.')));
     }
   };
 
@@ -615,6 +633,15 @@ export default function ExploreScreen() {
         style={styles.cardGradient}
         pointerEvents="none"
       />
+      {(() => {
+        const score = compatibilityScore(profile as any, u);
+        return score != null ? (
+          <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.compatChip} pointerEvents="none">
+            <Sparkles size={14} color="#FFFFFF" />
+            <Text style={styles.compatText}>{L('%{0} uyum', '{0}% match', [score])}</Text>
+          </LinearGradient>
+        ) : null;
+      })()}
       <View style={styles.cardInfo} pointerEvents="none">
         <View style={styles.userNameRow}>
           <Text style={styles.userName} numberOfLines={1}>
@@ -626,7 +653,7 @@ export default function ExploreScreen() {
         {isUserOnlineNow(u.is_online, u.last_seen) && (
           <View style={styles.onlineRow}>
             <View style={styles.onlineIndicator} />
-            <Text style={styles.onlineText}>{language === 'tr' ? 'Şu an çevrimiçi' : 'Online now'}</Text>
+            <Text style={styles.onlineText}>{L('Şu an çevrimiçi', 'Online now')}</Text>
           </View>
         )}
         {u.city ? (
@@ -634,7 +661,7 @@ export default function ExploreScreen() {
             <MapPin size={15} color="rgba(255,255,255,0.85)" />
             <Text style={styles.location}>
               {u.city}
-              {u.country ? `, ${u.country.replace(/\b\w/g, (c) => c.toUpperCase())}` : ''}
+              {u.country ? `, ${getCountryLabel(u.country)}` : ''}
             </Text>
           </View>
         ) : null}
@@ -661,7 +688,7 @@ export default function ExploreScreen() {
           <Filter size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.text }]}>
-          {language === 'tr' ? 'Keşfet' : 'Explore'}
+          {L('Keşfet', 'Explore')}
         </Text>
         <View style={{ width: 48 }} />
       </View>
@@ -679,8 +706,8 @@ export default function ExploreScreen() {
             next={nextUser ? renderCard(nextUser) : undefined}
             onSwiped={(dir) => (dir === 'right' ? handleLike() : handlePass())}
             onTap={() => setProfileModalVisible(true)}
-            likeLabel={language === 'tr' ? 'BEĞEN' : 'LIKE'}
-            nopeLabel={language === 'tr' ? 'GEÇ' : 'NOPE'}
+            likeLabel={L('BEĞEN', 'LIKE')}
+            nopeLabel={L('GEÇ', 'NOPE')}
           />
 
           <View style={styles.actions}>
@@ -706,15 +733,13 @@ export default function ExploreScreen() {
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-            {language === 'tr'
-              ? 'Filtrelerinize uygun kullanıcı bulunamadı.'
-              : 'No users found matching your filters.'}
+            {L('Filtrelerinize uygun kullanıcı bulunamadı.', 'No users found matching your filters.')}
           </Text>
           <TouchableOpacity
             style={[styles.changeFiltersButton, { backgroundColor: theme.primary }]}
             onPress={openFilterModal}>
             <Text style={styles.changeFiltersButtonText}>
-              {language === 'tr' ? 'Filtreleri Değiştir' : 'Change Filters'}
+              {L('Filtreleri Değiştir', 'Change Filters')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -802,6 +827,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
   },
+  compatChip: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+  },
+  compatText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
   cardGradient: {
     ...StyleSheet.absoluteFillObject,
   },

@@ -13,7 +13,20 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+// Text the receiver sees, in the receiver's own app language.
+const PUSH_TEXT: Record<string, { newMessage: string; photo: string }> = {
+  tr: { newMessage: 'Yeni mesaj', photo: '📷 Fotoğraf' },
+  en: { newMessage: 'New message', photo: '📷 Photo' },
+  de: { newMessage: 'Neue Nachricht', photo: '📷 Foto' },
+  fr: { newMessage: 'Nouveau message', photo: '📷 Photo' },
+  es: { newMessage: 'Nuevo mensaje', photo: '📷 Foto' },
+  ru: { newMessage: 'Новое сообщение', photo: '📷 Фото' },
+  ar: { newMessage: 'رسالة جديدة', photo: '📷 صورة' },
+};
+
 type RequestBody = {
+  /** 'photo' → body is replaced by a localized "Photo" label */
+  media?: 'text' | 'photo';
   to_user_id?: string;
   title?: string;
   body?: string;
@@ -51,6 +64,17 @@ Deno.serve(async (req: Request) => {
     if (!toUserId) return jsonResponse({ success: false, message: 'to_user_id is required' }, 400);
 
     const admin = createClient(supabaseUrl, serviceKey);
+
+    // Localize for the receiver; title = sender's name (like most chat apps).
+    const { data: people } = await admin
+      .from('profiles')
+      .select('id, full_name, preferred_language')
+      .in('id', [toUserId, userRes.user.id]);
+    const receiver = (people || []).find((p: any) => p.id === toUserId);
+    const sender = (people || []).find((p: any) => p.id === userRes.user.id);
+    const txt = PUSH_TEXT[String(receiver?.preferred_language || 'en')] || PUSH_TEXT.en;
+    const localizedTitle = String(sender?.full_name || '').trim() || txt.newMessage;
+    const localizedBody = payload.media === 'photo' ? txt.photo : bodyText;
     const { data: tokens, error: tokensErr } = await admin
       .from('push_tokens')
       .select('token')
@@ -62,8 +86,8 @@ Deno.serve(async (req: Request) => {
 
     const expoMessages = to.map((expoToken) => ({
       to: expoToken,
-      title,
-      body: bodyText,
+      title: localizedTitle,
+      body: localizedBody,
       data,
       sound: 'default',
     }));

@@ -1,3 +1,4 @@
+import { L } from '@/lib/l10n';
 export const religionOptions = [
   { value: 'islam', label: { tr: 'İslam', en: 'Islam' } },
   { value: 'christianity', label: { tr: 'Hristiyanlık', en: 'Christianity' } },
@@ -171,4 +172,13 @@ export function getCitiesForCountry(countryValue: string): string[] {
   const cities = citiesByCountry[countryValue];
   if (cities && cities.length > 0) return cities;
   return [];
+}
+
+/** Localized country name for a stored value ("germany", "Germany", "usa"…); falls back to Title Case. */
+export function getCountryLabel(value: string | null | undefined): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const v = raw.toLowerCase();
+  const hit = countries.find((c) => c.value === v || c.label.en.toLowerCase() === v || c.label.tr.toLowerCase() === v);
+  return hit ? L(hit.label.tr, hit.label.en) : raw.replace(/\b\w/g, (c) => c.toUpperCase());
 }

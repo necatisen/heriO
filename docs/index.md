@@ -1,8 +1,8 @@
 ---
-title: herio
+title: Birthchat
 ---
 
-# herio
+# Birthchat
 
 - Gizlilik Politikası: [privacy-policy](./privacy-policy)
 - Privacy Policy (TR/EN): [privacy-policy](./privacy-policy)

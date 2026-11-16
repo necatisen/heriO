@@ -24,6 +24,7 @@ import { useRouter } from 'expo-router';
 import { PREMIUM_PLANS } from '@/lib/storeProducts';
 import * as ImagePicker from 'expo-image-picker';
 import EditProfileModal from '@/components/EditProfileModal';
+import ProfileStrength from '@/components/ProfileStrength';
 import { uploadGalleryPhoto, deletePhotoFromStorage } from '@/lib/uploadAvatar';
 import {
   getEducationLabel,
@@ -40,6 +41,7 @@ import HeartLoader from '@/components/HeartLoader';
 import { isUserOnlineNow } from '@/lib/dateFormat';
 import { limitWords, sanitizeSocialAndContacts } from '@/lib/textSanitizer';
 
+import { L, localeTag } from '@/lib/l10n';
 type Photo = {
   id: string;
   photo_url: string;
@@ -52,7 +54,7 @@ function getCountryLabel(value: string | null | undefined, language: string): st
   const isTr = language.toLowerCase().startsWith('tr');
 
   const match = countries.find((c) => c.value === norm);
-  if (match) return isTr ? match.label.tr : match.label.en;
+  if (match) return L(match.label.tr, match.label.en);
 
   return raw;
 }
@@ -170,14 +172,12 @@ export default function ProfileScreen() {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (permissionResult.granted === false) {
-        const message = language === 'tr'
-          ? 'Galeriye erişim izni gerekiyor!'
-          : 'Permission to access gallery is required!';
+        const message = L('Galeriye erişim izni gerekiyor!', 'Permission to access gallery is required!');
 
         if (Platform.OS === 'web') {
           alert(message);
         } else {
-          Alert.alert(language === 'tr' ? 'İzin Gerekli' : 'Permission Required', message);
+          Alert.alert(L('İzin Gerekli', 'Permission Required'), message);
         }
         return;
       }
@@ -193,14 +193,12 @@ export default function ProfileScreen() {
       if (!asset?.uri) return;
       await uploadPhoto(asset.uri);
     } catch (error: any) {
-      const message = language === 'tr'
-        ? 'Resim seçilirken hata oluştu'
-        : 'Error picking image';
+      const message = L('Resim seçilirken hata oluştu', 'Error picking image');
 
       if (Platform.OS === 'web') {
         alert(message);
       } else {
-        Alert.alert('Error', message);
+        Alert.alert(L('Hata', 'Error'), message);
       }
     }
   };
@@ -244,26 +242,22 @@ export default function ProfileScreen() {
 
       await fetchPhotos();
 
-      const message = language === 'tr'
-        ? 'Fotoğraf başarıyla yüklendi!'
-        : 'Photo uploaded successfully!';
+      const message = L('Fotoğraf başarıyla yüklendi!', 'Photo uploaded successfully!');
 
       if (Platform.OS === 'web') {
         alert(message);
       } else {
-        Alert.alert(language === 'tr' ? 'Başarılı' : 'Success', message);
+        Alert.alert(L('Başarılı', 'Success'), message);
       }
     } catch (error: any) {
       console.error('Upload photo error:', error);
-      const message = language === 'tr'
-        ? 'Fotoğraf yüklenirken hata oluştu'
-        : 'Error uploading photo';
+      const message = L('Fotoğraf yüklenirken hata oluştu', 'Error uploading photo');
       const detail = error?.message ?? error?.error_description ?? '';
 
       if (Platform.OS === 'web') {
         alert(detail ? `${message}: ${detail}` : message);
       } else {
-        Alert.alert(language === 'tr' ? 'Yükleme hatası' : 'Upload Error', detail || message);
+        Alert.alert(L('Yükleme hatası', 'Upload Error'), detail || message);
       }
     } finally {
       setUploading(false);
@@ -278,10 +272,8 @@ export default function ProfileScreen() {
         setBioText(sanitized.text);
         if (Platform.OS !== 'web') {
           Alert.alert(
-            language === 'tr' ? 'Düzenlendi' : 'Adjusted',
-            language === 'tr'
-              ? 'Hakkımda alanı en fazla 50 kelime olabilir ve sosyal medya/iletişim bilgileri gizlenir.'
-              : 'Bio is limited to 50 words and social/contact details are hidden.'
+            L('Düzenlendi', 'Adjusted'),
+            L('Hakkımda alanı en fazla 50 kelime olabilir ve sosyal medya/iletişim bilgileri gizlenir.', 'Bio is limited to 50 words and social/contact details are hidden.')
           );
         }
       }
@@ -295,24 +287,20 @@ export default function ProfileScreen() {
       await refreshProfile();
       setEditingBio(false);
 
-      const message = language === 'tr'
-        ? 'Biyografi güncellendi'
-        : 'Bio updated';
+      const message = L('Biyografi güncellendi', 'Bio updated');
 
       if (Platform.OS === 'web') {
         alert(message);
       } else {
-        Alert.alert(language === 'tr' ? 'Başarılı' : 'Success', message);
+        Alert.alert(L('Başarılı', 'Success'), message);
       }
     } catch (error: any) {
-      const message = language === 'tr'
-        ? 'Biyografi güncellenirken hata oluştu'
-        : 'Error updating bio';
+      const message = L('Biyografi güncellenirken hata oluştu', 'Error updating bio');
 
       if (Platform.OS === 'web') {
         alert(message);
       } else {
-        Alert.alert('Error', message);
+        Alert.alert(L('Hata', 'Error'), message);
       }
     }
   };
@@ -321,8 +309,8 @@ export default function ProfileScreen() {
     if (!user?.id) return;
     const url = (photoUrl || '').trim();
     if (!url) {
-      if (Platform.OS === 'web') alert(language === 'tr' ? 'Fotoğraf adresi alınamadı.' : 'Could not get photo URL.');
-      else Alert.alert(language === 'tr' ? 'Hata' : 'Error', language === 'tr' ? 'Fotoğraf adresi alınamadı.' : 'Could not get photo URL.');
+      if (Platform.OS === 'web') alert(L('Fotoğraf adresi alınamadı.', 'Could not get photo URL.'));
+      else Alert.alert(L('Hata', 'Error'), L('Fotoğraf adresi alınamadı.', 'Could not get photo URL.'));
       return;
     }
     try {
@@ -334,43 +322,41 @@ export default function ProfileScreen() {
         .single();
       if (error) throw error;
       if (!data?.profile_picture) {
-        throw new Error(language === 'tr' ? 'Profil güncellenemedi (yetki veya satır bulunamadı).' : 'Profile update failed (permission or row not found).');
+        throw new Error(L('Profil güncellenemedi (yetki veya satır bulunamadı).', 'Profile update failed (permission or row not found).'));
       }
       await refreshProfile();
       await fetchPhotos();
-      const msg = language === 'tr' ? 'Profil fotoğrafı güncellendi' : 'Profile photo updated';
+      const msg = L('Profil fotoğrafı güncellendi', 'Profile photo updated');
       if (Platform.OS === 'web') alert(msg);
-      else Alert.alert(language === 'tr' ? 'Başarılı' : 'Success', msg);
+      else Alert.alert(L('Başarılı', 'Success'), msg);
     } catch (e: any) {
-      const errMsg = e?.message || e?.error_description || (language === 'tr' ? 'Profil fotoğrafı güncellenemedi' : 'Failed to update profile photo');
+      const errMsg = e?.message || e?.error_description || (L('Profil fotoğrafı güncellenemedi', 'Failed to update profile photo'));
       if (Platform.OS === 'web') alert(errMsg);
-      else Alert.alert(language === 'tr' ? 'Hata' : 'Error', errMsg);
+      else Alert.alert(L('Hata', 'Error'), errMsg);
     }
   };
 
   const handlePhotoActions = (photo: Photo) => {
     Alert.alert(
-      language === 'tr' ? 'Fotoğraf' : 'Photo',
-      language === 'tr' ? 'Ne yapmak istersiniz?' : 'What would you like to do?',
+      L('Fotoğraf', 'Photo'),
+      L('Ne yapmak istersiniz?', 'What would you like to do?'),
       [
         {
-          text: language === 'tr' ? 'Profil fotoğrafı yap' : 'Set as profile photo',
+          text: L('Profil fotoğrafı yap', 'Set as profile photo'),
           onPress: () => handleSetAsProfilePhoto(photo.photo_url),
         },
         {
-          text: language === 'tr' ? 'Sil' : 'Delete',
+          text: L('Sil', 'Delete'),
           style: 'destructive',
           onPress: () => handleDeletePhoto(photo.id, photo.photo_url),
         },
-        { text: language === 'tr' ? 'İptal' : 'Cancel', style: 'cancel' },
+        { text: L('İptal', 'Cancel'), style: 'cancel' },
       ]
     );
   };
 
   const handleDeletePhoto = async (photoId: string, photoUrl: string) => {
-    const confirmMessage = language === 'tr'
-      ? 'Bu fotoğrafı silmek istediğinize emin misiniz?'
-      : 'Are you sure you want to delete this photo?';
+    const confirmMessage = L('Bu fotoğrafı silmek istediğinize emin misiniz?', 'Are you sure you want to delete this photo?');
 
     const deleteAction = async () => {
       try {
@@ -397,24 +383,20 @@ export default function ProfileScreen() {
 
         await fetchPhotos();
 
-        const message = language === 'tr'
-          ? 'Fotoğraf silindi'
-          : 'Photo deleted';
+        const message = L('Fotoğraf silindi', 'Photo deleted');
 
         if (Platform.OS === 'web') {
           alert(message);
         } else {
-          Alert.alert(language === 'tr' ? 'Başarılı' : 'Success', message);
+          Alert.alert(L('Başarılı', 'Success'), message);
         }
       } catch (error: any) {
-        const message = language === 'tr'
-          ? 'Fotoğraf silinirken hata oluştu'
-          : 'Error deleting photo';
+        const message = L('Fotoğraf silinirken hata oluştu', 'Error deleting photo');
 
         if (Platform.OS === 'web') {
           alert(message);
         } else {
-          Alert.alert('Error', message);
+          Alert.alert(L('Hata', 'Error'), message);
         }
       }
     };
@@ -425,11 +407,11 @@ export default function ProfileScreen() {
       }
     } else {
       Alert.alert(
-        language === 'tr' ? 'Fotoğrafı Sil' : 'Delete Photo',
+        L('Fotoğrafı Sil', 'Delete Photo'),
         confirmMessage,
         [
-          { text: language === 'tr' ? 'İptal' : 'Cancel', style: 'cancel' },
-          { text: language === 'tr' ? 'Sil' : 'Delete', style: 'destructive', onPress: deleteAction },
+          { text: L('İptal', 'Cancel'), style: 'cancel' },
+          { text: L('Sil', 'Delete'), style: 'destructive', onPress: deleteAction },
         ]
       );
     }
@@ -449,7 +431,7 @@ export default function ProfileScreen() {
 
   const displayProfile = profile ?? {
     id: user.id,
-    full_name: user.email?.split('@')[0] ?? (language === 'tr' ? 'Kullanıcı' : 'User'),
+    full_name: user.email?.split('@')[0] ?? (L('Kullanıcı', 'User')),
     username: '',
     profile_picture: null,
     bio: '',
@@ -539,17 +521,18 @@ export default function ProfileScreen() {
 
               <View style={styles.nameContainer}>
                 <View style={styles.nameRow}>
-                  <Text style={styles.userName}>{displayProfile.full_name}</Text>
+                  <Text style={[styles.userName, { flexShrink: 1 }]} numberOfLines={2}>
+                    {displayProfile.full_name}
+                    {age ? <Text style={styles.userAge}>, {age}</Text> : null}
+                  </Text>
                   {displayProfile.verification_status === 'verified' ? (
                     <VerifiedBadge
                       size={20}
                       verified
                       onPress={() =>
                         Alert.alert(
-                          language === 'tr' ? 'Hesabınız doğrulandı' : 'Account verified',
-                          language === 'tr'
-                            ? 'Mavi rozetiniz profilinizde ve keşfet kartınızda görünüyor.'
-                            : 'Your blue badge is shown on your profile and explore card.'
+                          L('Hesabınız doğrulandı', 'Account verified'),
+                          L('Mavi rozetiniz profilinizde ve keşfet kartınızda görünüyor.', 'Your blue badge is shown on your profile and explore card.')
                         )
                       }
                     />
@@ -558,13 +541,11 @@ export default function ProfileScreen() {
                       style={styles.pendingBadge}
                       onPress={() =>
                         Alert.alert(
-                          language === 'tr' ? 'Doğrulama inceleniyor' : 'Verification in review',
-                          language === 'tr'
-                            ? 'Yüz doğrulamanız alındı ve inceleniyor. Onaylandığında mavi rozetiniz otomatik olarak eklenecek; tekrar doğrulama yapmanıza gerek yok.'
-                            : 'Your face verification was received and is being reviewed. The blue badge will be added automatically once approved.'
+                          L('Doğrulama inceleniyor', 'Verification in review'),
+                          L('Yüz doğrulamanız alındı ve inceleniyor. Onaylandığında mavi rozetiniz otomatik olarak eklenecek; tekrar doğrulama yapmanıza gerek yok.', 'Your face verification was received and is being reviewed. The blue badge will be added automatically once approved.')
                         )
                       }>
-                      <Text style={styles.pendingBadgeText}>{language === 'tr' ? 'İnceleniyor' : 'In review'}</Text>
+                      <Text style={styles.pendingBadgeText}>{L('İnceleniyor', 'In review')}</Text>
                     </TouchableOpacity>
                   ) : (
                     <VerifiedBadge
@@ -573,10 +554,9 @@ export default function ProfileScreen() {
                       onPress={() => router.push('/verify-face')}
                     />
                   )}
-                  {age && <Text style={styles.userAge}>, {age}</Text>}
                   {isUserOnlineNow(displayProfile.is_online, displayProfile.last_seen) && <View style={styles.onlineIndicator} />}
                 </View>
-                <Text style={styles.userHandle}>@{displayProfile.username || (language === 'tr' ? 'kullanıcı' : 'user')}</Text>
+                <Text style={styles.userHandle}>@{displayProfile.username || (L('kullanıcı', 'user'))}</Text>
               </View>
             </View>
 
@@ -584,25 +564,23 @@ export default function ProfileScreen() {
               <TouchableOpacity style={styles.statItem} onPress={() => router.push('/store/credits')}>
                 <Coins size={24} color="#FFD700" />
                 <Text style={styles.statValue}>{credits}</Text>
-                <Text style={styles.statLabel}>Kontör</Text>
+                <Text style={styles.statLabel}>{L('Kredi', 'Credits')}</Text>
               </TouchableOpacity>
               {isPremium ? (
                 <View style={styles.statItem}>
                   <Crown size={24} color="#FFD700" />
                   <View style={styles.statItemTextWrap}>
-                    <Text style={styles.statValue}>Premium</Text>
-                    <Text style={styles.statLabel}>Üye</Text>
+                    <Text style={styles.statValue}>{L('Premium', 'Premium')}</Text>
+                    <Text style={styles.statLabel}>{L('Üye', 'Member')}</Text>
                     <Text style={styles.statEndDate} numberOfLines={1}>
                       {subscriptionEnd
-                        ? (language === 'tr' ? 'Bitiş: ' : 'Ends: ') +
-                          new Date(subscriptionEnd).toLocaleDateString(language === 'tr' ? 'tr-TR' : 'en-US', {
+                        ? (L('Bitiş: ', 'Ends: ')) +
+                          new Date(subscriptionEnd).toLocaleDateString(localeTag(), {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
                           })
-                        : language === 'tr'
-                          ? 'Aktif'
-                          : 'Active'}
+                        : L('Aktif', 'Active')}
                     </Text>
                   </View>
                 </View>
@@ -610,40 +588,26 @@ export default function ProfileScreen() {
                 <TouchableOpacity style={styles.statItem} onPress={() => router.push('/store/premium')}>
                   <Crown size={24} color={theme.textSecondary} />
                   <Text style={[styles.statValue, { color: theme.textSecondary }]}>
-                    {language === 'tr' ? 'Premium ol' : 'Go Premium'}
+                    {L('Premium ol', 'Go Premium')}
                   </Text>
                 </TouchableOpacity>
               )}
             </View>
-            <Text style={[styles.creditInfoText, { color: theme.textSecondary }]}>
-              {language === 'tr'
-                ? 'Her mesaj 50 kredi, Premium üyeler için mesajlar ücretsiz.'
-                : 'Each message costs 50 credits; messages are free for Premium members.'}
-            </Text>
-            <View style={styles.profileCompletionCard}>
-              <Text style={[styles.profileCompletionText, { color: theme.textSecondary }]}>
-                {language === 'tr'
-                  ? `Profil tamamlanma oranı: %${completionPercent}`
-                  : `Profile completeness: ${completionPercent}%`}
-              </Text>
-              <View style={[styles.profileCompletionBar, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-                <View
-                  style={[
-                    styles.profileCompletionFill,
-                    { width: `${completionPercent}%`, backgroundColor: '#FFD700' },
-                  ]}
-                />
-              </View>
-            </View>
           </View>
         </LinearGradient>
+
+        <ProfileStrength
+          profile={profile}
+          photoCount={photos.length}
+          onPress={() => (profile?.verification_status !== "verified" && profile?.profile_picture ? router.push("/verify-face") : setShowEditModal(true))}
+        />
 
         <View style={[styles.content, { backgroundColor: theme.background }]}>
             {isPremium && subscriptionEnd && planType && (() => {
               const planDef = PREMIUM_PLANS.find((p) => p.id === planType);
-              const planLabel = planDef ? (language === 'tr' ? planDef.labelTr : planDef.labelEn) : planType;
+              const planLabel = planDef ? L(planDef.labelTr, planDef.labelEn) : planType;
               const endDate = new Date(subscriptionEnd);
-              const dateStr = endDate.toLocaleDateString(language === 'tr' ? 'tr-TR' : 'en-US', {
+              const dateStr = endDate.toLocaleDateString(localeTag(), {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
@@ -652,16 +616,14 @@ export default function ProfileScreen() {
                 <View style={[styles.subscriptionEndCard, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
                   <Crown size={18} color={theme.primary} />
                   <Text style={[styles.subscriptionEndText, { color: theme.textSecondary }]}>
-                    {language === 'tr'
-                      ? `${planLabel} üyeliğiniz ${dateStr} tarihinde sona erecek.`
-                      : `Your ${planLabel.toLowerCase()} subscription will end on ${dateStr}.`}
+                    {L('{0} üyeliğiniz {1} tarihinde sona erecek.', 'Your {0} subscription will end on {1}.', [planLabel, dateStr])}
                   </Text>
                 </View>
               );
             })()}
             <View style={[styles.storeCard, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                {language === 'tr' ? 'Mağaza' : 'Store'}
+                {L('Mağaza', 'Store')}
               </Text>
               <View style={styles.storeButtons}>
                 {!isPremium && (
@@ -670,7 +632,7 @@ export default function ProfileScreen() {
                     onPress={() => router.push('/store/premium')}>
                     <Crown size={20} color={theme.primary} />
                     <Text style={[styles.storeBtnText, { color: theme.primary }]}>
-                      {language === 'tr' ? 'Premium ol' : 'Go Premium'}
+                      {L('Premium ol', 'Go Premium')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -679,7 +641,7 @@ export default function ProfileScreen() {
                   onPress={() => router.push('/store/credits')}>
                   <Coins size={20} color="#D4A017" />
                   <Text style={[styles.storeBtnText, { color: '#B8860B' }]}>
-                    {language === 'tr' ? 'Kredi al' : 'Buy credits'}
+                    {L('Kredi al', 'Buy credits')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -687,7 +649,7 @@ export default function ProfileScreen() {
 
             <View style={[styles.infoCard, { backgroundColor: theme.cardBackground }]}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {language === 'tr' ? 'Fotoğraflarım' : 'My Photos'}
+              {L('Fotoğraflarım', 'My Photos')}
             </Text>
 
             <View style={styles.photosGrid}>
@@ -698,8 +660,8 @@ export default function ProfileScreen() {
                 <Plus size={32} color={theme.textSecondary} />
                 <Text style={[styles.addPhotoText, { color: theme.textSecondary }]}>
                   {uploading
-                    ? (language === 'tr' ? 'Yükleniyor...' : 'Uploading...')
-                    : (language === 'tr' ? 'Fotoğraf Ekle' : 'Add Photo')}
+                    ? (L('Yükleniyor...', 'Uploading...'))
+                    : (L('Fotoğraf Ekle', 'Add Photo'))}
                 </Text>
               </TouchableOpacity>
 
@@ -728,7 +690,7 @@ export default function ProfileScreen() {
           <View style={[styles.infoCard, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                {language === 'tr' ? 'Hakkımda' : 'About'}
+                {L('Hakkımda', 'About')}
               </Text>
               <TouchableOpacity
                 onPress={() => {
@@ -742,8 +704,8 @@ export default function ProfileScreen() {
                 <Edit2 size={16} color="#FFFFFF" />
                 <Text style={styles.editButtonText}>
                   {editingBio
-                    ? (language === 'tr' ? 'Kaydet' : 'Save')
-                    : (language === 'tr' ? 'Düzenle' : 'Edit')}
+                    ? (L('Kaydet', 'Save'))
+                    : (L('Düzenle', 'Edit'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -757,7 +719,7 @@ export default function ProfileScreen() {
                 }]}
                 value={bioText}
                 onChangeText={setBioText}
-                placeholder={language === 'tr' ? 'Kendinizden bahsedin...' : 'Tell about yourself...'}
+                placeholder={L('Kendinizden bahsedin...', 'Tell about yourself...')}
                 placeholderTextColor={theme.textSecondary}
                 multiline
                 numberOfLines={4}
@@ -771,9 +733,7 @@ export default function ProfileScreen() {
                   </Text>
                 ) : (
                   <Text style={[styles.noBioText, { color: theme.textSecondary }]}>
-                    {language === 'tr'
-                      ? 'Henüz bir biyografi eklenmemiş'
-                      : 'No bio added yet'}
+                    {L('Henüz bir biyografi eklenmemiş', 'No bio added yet')}
                   </Text>
                 )}
               </>
@@ -787,7 +747,7 @@ export default function ProfileScreen() {
                 }}
                 style={[styles.cancelButton, { borderColor: theme.border }]}>
                 <Text style={[styles.cancelButtonText, { color: theme.text }]}>
-                  {language === 'tr' ? 'İptal' : 'Cancel'}
+                  {L('İptal', 'Cancel')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -796,14 +756,14 @@ export default function ProfileScreen() {
           <View style={[styles.infoCard, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                {language === 'tr' ? 'Profil Bilgileri' : 'Profile Information'}
+                {L('Profil Bilgileri', 'Profile Information')}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowEditModal(true)}
                 style={[styles.editButton, { backgroundColor: theme.primary }]}>
                 <Edit size={16} color="#FFFFFF" />
                 <Text style={styles.editButtonText}>
-                  {language === 'tr' ? 'Düzenle' : 'Edit'}
+                  {L('Düzenle', 'Edit')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -811,7 +771,7 @@ export default function ProfileScreen() {
             {displayProfile.gender && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Cinsiyet:' : 'Gender:'}
+                  {L('Cinsiyet:', 'Gender:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {getGenderLabel(displayProfile.gender, language)}
@@ -822,7 +782,7 @@ export default function ProfileScreen() {
             {displayProfile.height && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Boy:' : 'Height:'}
+                  {L('Boy:', 'Height:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>{displayProfile.height} cm</Text>
               </View>
@@ -831,7 +791,7 @@ export default function ProfileScreen() {
             {displayProfile.weight && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Kilo:' : 'Weight:'}
+                  {L('Kilo:', 'Weight:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>{displayProfile.weight} kg</Text>
               </View>
@@ -840,7 +800,7 @@ export default function ProfileScreen() {
             {displayProfile.education && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Eğitim:' : 'Education:'}
+                  {L('Eğitim:', 'Education:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {getEducationLabel(displayProfile.education, language)}
@@ -851,7 +811,7 @@ export default function ProfileScreen() {
             {displayProfile.profession && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Meslek:' : 'Profession:'}
+                  {L('Meslek:', 'Profession:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {getProfessionLabel(displayProfile.profession, language)}
@@ -862,7 +822,7 @@ export default function ProfileScreen() {
             {age && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Yaş:' : 'Age:'}
+                  {L('Yaş:', 'Age:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>{age}</Text>
               </View>
@@ -871,7 +831,7 @@ export default function ProfileScreen() {
             {displayProfile.country && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Ülke:' : 'Country:'}
+                  {L('Ülke:', 'Country:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {getCountryLabel(displayProfile.country, language)}
@@ -882,7 +842,7 @@ export default function ProfileScreen() {
             {displayProfile.city && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Şehir:' : 'City:'}
+                  {L('Şehir:', 'City:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>{displayProfile.city}</Text>
               </View>
@@ -891,7 +851,7 @@ export default function ProfileScreen() {
             {displayProfile.body_type && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Vücut Tipi:' : 'Body Type:'}
+                  {L('Vücut Tipi:', 'Body Type:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {getBodyTypeLabel(displayProfile.body_type, language)}
@@ -902,7 +862,7 @@ export default function ProfileScreen() {
             {displayProfile.nationality && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Uyruk:' : 'Nationality:'}
+                  {L('Uyruk:', 'Nationality:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>{displayProfile.nationality}</Text>
               </View>
@@ -911,7 +871,7 @@ export default function ProfileScreen() {
             {displayProfile.religion && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Din:' : 'Religion:'}
+                  {L('Din:', 'Religion:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {getReligionLabel(displayProfile.religion, language)}
@@ -922,7 +882,7 @@ export default function ProfileScreen() {
             {displayProfile.alcohol_consumption && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Alkol:' : 'Alcohol:'}
+                  {L('Alkol:', 'Alcohol:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {getAlcoholLabel(displayProfile.alcohol_consumption, language)}
@@ -933,7 +893,7 @@ export default function ProfileScreen() {
             {displayProfile.relationship_status && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'İlişki Durumu:' : 'Relationship Status:'}
+                  {L('İlişki Durumu:', 'Relationship Status:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {getRelationshipStatusLabel(displayProfile.relationship_status, language)}
@@ -944,7 +904,7 @@ export default function ProfileScreen() {
             {displayProfile.relationship_goal && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'İlişki Arayışı:' : 'Relationship Goal:'}
+                  {L('İlişki Arayışı:', 'Relationship Goal:')}
                 </Text>
                 <Text style={[styles.infoValue, { color: theme.text }]}>
                   {getRelationshipGoalLabel(displayProfile.relationship_goal, language)}

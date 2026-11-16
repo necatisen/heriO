@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BRAND } from '@/lib/brand';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   MessageCircle,
@@ -47,6 +48,7 @@ import {
 } from '@/lib/constants';
 import ComboBox from '@/components/ComboBox';
 
+import { L } from '@/lib/l10n';
 export default function RegisterScreen() {
   const router = useRouter();
   const { signUp } = useAuth();
@@ -101,86 +103,80 @@ export default function RegisterScreen() {
   const confirmPasswordRef = useRef<TextInput | null>(null);
 
   const educationOptions = [
-    { value: 'no_diploma', label: language === 'tr' ? 'Diploması Yok' : 'No Diploma' },
-    { value: 'private_school', label: language === 'tr' ? 'Özel Okul' : 'Private School' },
-    { value: 'currently_in_high_school', label: language === 'tr' ? 'Halen Lisede' : 'Currently in High School' },
-    { value: 'associate_degree', label: language === 'tr' ? 'Ön Lisans' : 'Associate Degree' },
-    { value: 'high_school_graduate', label: language === 'tr' ? 'Lise Mezunu' : 'High School Graduate' },
-    { value: 'currently_in_university', label: language === 'tr' ? 'Halen Yüksek Okulda' : 'Currently in University' },
-    { value: 'university_graduate', label: language === 'tr' ? 'Üniversite Mezunu' : 'University Graduate' },
-    { value: 'masters_degree', label: language === 'tr' ? 'Yüksek Lisans' : 'Master\'s Degree' },
-    { value: 'phd_doctorate', label: language === 'tr' ? 'PhD/Doktora' : 'PhD/Doctorate' },
+    { value: 'no_diploma', label: L('Diploması Yok', 'No Diploma') },
+    { value: 'private_school', label: L('Özel Okul', 'Private School') },
+    { value: 'currently_in_high_school', label: L('Halen Lisede', 'Currently in High School') },
+    { value: 'associate_degree', label: L('Ön Lisans', 'Associate Degree') },
+    { value: 'high_school_graduate', label: L('Lise Mezunu', 'High School Graduate') },
+    { value: 'currently_in_university', label: L('Halen Yüksek Okulda', 'Currently in University') },
+    { value: 'university_graduate', label: L('Üniversite Mezunu', 'University Graduate') },
+    { value: 'masters_degree', label: L('Yüksek Lisans', 'Master\'s Degree') },
+    { value: 'phd_doctorate', label: L('PhD/Doktora', 'PhD/Doctorate') },
   ];
 
   const bodyTypeOptions = [
-    { value: 'slim', label: language === 'tr' ? 'İnce' : 'Slim' },
-    { value: 'normal', label: language === 'tr' ? 'Normal' : 'Normal' },
-    { value: 'athletic', label: language === 'tr' ? 'Atletik' : 'Athletic' },
-    { value: 'chubby', label: language === 'tr' ? 'Tombul' : 'Chubby' },
+    { value: 'slim', label: L('İnce', 'Slim') },
+    { value: 'normal', label: L('Normal', 'Normal') },
+    { value: 'athletic', label: L('Atletik', 'Athletic') },
+    { value: 'chubby', label: L('Tombul', 'Chubby') },
   ];
 
   const childrenOptions = [
-    { value: 'want_someday', label: language === 'tr' ? 'Bir Gün İstiyor' : 'Want Someday' },
-    { value: 'dont_want', label: language === 'tr' ? 'İstemiyor' : "Don't Want" },
-    { value: 'have', label: language === 'tr' ? 'Sahibim' : 'Have' },
-    { value: 'want_more', label: language === 'tr' ? 'Daha Fazla İstiyorum' : 'Want More' },
-    { value: 'dont_want_more', label: language === 'tr' ? 'Daha Fazla İstemiyorum' : "Don't Want More" },
+    { value: 'want_someday', label: L('Bir Gün İstiyor', 'Want Someday') },
+    { value: 'dont_want', label: L('İstemiyor', 'Don\'t Want') },
+    { value: 'have', label: L('Sahibim', 'Have') },
+    { value: 'want_more', label: L('Daha Fazla İstiyorum', 'Want More') },
+    { value: 'dont_want_more', label: L('Daha Fazla İstemiyorum', 'Don\'t Want More') },
   ];
 
   const smokingOptions = [
-    { value: 'yes', label: language === 'tr' ? 'Evet' : 'Yes' },
-    { value: 'no', label: language === 'tr' ? 'Hayır' : 'No' },
+    { value: 'yes', label: L('Evet', 'Yes') },
+    { value: 'no', label: L('Hayır', 'No') },
   ];
 
   const relationshipStatusOptions = [
-    { value: 'single', label: language === 'tr' ? 'Bekar' : 'Single' },
-    { value: 'married', label: language === 'tr' ? 'Evli' : 'Married' },
-    { value: 'divorced', label: language === 'tr' ? 'Boşanmış' : 'Divorced' },
-    { value: 'widowed', label: language === 'tr' ? 'Dul' : 'Widowed' },
+    { value: 'single', label: L('Bekar', 'Single') },
+    { value: 'married', label: L('Evli', 'Married') },
+    { value: 'divorced', label: L('Boşanmış', 'Divorced') },
+    { value: 'widowed', label: L('Dul', 'Widowed') },
   ];
 
   const relationshipGoalOptions = [
     {
       value: 'serious_long_term',
       label:
-        language === 'tr'
-          ? 'Ciddi ilişki / uzun vadeli partner'
-          : 'Serious relationship / long-term partner',
+        L('Ciddi ilişki / uzun vadeli partner', 'Serious relationship / long-term partner'),
     },
     {
       value: 'marriage_focused',
-      label: language === 'tr' ? 'Evlilik odaklı' : 'Marriage focused',
+      label: L('Evlilik odaklı', 'Marriage focused'),
     },
     {
       value: 'slow_getting_to_know',
       label:
-        language === 'tr'
-          ? 'Yavaş ilerleyen (önce tanışma)'
-          : 'Slow pace (get to know first)',
+        L('Yavaş ilerleyen (önce tanışma)', 'Slow pace (get to know first)'),
     },
     {
       value: 'short_term_casual',
-      label: language === 'tr' ? 'Kısa süreli / casual' : 'Short-term / casual',
+      label: L('Kısa süreli / casual', 'Short-term / casual'),
     },
     {
       value: 'exploring',
       label:
-        language === 'tr'
-          ? 'Belirsiz / keşif aşamasında'
-          : 'Unsure / exploring',
+        L('Belirsiz / keşif aşamasında', 'Unsure / exploring'),
     },
     {
       value: 'go_with_flow',
       label:
-        language === 'tr' ? 'Akışına bırak' : 'Go with the flow',
+        L('Akışına bırak', 'Go with the flow'),
     },
     {
       value: 'friendship',
-      label: language === 'tr' ? 'Arkadaşlık' : 'Friendship',
+      label: L('Arkadaşlık', 'Friendship'),
     },
     {
       value: 'relaxed',
-      label: language === 'tr' ? 'Rahat bir şeyler' : 'Something relaxed',
+      label: L('Rahat bir şeyler', 'Something relaxed'),
     },
   ];
 
@@ -232,7 +228,7 @@ export default function RegisterScreen() {
     if (selectedDate) {
       const age = calculateAge(selectedDate);
       if (age < 18) {
-        setError(language === 'tr' ? '18 yaşından küçüksünüz!' : 'You must be 18 or older!');
+        setError(L('18 yaşından küçüksünüz!', 'You must be 18 or older!'));
         return;
       }
       setError('');
@@ -267,9 +263,7 @@ export default function RegisterScreen() {
 
     if (!profilePhotoUri) {
       setError(
-        language === 'tr'
-          ? 'Profil fotoğrafını boş geçemezsiniz. Lütfen bir profil fotoğrafı ekleyin.'
-          : 'You cannot leave the profile photo empty. Please add a profile photo.'
+        L('Profil fotoğrafını boş geçemezsiniz. Lütfen bir profil fotoğrafı ekleyin.', 'You cannot leave the profile photo empty. Please add a profile photo.')
       );
       scrollRef.current?.scrollTo({ y: 0, animated: true });
       return;
@@ -277,9 +271,7 @@ export default function RegisterScreen() {
 
     if (!formData.fullName.trim()) {
       setError(
-        language === 'tr'
-          ? 'Ad Soyad alanını boş geçemezsiniz.'
-          : 'You cannot leave the full name field empty.'
+        L('Ad Soyad alanını boş geçemezsiniz.', 'You cannot leave the full name field empty.')
       );
       fullNameRef.current?.focus();
       return;
@@ -287,9 +279,7 @@ export default function RegisterScreen() {
 
     if (!formData.username.trim()) {
       setError(
-        language === 'tr'
-          ? 'Kullanıcı adı alanını boş geçemezsiniz.'
-          : 'You cannot leave the username field empty.'
+        L('Kullanıcı adı alanını boş geçemezsiniz.', 'You cannot leave the username field empty.')
       );
       usernameRef.current?.focus();
       return;
@@ -297,9 +287,7 @@ export default function RegisterScreen() {
 
     if (!formData.email.trim()) {
       setError(
-        language === 'tr'
-          ? 'E-posta alanını boş geçemezsiniz.'
-          : 'You cannot leave the email field empty.'
+        L('E-posta alanını boş geçemezsiniz.', 'You cannot leave the email field empty.')
       );
       emailRef.current?.focus();
       return;
@@ -307,9 +295,7 @@ export default function RegisterScreen() {
 
     if (!formData.age) {
       setError(
-        language === 'tr'
-          ? 'Yaş alanını boş geçemezsiniz.'
-          : 'You cannot leave the age field empty.'
+        L('Yaş alanını boş geçemezsiniz.', 'You cannot leave the age field empty.')
       );
       setShowAgePicker(true);
       return;
@@ -317,9 +303,7 @@ export default function RegisterScreen() {
 
     if (!formData.country) {
       setError(
-        language === 'tr'
-          ? 'Ülke alanını boş geçemezsiniz.'
-          : 'You cannot leave the country field empty.'
+        L('Ülke alanını boş geçemezsiniz.', 'You cannot leave the country field empty.')
       );
       setShowCountryPicker(true);
       return;
@@ -327,9 +311,7 @@ export default function RegisterScreen() {
 
     if (!formData.city) {
       setError(
-        language === 'tr'
-          ? 'Şehir alanını boş geçemezsiniz.'
-          : 'You cannot leave the city field empty.'
+        L('Şehir alanını boş geçemezsiniz.', 'You cannot leave the city field empty.')
       );
       setShowCityPicker(true);
       return;
@@ -337,9 +319,7 @@ export default function RegisterScreen() {
 
     if (!formData.password) {
       setError(
-        language === 'tr'
-          ? 'Şifre alanını boş geçemezsiniz.'
-          : 'You cannot leave the password field empty.'
+        L('Şifre alanını boş geçemezsiniz.', 'You cannot leave the password field empty.')
       );
       passwordRef.current?.focus();
       return;
@@ -347,32 +327,30 @@ export default function RegisterScreen() {
 
     if (!formData.confirmPassword) {
       setError(
-        language === 'tr'
-          ? 'Şifre tekrar alanını boş geçemezsiniz.'
-          : 'You cannot leave the confirm password field empty.'
+        L('Şifre tekrar alanını boş geçemezsiniz.', 'You cannot leave the confirm password field empty.')
       );
       confirmPasswordRef.current?.focus();
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError(language === 'tr' ? 'Şifreler eşleşmiyor' : 'Passwords do not match');
+      setError(L('Şifreler eşleşmiyor', 'Passwords do not match'));
       return;
     }
 
     if (formData.password.length < 6) {
-      setError(language === 'tr' ? 'Şifre en az 6 karakter olmalıdır' : 'Password must be at least 6 characters');
+      setError(L('Şifre en az 6 karakter olmalıdır', 'Password must be at least 6 characters'));
       return;
     }
 
     const age = parseInt(formData.age);
     if (age < 18) {
-      setError(language === 'tr' ? '18 yaşından küçüksünüz!' : 'You must be 18 or older!');
+      setError(L('18 yaşından küçüksünüz!', 'You must be 18 or older!'));
       return;
     }
 
     if (!validateUsername(formData.username)) {
-      setError(language === 'tr' ? 'Lütfen geçerli bir kullanıcı adı kullanın (sahte isimler yok)' : 'Please use a valid username (no fake names)');
+      setError(L('Lütfen geçerli bir kullanıcı adı kullanın (sahte isimler yok)', 'Please use a valid username (no fake names)'));
       return;
     }
 
@@ -417,25 +395,23 @@ export default function RegisterScreen() {
       }
       if (photoFailed) {
         Alert.alert(
-          language === 'tr' ? 'Fotoğraf yüklenemedi' : 'Photo upload failed',
-          language === 'tr'
-            ? 'Hesabınız oluşturuldu ancak profil fotoğrafınız yüklenemedi. Profil sayfasından tekrar ekleyebilirsiniz.'
-            : 'Your account was created but the profile photo could not be uploaded. You can add it again from your profile.'
+          L('Fotoğraf yüklenemedi', 'Photo upload failed'),
+          L('Hesabınız oluşturuldu ancak profil fotoğrafınız yüklenemedi. Profil sayfasından tekrar ekleyebilirsiniz.', 'Your account was created but the profile photo could not be uploaded. You can add it again from your profile.')
         );
       }
-      setSuccess(language === 'tr' ? 'Hesabınız oluşturuldu! Yönlendiriliyorsunuz...' : 'Account created! Redirecting...');
+      setSuccess(L('Hesabınız oluşturuldu! Yönlendiriliyorsunuz...', 'Account created! Redirecting...'));
       setTimeout(() => {
         router.replace('/onboarding');
       }, 800);
     } catch (error: any) {
       if (error.message?.includes('already registered')) {
-        setError(language === 'tr' ? 'Bu e-posta adresi zaten kayıtlı' : 'This email is already registered');
+        setError(L('Bu e-posta adresi zaten kayıtlı', 'This email is already registered'));
       } else if (error.message?.includes('duplicate key value violates unique constraint "profiles_username_key"')) {
-        setError(language === 'tr' ? 'Bu kullanıcı adı zaten kullanılıyor' : 'This username is already taken');
+        setError(L('Bu kullanıcı adı zaten kullanılıyor', 'This username is already taken'));
       } else if (error.message?.includes('Database error')) {
-        setError(language === 'tr' ? 'Veritabanı hatası. Lütfen tekrar deneyin.' : 'Database error. Please try again.');
+        setError(L('Veritabanı hatası. Lütfen tekrar deneyin.', 'Database error. Please try again.'));
       } else {
-        setError(error.message || error.error_description || (language === 'tr' ? 'Kayıt oluşturulamadı. Lütfen tekrar deneyin.' : 'Registration failed. Please try again.'));
+        setError(error.message || error.error_description || (L('Kayıt oluşturulamadı. Lütfen tekrar deneyin.', 'Registration failed. Please try again.')));
       }
     } finally {
       setLoading(false);
@@ -443,7 +419,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <LinearGradient colors={['#4A90E2', '#50C9E9']} style={styles.container}>
+    <LinearGradient colors={BRAND.night} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
@@ -477,14 +453,14 @@ export default function RegisterScreen() {
             ) : null}
 
             <Text style={styles.sectionLabel}>
-              {language === 'tr' ? 'Zorunlu alanlar' : 'Required'}
+              {L('Zorunlu alanlar', 'Required')}
             </Text>
             <TouchableOpacity
               style={styles.photoButton}
               onPress={async () => {
                 const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
                 if (!perm.granted) {
-                  Alert.alert('', language === 'tr' ? 'Fotoğraf seçmek için galeri izni gerekli.' : 'Gallery permission needed to pick a photo.');
+                  Alert.alert('', L('Fotoğraf seçmek için galeri izni gerekli.', 'Gallery permission needed to pick a photo.'));
                   return;
                 }
                 const result = await ImagePicker.launchImageLibraryAsync({
@@ -502,16 +478,16 @@ export default function RegisterScreen() {
                 <Image source={{ uri: profilePhotoUri }} style={styles.photoPreview} />
               ) : (
                 <View style={styles.photoPlaceholder}>
-                  <Camera size={40} color="#4A90E2" />
+                  <Camera size={40} color="#5B4BFF" />
                   <Text style={styles.photoPlaceholderText}>
-                    {language === 'tr' ? 'Profil fotoğrafı (zorunlu)' : 'Profile photo (required)'}
+                    {L('Profil fotoğrafı (zorunlu)', 'Profile photo (required)')}
                   </Text>
                 </View>
               )}
             </TouchableOpacity>
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#4A90E2" style={styles.inputIcon} />
+              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.fullName}
@@ -524,7 +500,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#4A90E2" style={styles.inputIcon} />
+              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.username}
@@ -538,7 +514,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Mail size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Mail size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.email}
@@ -553,7 +529,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Calendar size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Calendar size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowAgePicker(!showAgePicker)}>
@@ -563,8 +539,8 @@ export default function RegisterScreen() {
                     !formData.age && styles.pickerPlaceholder,
                   ]}>
                   {formData.age
-                    ? `${formData.age} ${language === 'tr' ? 'yaş' : 'years old'}`
-                    : (language === 'tr' ? 'Yaş Seçin' : 'Select Age')}
+                    ? `${formData.age} ${L('yaş', 'years old')}`
+                    : (L('Yaş Seçin', 'Select Age'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -619,10 +595,10 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Ruler size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Ruler size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder={language === 'tr' ? 'Boy (cm)' : 'Height (cm)'}
+                placeholder={L('Boy (cm)', 'Height (cm)')}
                 placeholderTextColor="#999999"
                 value={formData.height}
                 onChangeText={(text) =>
@@ -633,10 +609,10 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Weight size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Weight size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder={language === 'tr' ? 'Kilo (kg)' : 'Weight (kg)'}
+                placeholder={L('Kilo (kg)', 'Weight (kg)')}
                 placeholderTextColor="#999999"
                 value={formData.weight}
                 onChangeText={(text) =>
@@ -647,7 +623,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#4A90E2" style={styles.inputIcon} />
+              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowCountryPicker(!showCountryPicker)}>
@@ -658,7 +634,7 @@ export default function RegisterScreen() {
                   ]}>
                   {formData.country
                     ? (countries.find((opt) => opt.value === formData.country)?.label as any)?.[language] || countries.find((opt) => opt.value === formData.country)?.label.en
-                    : (language === 'tr' ? 'Ülke Seçin' : 'Select Country')}
+                    : (L('Ülke Seçin', 'Select Country'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -690,7 +666,7 @@ export default function RegisterScreen() {
             )}
 
           <View style={styles.inputContainer}>
-            <User size={20} color="#4A90E2" style={styles.inputIcon} />
+            <User size={20} color="#5B4BFF" style={styles.inputIcon} />
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={() => {
@@ -705,12 +681,8 @@ export default function RegisterScreen() {
                 {formData.city
                   ? formData.city
                   : !formData.country
-                  ? language === 'tr'
-                    ? 'Önce ülke seçin'
-                    : 'Select country first'
-                  : language === 'tr'
-                  ? 'Şehir Seçin'
-                  : 'Select City'}
+                  ? L('Önce ülke seçin', 'Select country first')
+                  : L('Şehir Seçin', 'Select City')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -742,10 +714,10 @@ export default function RegisterScreen() {
           )}
 
             <Text style={[styles.sectionLabel, { marginTop: 8 }]}>
-              {language === 'tr' ? 'İsteğe bağlı — sonra ekleyebilirsiniz' : 'Optional — you can add later'}
+              {L('İsteğe bağlı — sonra ekleyebilirsiniz', 'Optional — you can add later')}
             </Text>
             <View style={styles.inputContainer}>
-              <GraduationCap size={20} color="#4A90E2" style={styles.inputIcon} />
+              <GraduationCap size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowEducationPicker(!showEducationPicker)}>
@@ -756,7 +728,7 @@ export default function RegisterScreen() {
                   ]}>
                   {formData.education
                     ? educationOptions.find((opt) => opt.value === formData.education)?.label
-                    : (language === 'tr' ? 'Eğitim Durumu Seçin' : 'Select Education')}
+                    : (L('Eğitim Durumu Seçin', 'Select Education'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -788,7 +760,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Briefcase size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Briefcase size={20} color="#5B4BFF" style={styles.inputIcon} />
               <ComboBox
                 options={professionOptions.map((opt) => ({
                   value: opt.value,
@@ -796,22 +768,22 @@ export default function RegisterScreen() {
                 }))}
                 selectedValue={formData.profession}
                 onValueChange={(value) => setFormData({ ...formData, profession: value as string })}
-                placeholder={language === 'tr' ? 'Meslek Seçin' : 'Select Profession'}
+                placeholder={L('Meslek Seçin', 'Select Profession')}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Users size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Users size={20} color="#5B4BFF" style={styles.inputIcon} />
               <ComboBox
                 options={bodyTypeOptions}
                 selectedValue={formData.bodyType}
                 onValueChange={(value) => setFormData({ ...formData, bodyType: value as string })}
-                placeholder={language === 'tr' ? 'Vücut Tipi Seçin' : 'Select Body Type'}
+                placeholder={L('Vücut Tipi Seçin', 'Select Body Type')}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Baby size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Baby size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowChildrenPicker(!showChildrenPicker)}>
@@ -822,7 +794,7 @@ export default function RegisterScreen() {
                   ]}>
                   {formData.childrenStatus
                     ? childrenOptions.find((opt) => opt.value === formData.childrenStatus)?.label
-                    : (language === 'tr' ? 'Çocuk Durumu Seçin' : 'Select Children Status')}
+                    : (L('Çocuk Durumu Seçin', 'Select Children Status'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -854,7 +826,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Cigarette size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Cigarette size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowSmokingPicker(!showSmokingPicker)}>
@@ -865,7 +837,7 @@ export default function RegisterScreen() {
                   ]}>
                   {formData.smokingHabit
                     ? smokingOptions.find((opt) => opt.value === formData.smokingHabit)?.label
-                    : (language === 'tr' ? 'Sigara Alışkanlığı Seçin' : 'Select Smoking Habit')}
+                    : (L('Sigara Alışkanlığı Seçin', 'Select Smoking Habit'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -897,7 +869,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Cigarette size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Cigarette size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowAlcoholPicker(!showAlcoholPicker)}>
@@ -908,7 +880,7 @@ export default function RegisterScreen() {
                   ]}>
                   {formData.alcoholConsumption
                     ? (alcoholConsumptionOptions.find((opt) => opt.value === formData.alcoholConsumption)?.label as any)?.[language] || alcoholConsumptionOptions.find((opt) => opt.value === formData.alcoholConsumption)?.label.en
-                    : (language === 'tr' ? 'Alkol Tüketimi Seçin' : 'Select Alcohol Consumption')}
+                    : (L('Alkol Tüketimi Seçin', 'Select Alcohol Consumption'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -940,7 +912,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#4A90E2" style={styles.inputIcon} />
+              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowReligionPicker(!showReligionPicker)}>
@@ -951,7 +923,7 @@ export default function RegisterScreen() {
                   ]}>
                   {formData.religion
                     ? (religionOptions.find((opt) => opt.value === formData.religion)?.label as any)?.[language] || religionOptions.find((opt) => opt.value === formData.religion)?.label.en
-                    : (language === 'tr' ? 'Din Seçin' : 'Select Religion')}
+                    : (L('Din Seçin', 'Select Religion'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -983,7 +955,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#4A90E2" style={styles.inputIcon} />
+              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => {
@@ -997,7 +969,7 @@ export default function RegisterScreen() {
                   ]}>
                   {formData.relationshipStatus
                     ? relationshipStatusOptions.find((opt) => opt.value === formData.relationshipStatus)?.label
-                    : (language === 'tr' ? 'İlişki Durumu Seçin' : 'Select Relationship Status')}
+                    : (L('İlişki Durumu Seçin', 'Select Relationship Status'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1029,7 +1001,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#4A90E2" style={styles.inputIcon} />
+              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => {
@@ -1043,7 +1015,7 @@ export default function RegisterScreen() {
                   ]}>
                   {formData.relationshipGoal
                     ? relationshipGoalOptions.find((opt) => opt.value === formData.relationshipGoal)?.label
-                    : (language === 'tr' ? 'İlişki Arayışı Seçin' : 'Select Relationship Goal')}
+                    : (L('İlişki Arayışı Seçin', 'Select Relationship Goal'))}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1074,7 +1046,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Lock size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Lock size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.password}
@@ -1095,7 +1067,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Lock size={20} color="#4A90E2" style={styles.inputIcon} />
+              <Lock size={20} color="#5B4BFF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.confirmPassword}
@@ -1191,7 +1163,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4A90E2',
+    color: '#5B4BFF',
     marginBottom: 12,
   },
   photoButton: {
@@ -1212,11 +1184,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#4A90E2',
+    borderColor: '#5B4BFF',
   },
   photoPlaceholderText: {
     fontSize: 11,
-    color: '#4A90E2',
+    color: '#5B4BFF',
     marginTop: 8,
     textAlign: 'center',
   },
@@ -1276,7 +1248,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   genderButtonActive: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
   },
   genderButtonText: {
     fontSize: 14,
@@ -1293,11 +1265,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   registerButton: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
     paddingVertical: 18,
     borderRadius: 15,
     alignItems: 'center',
-    shadowColor: '#4A90E2',
+    shadowColor: '#5B4BFF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1320,7 +1292,7 @@ const styles = StyleSheet.create({
   loginLink: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#4A90E2',
+    color: '#5B4BFF',
   },
   errorContainer: {
     backgroundColor: '#FFE5E5',
@@ -1390,7 +1362,7 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   pickerOptionTextSelected: {
-    color: '#4A90E2',
+    color: '#5B4BFF',
     fontWeight: '600',
   },
 });

@@ -7,6 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CREDIT_PACKAGES, CREDIT_RULES } from '@/lib/storeProducts';
 
+import { L } from '@/lib/l10n';
 type CreditPackId = (typeof CREDIT_PACKAGES)[number]['id'];
 
 export default function CreditsScreen() {
@@ -16,10 +17,10 @@ export default function CreditsScreen() {
   const defaultPack = CREDIT_PACKAGES.find((p) => p.popular) || CREDIT_PACKAGES[0];
   const [selectedPackId, setSelectedPackId] = useState<CreditPackId>(defaultPack.id);
 
-  const rules = CREDIT_RULES[language === 'tr' ? 'tr' : 'en'];
-  const title = language === 'tr' ? 'Kredi satın al' : 'Buy credits';
-  const ctaLabel = language === 'tr' ? 'Satın al' : 'Purchase';
-  const popular = language === 'tr' ? 'Popüler' : 'Popular';
+  const rules = { ...CREDIT_RULES.en, description: L(CREDIT_RULES.tr.description, CREDIT_RULES.en.description) };
+  const title = L('Kredi satın al', 'Buy credits');
+  const ctaLabel = L('Satın al', 'Purchase');
+  const popular = L('Popüler', 'Popular');
 
   const selectedPack = CREDIT_PACKAGES.find((p) => p.id === selectedPackId) || CREDIT_PACKAGES[0];
 
@@ -44,7 +45,7 @@ export default function CreditsScreen() {
         <Text style={[styles.rules, { color: theme.textSecondary }]}>{rules.description}</Text>
 
         <Text style={[styles.packsTitle, { color: theme.text }]}>
-          {language === 'tr' ? 'Paket seçin' : 'Choose a pack'}
+          {L('Paket seçin', 'Choose a pack')}
         </Text>
         {CREDIT_PACKAGES.map((pack) => {
           const isSelected = selectedPackId === pack.id;
@@ -69,9 +70,9 @@ export default function CreditsScreen() {
               <View style={styles.packLeft}>
                 <Coins size={28} color="#D4A017" />
                 <View>
-                  <Text style={[styles.packCredits, { color: theme.text }]}>{pack.credits} kredi</Text>
+                  <Text style={[styles.packCredits, { color: theme.text }]}>{L('{0} kredi', '{0} credits', [pack.credits])}</Text>
                   <Text style={[styles.packPrice, { color: theme.textSecondary }]}>
-                    {language === 'tr' ? pack.priceLabelTr : pack.priceLabelEn}
+                    {L(pack.priceLabelTr, pack.priceLabelEn)}
                   </Text>
                 </View>
               </View>

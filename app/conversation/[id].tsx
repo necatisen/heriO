@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { getCountryLabel } from '@/lib/constants';
 import {
   View,
   Text,
@@ -18,6 +19,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BRAND } from '@/lib/brand';
+import { LinearGradient } from 'expo-linear-gradient';
+import Reanimated, { FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { Send, User, ArrowLeft, CreditCard as Edit2, Reply, Check, CheckCheck, Image as ImageIcon, Copy, Trash2, Shield } from 'lucide-react-native';
 import VerifiedBadge from '@/components/VerifiedBadge';
@@ -36,6 +40,7 @@ import { uploadChatImage } from '@/lib/uploadAvatar';
 import HeartLoader from '@/components/HeartLoader';
 import { sanitizeSocialAndContacts } from '@/lib/textSanitizer';
 
+import { L } from '@/lib/l10n';
 type Message = {
   id: string;
   content: string;
@@ -413,10 +418,8 @@ export default function ConversationScreen() {
       .map((m) => m.content || '');
     if (isSpam(messageContent, recentOwnMessages)) {
       Alert.alert(
-        language === 'tr' ? 'Spam Tespit Edildi' : 'Spam Detected',
-        language === 'tr'
-          ? 'Aynı mesajı çok sık gönderiyorsunuz. Lütfen bekleyin veya farklı bir mesaj yazın.'
-          : 'You are sending the same message too frequently. Please wait or send a different message.'
+        L('Spam Tespit Edildi', 'Spam Detected'),
+        L('Aynı mesajı çok sık gönderiyorsunuz. Lütfen bekleyin veya farklı bir mesaj yazın.', 'You are sending the same message too frequently. Please wait or send a different message.')
       );
       return;
     }
@@ -436,10 +439,8 @@ export default function ConversationScreen() {
           setMessageText('');
           setReplyToMessage(null);
           Alert.alert(
-            language === 'tr' ? 'Mesaj gönderilemiyor' : 'Cannot send message',
-            language === 'tr'
-              ? 'Bu kullanıcıyla aranızda engelleme olduğu için mesaj gönderemezsiniz.'
-              : 'You cannot send messages because there is a block between you and this user.'
+            L('Mesaj gönderilemiyor', 'Cannot send message'),
+            L('Bu kullanıcıyla aranızda engelleme olduğu için mesaj gönderemezsiniz.', 'You cannot send messages because there is a block between you and this user.')
           );
           return;
         }
@@ -448,10 +449,8 @@ export default function ConversationScreen() {
         setMessageText('');
         setReplyToMessage(null);
         Alert.alert(
-          language === 'tr' ? 'Mesaj gönderilemiyor' : 'Cannot send message',
-          language === 'tr'
-            ? 'Şu anda bu kullanıcıya mesaj gönderemezsiniz.'
-            : 'You cannot send a message to this user right now.'
+          L('Mesaj gönderilemiyor', 'Cannot send message'),
+          L('Şu anda bu kullanıcıya mesaj gönderemezsiniz.', 'You cannot send a message to this user right now.')
         );
         return;
       }
@@ -465,17 +464,15 @@ export default function ConversationScreen() {
       setReplyToMessage(null);
 
       Alert.alert(
-        language === 'tr' ? 'Yetersiz Kredi' : 'Insufficient Credits',
-        language === 'tr'
-          ? 'Mesaj göndermek için krediniz yok'
-          : 'You do not have enough credits to send a message',
+        L('Yetersiz Kredi', 'Insufficient Credits'),
+        L('Mesaj göndermek için krediniz yok', 'You do not have enough credits to send a message'),
         [
           {
-            text: language === 'tr' ? 'Vazgeç' : 'Cancel',
+            text: L('Vazgeç', 'Cancel'),
             style: 'cancel',
           },
           {
-            text: language === 'tr' ? 'Kontör Yükle' : 'Buy Credits',
+            text: L('Kontör Yükle', 'Buy Credits'),
             onPress: () => router.push('/store/credits'),
           },
         ]
@@ -546,7 +543,7 @@ export default function ConversationScreen() {
 
         // Push notification (receiver device)
         try {
-          const title = language === 'tr' ? 'Yeni mesaj' : 'New message';
+          const title = L('Yeni mesaj', 'New message');
           const body = messageContent.length > 120 ? `${messageContent.slice(0, 117)}...` : messageContent;
           void supabase.functions.invoke('send-push-message', {
             body: {
@@ -561,7 +558,7 @@ export default function ConversationScreen() {
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
         setMessageText(messageContent);
         setReplyToMessage(replyTo || null);
-        Alert.alert('Error', error.message || 'Failed to send message');
+        Alert.alert(L('Hata', 'Error'), error.message || L('Mesaj gönderilemedi', 'Failed to send message'));
       }
     })();
   };
@@ -570,16 +567,14 @@ export default function ConversationScreen() {
     if (!user?.id || !otherUser?.id) return;
 
     Alert.alert(
-      language === 'tr' ? 'Kullanıcıyı Engelle' : 'Block User',
-      language === 'tr'
-        ? `${otherUser.full_name} kullanıcısını engellemek istiyor musunuz? Bir sebep seçin.`
-        : `Do you want to block ${otherUser.full_name}? Choose a reason.`,
+      L('Kullanıcıyı Engelle', 'Block User'),
+      L('{0} kullanıcısını engellemek istiyor musunuz? Bir sebep seçin.', 'Do you want to block {0}? Choose a reason.', [otherUser.full_name]),
       [
-        { text: language === 'tr' ? 'Vazgeç' : 'Cancel', style: 'cancel' },
+        { text: L('Vazgeç', 'Cancel'), style: 'cancel' },
         ...[
           {
             key: 'harassment',
-            tr: 'Şikayet et',
+            tr: 'Taciz',
             en: 'Harassment',
           },
           {
@@ -598,7 +593,7 @@ export default function ConversationScreen() {
             en: 'Other',
           },
         ].map((opt) => ({
-          text: language === 'tr' ? opt.tr : opt.en,
+          text: L(opt.tr, opt.en),
           style: 'destructive' as const,
           onPress: async () => {
             try {
@@ -611,10 +606,8 @@ export default function ConversationScreen() {
 
               if (existing) {
                 Alert.alert(
-                  language === 'tr' ? 'Zaten Engellendi' : 'Already Blocked',
-                  language === 'tr'
-                    ? 'Bu kullanıcı zaten engellenmiş.'
-                    : 'This user is already blocked.'
+                  L('Zaten Engellendi', 'Already Blocked'),
+                  L('Bu kullanıcı zaten engellenmiş.', 'This user is already blocked.')
                 );
                 return;
               }
@@ -627,10 +620,8 @@ export default function ConversationScreen() {
               if (error) throw error;
 
               Alert.alert(
-                language === 'tr' ? 'Engellendi' : 'Blocked',
-                language === 'tr'
-                  ? 'Kullanıcı engellendi. Artık sizden mesaj alamayacak.'
-                  : 'User has been blocked and will no longer be able to contact you.'
+                L('Engellendi', 'Blocked'),
+                L('Kullanıcı engellendi. Artık sizden mesaj alamayacak.', 'User has been blocked and will no longer be able to contact you.')
               );
               // İki kullanıcı arasındaki aktif sohbeti de kaldır
               await supabase
@@ -644,11 +635,9 @@ export default function ConversationScreen() {
               router.back();
             } catch (e: any) {
               Alert.alert(
-                'Error',
+                L('Hata', 'Error'),
                 e?.message ||
-                  (language === 'tr'
-                    ? 'Kullanıcı engellenemedi.'
-                    : 'Failed to block user.')
+                  (L('Kullanıcı engellenemedi.', 'Failed to block user.'))
               );
             }
           },
@@ -664,13 +653,13 @@ export default function ConversationScreen() {
         .update({
           is_deleted: true,
           deleted_at: new Date().toISOString(),
-          content: language === 'tr' ? 'Bu mesaj silindi' : 'This message was deleted',
+          content: L('Bu mesaj silindi', 'This message was deleted'),
         })
         .eq('id', messageId);
 
       if (error) throw error;
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to delete message');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Mesaj silinemedi', 'Failed to delete message'));
     }
   };
 
@@ -691,7 +680,7 @@ export default function ConversationScreen() {
       setEditingMessage(null);
       setMessageText('');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to edit message');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Mesaj düzenlenemedi', 'Failed to edit message'));
     }
   };
 
@@ -710,7 +699,7 @@ export default function ConversationScreen() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert('', language === 'tr' ? 'Galeri izni gerekli' : 'Gallery permission required');
+        Alert.alert('', L('Galeri izni gerekli', 'Gallery permission required'));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -731,14 +720,14 @@ export default function ConversationScreen() {
         if (!allowed) {
           const msgTr = 'Uygunsuz resim yüklediniz, bu nedenle gösterilmiyor.';
           const msgEn = 'You uploaded an inappropriate image, so it is not shown.';
-          const placeholder = language === 'tr' ? msgTr : msgEn;
+          const placeholder = L(msgTr, msgEn);
           await supabase.from('messages').insert({
             session_id: sessionId,
             sender_id: user?.id,
             receiver_id: otherUser.id,
             content: placeholder,
           });
-          Alert.alert(language === 'tr' ? 'Uygunsuz içerik' : 'Inappropriate content', placeholder);
+          Alert.alert(L('Uygunsuz içerik', 'Inappropriate content'), placeholder);
           return;
         }
       } catch {
@@ -778,8 +767,8 @@ export default function ConversationScreen() {
             setMessages((prev) => prev.filter((m) => m.id !== tempId));
             setReplyToMessage(replyTo || null);
             Alert.alert(
-              language === 'tr' ? 'Yetersiz Kredi' : 'Insufficient Credits',
-              language === 'tr' ? 'Fotoğraf göndermek için 1 kredi gerekir' : '1 credit required to send a photo'
+              L('Yetersiz Kredi', 'Insufficient Credits'),
+              L('Fotoğraf göndermek için 1 kredi gerekir', '1 credit required to send a photo')
             );
             return;
           }
@@ -827,10 +816,11 @@ export default function ConversationScreen() {
 
           // Push notification (receiver device)
           try {
-            const title = language === 'tr' ? 'Yeni mesaj' : 'New message';
-            const body = language === 'tr' ? '📷 Fotoğraf' : '📷 Photo';
+            const title = L('Yeni mesaj', 'New message');
+            const body = L('📷 Fotoğraf', '📷 Photo');
             void supabase.functions.invoke('send-push-message', {
               body: {
+                media: 'photo',
                 to_user_id: otherUser.id,
                 title,
                 body,
@@ -841,13 +831,13 @@ export default function ConversationScreen() {
         } catch (error: any) {
           setMessages((prev) => prev.filter((m) => m.id !== tempId));
           setReplyToMessage(replyTo || null);
-          Alert.alert('Error', error.message || (language === 'tr' ? 'Fotoğraf gönderilemedi' : 'Failed to send photo'));
+          Alert.alert(L('Hata', 'Error'), error.message || (L('Fotoğraf gönderilemedi', 'Failed to send photo')));
         } finally {
           setSendingImage(false);
         }
       })();
     } catch (error: any) {
-      Alert.alert('Error', error.message || (language === 'tr' ? 'Fotoğraf gönderilemedi' : 'Failed to send photo'));
+      Alert.alert(L('Hata', 'Error'), error.message || (L('Fotoğraf gönderilemedi', 'Failed to send photo')));
     }
   };
 
@@ -867,9 +857,9 @@ export default function ConversationScreen() {
     if (messageActionMessage?.content) {
       try {
         await Clipboard.setStringAsync(messageActionMessage.content);
-        Alert.alert('', language === 'tr' ? 'Kopyalandı' : 'Copied');
+        Alert.alert('', L('Kopyalandı', 'Copied'));
       } catch {
-        Alert.alert('', language === 'tr' ? 'Kopyalama başarısız' : 'Copy failed');
+        Alert.alert('', L('Kopyalama başarısız', 'Copy failed'));
       }
     }
     closeMessageActions();
@@ -885,11 +875,11 @@ export default function ConversationScreen() {
     const messageId = messageActionMessage.id;
     closeMessageActions();
     Alert.alert(
-      language === 'tr' ? 'Mesajı Sil' : 'Delete Message',
-      language === 'tr' ? 'Bu mesajı silmek istediğinize emin misiniz?' : 'Are you sure you want to delete this message?',
+      L('Mesajı Sil', 'Delete Message'),
+      L('Bu mesajı silmek istediğinize emin misiniz?', 'Are you sure you want to delete this message?'),
       [
-        { text: language === 'tr' ? 'İptal' : 'Cancel', style: 'cancel' },
-        { text: language === 'tr' ? 'Sil' : 'Delete', style: 'destructive', onPress: () => deleteMessage(messageId) },
+        { text: L('İptal', 'Cancel'), style: 'cancel' },
+        { text: L('Sil', 'Delete'), style: 'destructive', onPress: () => deleteMessage(messageId) },
       ]
     );
   };
@@ -899,17 +889,17 @@ export default function ConversationScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.loadingScreen}>
           <Text style={[styles.errorTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Sohbet yüklenemedi' : 'Could not load conversation'}
+            {L('Sohbet yüklenemedi', 'Could not load conversation')}
           </Text>
           <Text style={[styles.errorSubtitle, { color: theme.textSecondary }]}>
-            {language === 'tr' ? 'Bağlantıyı kontrol edip tekrar deneyin.' : 'Check your connection and try again.'}
+            {L('Bağlantıyı kontrol edip tekrar deneyin.', 'Check your connection and try again.')}
           </Text>
           <TouchableOpacity
             style={[styles.backErrorButton, { backgroundColor: theme.primary }]}
             onPress={() => router.back()}>
             <ArrowLeft size={20} color="#FFFFFF" />
             <Text style={styles.backErrorButtonText}>
-              {language === 'tr' ? 'Geri' : 'Back'}
+              {L('Geri', 'Back')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -963,14 +953,10 @@ export default function ConversationScreen() {
               </View>
               <Text style={styles.userDetails}>
                 {isUserOnlineNow(otherUser.is_online, otherUser.last_seen)
-                  ? language === 'tr'
-                    ? 'Çevrimiçi'
-                    : 'Online'
+                  ? L('Çevrimiçi', 'Online')
                   : (otherUser.last_seen
-                    ? (language === 'tr'
-                      ? `Son görülme: ${formatLastSeen(otherUser.last_seen, language)}`
-                      : `Last seen: ${formatLastSeen(otherUser.last_seen, language)}`)
-                    : (otherUser.city || otherUser.country))}
+                    ? (L('Son görülme: {0}', 'Last seen: {0}', [formatLastSeen(otherUser.last_seen, language)]))
+                    : (otherUser.city || getCountryLabel(otherUser.country)))}
               </Text>
             </View>
           </TouchableOpacity>
@@ -988,7 +974,7 @@ export default function ConversationScreen() {
           ListEmptyComponent={
             <View style={styles.emptyMessages}>
               <Text style={[styles.emptyMessagesText, { color: theme.textSecondary }]}>
-                {language === 'tr' ? 'Henüz mesaj yok. İlk mesajı gönderin.' : 'No messages yet. Send the first message.'}
+                {L('Henüz mesaj yok. İlk mesajı gönderin.', 'No messages yet. Send the first message.')}
               </Text>
             </View>
           }
@@ -1001,8 +987,11 @@ export default function ConversationScreen() {
             const isImageMessage = !!(item.attachment_url && (item.attachment_type === 'image' || !item.attachment_type) && !item.is_deleted);
             const hasText = !!(item.content && item.content !== '📷 Fotoğraf' && item.content !== '📷 Photo');
 
+            // Only fresh messages pop in; history renders instantly.
+            const isFresh = Date.now() - new Date(item.created_at).getTime() < 8000;
             return (
-              <View
+              <Reanimated.View
+                entering={isFresh ? (isMine ? FadeInRight : FadeInLeft).springify().damping(16) : undefined}
                 style={[
                   styles.messageSpacer,
                   prevSameSender ? styles.messageSpacerSame : styles.messageSpacerDifferent,
@@ -1067,6 +1056,15 @@ export default function ConversationScreen() {
                           isMine ? styles.myTextBubble : styles.theirTextBubble,
                           item.is_deleted && styles.deletedMessage,
                         ]}>
+                        {isMine && !item.is_deleted && (
+                          <LinearGradient
+                            colors={BRAND.gradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={StyleSheet.absoluteFill}
+                            pointerEvents="none"
+                          />
+                        )}
                         {item.reply_to && (
                           <View style={[styles.replyContainer, !isMine && styles.replyContainerTheirs]}>
                             <Text style={[styles.replyText, isMine && styles.replyTextMine]} numberOfLines={2}>
@@ -1083,7 +1081,7 @@ export default function ConversationScreen() {
                             ]}>
                             {item.content}
                             {isLastInGroup && (
-                              <Text style={[styles.textBubbleTimeInline, { color: theme.textSecondary }]}>
+                              <Text style={[styles.textBubbleTimeInline, { color: isMine ? 'rgba(255,255,255,0.75)' : theme.textSecondary }]}>
                                 {' '}{formatMessageTime(item.created_at)}
                               </Text>
                             )}
@@ -1126,7 +1124,7 @@ export default function ConversationScreen() {
                     )}
                   </View>
                 </SwipeableMessage>
-              </View>
+              </Reanimated.View>
             );
           }}
         />
@@ -1135,7 +1133,7 @@ export default function ConversationScreen() {
           <View style={styles.editBar}>
             <View style={{ flex: 1 }}>
               <Text style={styles.editBarTitle}>
-                {language === 'tr' ? 'Düzenleniyor' : 'Editing'}
+                {L('Düzenleniyor', 'Editing')}
               </Text>
               <Text style={styles.editBarText} numberOfLines={1}>
                 {editingMessage.content}
@@ -1151,7 +1149,7 @@ export default function ConversationScreen() {
           <View style={styles.replyBar}>
             <View style={{ flex: 1 }}>
               <Text style={styles.replyBarTitle}>
-                {language === 'tr' ? 'Yanıtlanıyor' : 'Replying to'}
+                {L('Yanıtlanıyor', 'Replying to')}
               </Text>
               <Text style={styles.replyBarText} numberOfLines={2}>
                 {replyToMessage.content}
@@ -1187,7 +1185,7 @@ export default function ConversationScreen() {
           </TouchableOpacity>
           <TextInput
             style={[styles.input, { backgroundColor: theme.background, color: theme.text }]}
-            placeholder={language === 'tr' ? 'Mesaj yaz...' : 'Type a message...'}
+            placeholder={L('Mesaj yaz...', 'Type a message...')}
             placeholderTextColor={theme.textSecondary}
             value={messageText}
             onChangeText={setMessageText}
@@ -1245,16 +1243,16 @@ export default function ConversationScreen() {
               <View style={styles.contextMenuPanel}>
                 <TouchableOpacity style={styles.contextMenuRow} onPress={handleMessageActionReply}>
                   <Reply size={20} color="rgba(255,255,255,0.95)" strokeWidth={2} />
-                  <Text style={styles.contextMenuRowText}>{language === 'tr' ? 'Yanıtla' : 'Reply'}</Text>
+                  <Text style={styles.contextMenuRowText}>{L('Yanıtla', 'Reply')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.contextMenuRow} onPress={handleMessageActionCopy}>
                   <Copy size={20} color="rgba(255,255,255,0.95)" strokeWidth={2} />
-                  <Text style={styles.contextMenuRowText}>{language === 'tr' ? 'Kopyala' : 'Copy'}</Text>
+                  <Text style={styles.contextMenuRowText}>{L('Kopyala', 'Copy')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.contextMenuRow, styles.contextMenuRowLast]} onPress={handleMessageActionDelete}>
                   <Trash2 size={20} color="#FF6B6B" strokeWidth={2} />
                   <Text style={[styles.contextMenuRowText, styles.contextMenuRowTextDanger]}>
-                    {language === 'tr' ? 'Sil' : 'Delete'}
+                    {L('Sil', 'Delete')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1281,7 +1279,7 @@ export default function ConversationScreen() {
               ) : null}
             </View>
             <Text style={styles.imagePreviewCloseHint}>
-              {language === 'tr' ? 'Kapatmak için dokunun' : 'Tap to close'}
+              {L('Kapatmak için dokunun', 'Tap to close')}
             </Text>
           </TouchableOpacity>
         </Modal>
@@ -1526,7 +1524,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   myTextBubble: {
-    backgroundColor: '#4B4376',
+    backgroundColor: '#8B3DFF',
+    overflow: 'hidden',
     alignSelf: 'flex-end',
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
@@ -1616,7 +1615,7 @@ const styles = StyleSheet.create({
   replyBarTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4A90E2',
+    color: '#5B4BFF',
     marginBottom: 2,
   },
   replyBarText: {
@@ -1762,7 +1761,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
     justifyContent: 'center',
     alignItems: 'center',
   },

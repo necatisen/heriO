@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Swipeable } from 'react-native-gesture-handler';
-import { MessageCircle, User, Trash2 } from 'lucide-react-native';
+import { MessageCircle, Trash2, Sparkles } from 'lucide-react-native';
+import Animated, { FadeInDown, FadeInRight, LinearTransition } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import BouncyButton from '@/components/BouncyButton';
+import GradientButton from '@/components/GradientButton';
+import { BrandLogo } from '@/components/BrandLogo';
+import { ChatListSkeleton } from '@/components/Skeleton';
+import { BRAND } from '@/lib/brand';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -19,51 +26,64 @@ import { supabase } from '@/lib/supabase';
 import { useRouter, useFocusEffect } from 'expo-router';
 import ProfileModal from '@/components/ProfileModal';
 import { formatLastMessageTime } from '@/lib/dateFormat';
-import HeartLoader from '@/components/HeartLoader';
 
-type Match = {
-  id: string;
-  full_name: string;
-  profile_picture: string | null;
-};
+import { loadChatList, type Match, type Conversation } from '@/lib/chatList';
+import { peekCache, readCache, writeCache } from '@/lib/cache';
 
-type Conversation = {
-  id: string;
-  other_user_id: string;
-  other_user_name: string;
-  other_user_picture: string | null;
-  last_message: string;
-  last_message_time: string;
-  unread_count: number;
-};
-
+import { L } from '@/lib/l10n';
 export default function ChatListScreen() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const { theme } = useTheme();
   const router = useRouter();
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = user ? `chatlist:${user.id}` : '';
+  const cachedList = cacheKey ? peekCache<{ matches: Match[]; conversations: Conversation[] }>(cacheKey) : undefined;
+  const [matches, setMatches] = useState<Match[]>(cachedList?.matches ?? []);
+  const [conversations, setConversations] = useState<Conversation[]>(cachedList?.conversations ?? []);
+  const [loading, setLoading] = useState(!cachedList);
   const [refreshing, setRefreshing] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const hasDataRef = useRef(!!cachedList);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const refreshAll = useCallback(async (opts?: { showSpinner?: boolean }) => {
+  // Show the last known list instantly (from disk on a cold start).
+  useEffect(() => {
+    if (!cacheKey || hasDataRef.current) return;
+    readCache<{ matches: Match[]; conversations: Conversation[] }>(cacheKey).then((c) => {
+      if (!c || hasDataRef.current) return;
+      hasDataRef.current = true;
+      setMatches(c.matches);
+      setConversations(c.conversations);
+      setLoading(false);
+    });
+  }, [cacheKey]);
+
+  const refreshAll = useCallback(async () => {
     if (!user) return;
-    if (opts?.showSpinner !== false) setLoading(true);
+    // Full-screen loader only when there is nothing to show yet; otherwise refresh silently.
+    if (!hasDataRef.current) setLoading(true);
     try {
-      await Promise.all([fetchMatches(), fetchConversations()]);
+      const data = await loadChatList(user.id, language);
+      if (!data) return;
+      hasDataRef.current = true;
+      setMatches(data.matches);
+      setConversations(data.conversations);
+      writeCache(`chatlist:${user.id}`, data);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, language]);
+
+  // Realtime events can arrive in bursts; collapse them into one refresh.
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => refreshAll(), 400);
+  }, [refreshAll]);
 
   useFocusEffect(
     useCallback(() => {
-      if (user) {
-        refreshAll();
-      }
+      if (user) refreshAll();
     }, [user, refreshAll])
   );
 
@@ -72,212 +92,20 @@ export default function ChatListScreen() {
 
     const friendsSubscription = supabase
       .channel('friends_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'friends',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          refreshAll({ showSpinner: false });
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friends', filter: `user_id=eq.${user.id}` }, scheduleRefresh)
       .subscribe();
 
     const messagesSubscription = supabase
       .channel('messages_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-        },
-        () => {
-          refreshAll({ showSpinner: false });
-        }
-      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, scheduleRefresh)
       .subscribe();
 
     return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
       supabase.removeChannel(friendsSubscription);
       supabase.removeChannel(messagesSubscription);
     };
-  }, [user]);
-
-  const fetchMatches = async () => {
-    try {
-      const { data: friendsData, error } = await supabase
-        .from('friends')
-        .select('friend_id')
-        .eq('user_id', user?.id)
-        .eq('status', 'accepted');
-
-      if (error || !friendsData) {
-        setMatches([]);
-        return;
-      }
-
-      const friendIds = friendsData.map(f => f.friend_id);
-
-      const { data: sessionsData } = await supabase
-        .from('chat_sessions')
-        .select('user1_id, user2_id')
-        .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id}`)
-        .eq('status', 'active');
-
-      const sessionUserIds = new Set(
-        sessionsData?.map(s =>
-          s.user1_id === user?.id ? s.user2_id : s.user1_id
-        ) || []
-      );
-
-      const matchIdsWithoutChat = friendIds.filter(id => !sessionUserIds.has(id));
-
-      if (matchIdsWithoutChat.length === 0) {
-        setMatches([]);
-        return;
-      }
-
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, full_name, profile_picture')
-        .in('id', matchIdsWithoutChat);
-
-      const formatted = profilesData?.map((profile: any) => ({
-        id: profile.id,
-        full_name: profile.full_name,
-        profile_picture: profile.profile_picture,
-      })) || [];
-
-      setMatches(formatted);
-    } catch (error) {
-      console.error('Error fetching matches:', error);
-    }
-  };
-
-  const fetchConversations = async () => {
-    try {
-      // Fetch only the latest message per session for speed.
-      const { data: sessions, error } = await supabase
-        .from('chat_sessions')
-        .select(`
-          id,
-          user1_id,
-          user2_id,
-          started_at,
-          messages(content, created_at, is_read, sender_id, receiver_id, attachment_url, attachment_type)
-        `)
-        .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id}`)
-        .eq('status', 'active')
-        .order('started_at', { ascending: false })
-        .order('created_at', { referencedTable: 'messages', ascending: false })
-        .limit(1, { referencedTable: 'messages' });
-
-      if (!error && sessions) {
-        // Unread counts in one lightweight query (only unread rows).
-        const { data: unreadRows } = await supabase
-          .from('messages')
-          .select('session_id')
-          .eq('receiver_id', user?.id)
-          .eq('is_read', false);
-        const unreadBySession: Record<string, number> = {};
-        (unreadRows || []).forEach((r: any) => {
-          if (!r?.session_id) return;
-          unreadBySession[r.session_id] = (unreadBySession[r.session_id] || 0) + 1;
-        });
-
-        // 1) Tüm karşı taraf kullanıcı id'lerini topla
-        const otherUserIds = Array.from(
-          new Set(
-            sessions
-              .map((s: any) => (s.user1_id === user?.id ? s.user2_id : s.user1_id))
-              .filter(Boolean)
-          )
-        );
-
-        // 2) Tek sorguda tüm profilleri çek (IN)
-        const { data: users } = await supabase
-          .from('profiles')
-          .select('id, full_name, profile_picture')
-          .in('id', otherUserIds);
-
-        const usersById: Record<string, { id: string; full_name: string; profile_picture: string | null }> =
-          Object.fromEntries((users || []).map((u: any) => [u.id, u]));
-
-        // 2b) Engellemeleri al: ben onu engelledim mi / o beni engelledi mi?
-        const blockedIdsByMe = new Set<string>();
-        const blockedMeIds = new Set<string>();
-        if (user?.id) {
-          const { data: blocks } = await supabase
-            .from('blocks')
-            .select('user_id, blocked_user_id')
-            .or(
-              `user_id.eq.${user.id},blocked_user_id.eq.${user.id}`
-            );
-          (blocks || []).forEach((b: any) => {
-            if (b.user_id === user.id) {
-              blockedIdsByMe.add(b.blocked_user_id);
-            }
-            if (b.blocked_user_id === user.id) {
-              blockedMeIds.add(b.user_id);
-            }
-          });
-        }
-
-        // 3) Session listesi ile profilleri localde eşleştir
-        const conversationsWithDetails = sessions
-          .map((session: any) => {
-          const otherUserId = session.user1_id === user?.id ? session.user2_id : session.user1_id;
-          const otherUser = usersById[otherUserId];
-
-          // Eğer iki taraflı bir engelleme varsa, bu sohbeti listeden çıkar
-          if (
-            (user?.id && blockedIdsByMe.has(otherUserId)) ||
-            (user?.id && blockedMeIds.has(otherUserId))
-          ) {
-            return null;
-          }
-
-          const lastMessage = (session.messages || [])[0];
-          const unreadCount = unreadBySession[session.id] || 0;
-
-          let lastText = language === 'tr' ? 'Henüz mesaj yok' : 'No messages yet';
-          if (lastMessage) {
-            if (lastMessage.attachment_url && (lastMessage.attachment_type === 'image' || !lastMessage.attachment_type)) {
-              lastText = language === 'tr' ? '📷 Fotoğraf' : '📷 Photo';
-            } else if (lastMessage.content) {
-              lastText = lastMessage.content;
-            }
-          }
-
-          return {
-            id: session.id,
-            other_user_id: otherUserId,
-            other_user_name: otherUser?.full_name || 'Unknown',
-            other_user_picture: otherUser?.profile_picture || null,
-            last_message: lastText,
-            last_message_time: lastMessage?.created_at || session.started_at,
-            unread_count: unreadCount,
-          };
-        })
-          .filter(Boolean) as Conversation[];
-        
-        // Yeni mesaj gelen sohbet her zaman en üstte görünsün.
-        const sortedConversations = conversationsWithDetails.sort((a, b) => {
-          const ta = new Date(a.last_message_time).getTime();
-          const tb = new Date(b.last_message_time).getTime();
-          return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
-        });
-
-        setConversations(sortedConversations);
-      }
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-    }
-  };
+  }, [user, scheduleRefresh]);
 
   const handleMatchClick = async (matchId: string) => {
     try {
@@ -309,7 +137,7 @@ export default function ChatListScreen() {
 
       router.push(`/conversation/${sessionId}?friendId=${matchId}`);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to start chat');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Sohbet başlatılamadı', 'Failed to start chat'));
     }
   };
 
@@ -319,14 +147,12 @@ export default function ChatListScreen() {
 
   const handleDeleteConversation = (conversation: Conversation) => {
     Alert.alert(
-      language === 'tr' ? 'Sohbeti Sil' : 'Delete Conversation',
-      language === 'tr'
-        ? `"${conversation.other_user_name}" ile tüm sohbet geçmişi silinecek. Emin misiniz?`
-        : `Delete entire chat history with ${conversation.other_user_name}? This cannot be undone.`,
+      L('Sohbeti Sil', 'Delete Conversation'),
+      L('"{0}" ile tüm sohbet geçmişi silinecek. Emin misiniz?', 'Delete entire chat history with {0}? This cannot be undone.', [conversation.other_user_name]),
       [
-        { text: language === 'tr' ? 'İptal' : 'Cancel', style: 'cancel' },
+        { text: L('İptal', 'Cancel'), style: 'cancel' },
         {
-          text: language === 'tr' ? 'Sil' : 'Delete',
+          text: L('Sil', 'Delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -338,7 +164,7 @@ export default function ChatListScreen() {
               if (error) throw error;
               setConversations((prev) => prev.filter((c) => c.id !== conversation.id));
             } catch (e: any) {
-              Alert.alert('', e?.message || (language === 'tr' ? 'Sohbet silinemedi.' : 'Failed to delete conversation.'));
+              Alert.alert('', e?.message || (L('Sohbet silinemedi.', 'Failed to delete conversation.')));
             }
           },
         },
@@ -348,7 +174,7 @@ export default function ChatListScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refreshAll({ showSpinner: false });
+    await refreshAll();
     setRefreshing(false);
   }, [refreshAll]);
 
@@ -364,99 +190,126 @@ export default function ChatListScreen() {
       setSelectedProfile(data);
       setProfileModalVisible(true);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load profile');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Profil yüklenemedi', 'Failed to load profile'));
     }
   };
 
-  const renderMatch = ({ item }: { item: Match }) => (
-    <TouchableOpacity style={styles.matchItem} onPress={() => handleMatchClick(item.id)}>
-      {item.profile_picture ? (
-        <Image source={{ uri: item.profile_picture }} style={styles.matchAvatar} />
-      ) : (
-        <View style={[styles.matchAvatarPlaceholder, { backgroundColor: theme.background, borderColor: theme.border }]}>
-          <User size={24} color={theme.textSecondary} />
-        </View>
-      )}
-      <Text style={[styles.matchName, { color: theme.text }]} numberOfLines={1}>
-        {item.full_name}
-      </Text>
-    </TouchableOpacity>
+  const isTr = language === 'tr';
+  const unreadTotal = conversations.reduce((n, c) => n + c.unread_count, 0);
+
+  const renderMatch = ({ item, index }: { item: Match; index: number }) => (
+    <Animated.View entering={FadeInRight.delay(index * 60).springify().damping(16)}>
+      <BouncyButton style={styles.matchItem} onPress={() => handleMatchClick(item.id)}>
+        <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.matchRing}>
+          <View style={[styles.matchRingInner, { backgroundColor: theme.background }]}>
+            {item.profile_picture ? (
+              <Image source={{ uri: item.profile_picture }} style={styles.matchAvatar} />
+            ) : (
+              <View style={[styles.matchAvatar, styles.center, { backgroundColor: theme.primaryLight }]}>
+                <Text style={[styles.initial, { color: theme.primary }]}>{item.full_name?.charAt(0) || '?'}</Text>
+              </View>
+            )}
+          </View>
+        </LinearGradient>
+        <View style={styles.newDot} />
+        <Text style={[styles.matchName, { color: theme.text }]} numberOfLines={1}>
+          {item.full_name?.split(' ')[0]}
+        </Text>
+      </BouncyButton>
+    </Animated.View>
   );
 
   const renderRightActions = (item: Conversation) => (
-    <TouchableOpacity
-      style={styles.conversationDeleteStrip}
-      onPress={() => handleDeleteConversation(item)}
-      activeOpacity={0.8}>
-      <Trash2 size={24} color="#FFFFFF" />
-      <Text style={styles.conversationDeleteText}>{language === 'tr' ? 'Sil' : 'Delete'}</Text>
+    <TouchableOpacity style={styles.conversationDeleteStrip} onPress={() => handleDeleteConversation(item)} activeOpacity={0.8}>
+      <Trash2 size={22} color="#FFFFFF" />
+      <Text style={styles.conversationDeleteText}>{L('Sil', 'Delete')}</Text>
     </TouchableOpacity>
   );
 
-  const renderConversation = ({ item }: { item: Conversation }) => (
-    <Swipeable renderRightActions={() => renderRightActions(item)} friction={2}>
-      <TouchableOpacity
-        style={[styles.conversationItem, { backgroundColor: theme.cardBackground }]}
-        onPress={() => handleConversationClick(item)}>
-        {item.other_user_picture ? (
-          <Image source={{ uri: item.other_user_picture }} style={styles.conversationAvatar} />
-        ) : (
-          <View style={[styles.conversationAvatarPlaceholder, { backgroundColor: theme.background, borderColor: theme.border }]}>
-            <User size={32} color={theme.textSecondary} />
-          </View>
-        )}
-        <View style={styles.conversationInfo}>
-          <Text style={[styles.conversationName, { color: theme.text }]} numberOfLines={1}>
-            {item.other_user_name}
-          </Text>
-          <Text style={[styles.conversationLastMessage, { color: theme.textSecondary }]} numberOfLines={1}>
-            {item.last_message}
-          </Text>
-        </View>
-        <View style={styles.conversationMeta}>
-          <Text style={[styles.conversationTime, { color: theme.textSecondary }]}>
-            {formatLastMessageTime(item.last_message_time, language)}
-          </Text>
-          {item.unread_count > 0 && (
-            <View style={[styles.unreadBadge, { backgroundColor: theme.primary }]}>
-              <Text style={styles.unreadText}>{item.unread_count > 99 ? '99+' : item.unread_count}</Text>
+  const renderConversation = ({ item, index }: { item: Conversation; index: number }) => {
+    const unread = item.unread_count > 0;
+    return (
+      <Animated.View entering={index < 12 ? FadeInDown.delay(index * 45).duration(380) : undefined} layout={LinearTransition}>
+        <Swipeable renderRightActions={() => renderRightActions(item)} friction={2}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={[
+              styles.conversationItem,
+              { backgroundColor: theme.cardBackground, borderColor: unread ? theme.primary + '40' : 'transparent' },
+            ]}
+            onPress={() => handleConversationClick(item)}>
+            {item.other_user_picture ? (
+              <Image source={{ uri: item.other_user_picture }} style={styles.conversationAvatar} />
+            ) : (
+              <View style={[styles.conversationAvatar, styles.center, { backgroundColor: theme.primaryLight }]}>
+                <Text style={[styles.initial, { color: theme.primary }]}>{item.other_user_name?.charAt(0) || '?'}</Text>
+              </View>
+            )}
+            <View style={styles.conversationInfo}>
+              <Text style={[styles.conversationName, { color: theme.text }]} numberOfLines={1}>
+                {item.other_user_name}
+              </Text>
+              <Text
+                style={[
+                  styles.conversationLastMessage,
+                  { color: unread ? theme.text : theme.textSecondary, fontWeight: unread ? '600' : '400' },
+                ]}
+                numberOfLines={1}>
+                {item.last_message}
+              </Text>
             </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    </Swipeable>
+            <View style={styles.conversationMeta}>
+              <Text style={[styles.conversationTime, { color: unread ? theme.primary : theme.textSecondary }]}>
+                {formatLastMessageTime(item.last_message_time)}
+              </Text>
+              {unread && (
+                <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.unreadBadge}>
+                  <Text style={styles.unreadText}>{item.unread_count > 99 ? '99+' : item.unread_count}</Text>
+                </LinearGradient>
+              )}
+            </View>
+          </TouchableOpacity>
+        </Swipeable>
+      </Animated.View>
+    );
+  };
+
+  const header = (
+    <View style={styles.header}>
+      <View>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>{L('Mesajlar', 'Messages')}</Text>
+        <Text style={[styles.headerSub, { color: theme.textSecondary }]}>
+          {unreadTotal > 0
+            ? L('{0} okunmamış mesaj', '{0} unread', [unreadTotal])
+            : L('Hepsi okundu', 'All caught up')}
+        </Text>
+      </View>
+      <BrandLogo size="sm" showWordmark={false} />
+    </View>
   );
 
-  if (loading && conversations.length === 0) {
+  if (loading && conversations.length === 0 && matches.length === 0) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
-        <View style={[styles.header, { borderBottomColor: theme.border }]}>
-          <MessageCircle size={32} color={theme.primary} />
-          <Text style={[styles.headerTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Mesajlar' : 'Messages'}
-          </Text>
-        </View>
-        <View style={styles.loadingContainer}>
-          <HeartLoader />
-        </View>
+        {header}
+        <ChatListSkeleton />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
-      <View style={[styles.header, { borderBottomWidth: 1, borderBottomColor: theme.border }]}>
-        <MessageCircle size={32} color={theme.primary} />
-        <Text style={[styles.headerTitle, { color: theme.text }]}>
-          {language === 'tr' ? 'Mesajlar' : 'Messages'}
-        </Text>
-      </View>
+      {header}
 
       {matches.length > 0 && (
-        <View style={[styles.matchesSection, { borderBottomColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Eşleşmeler' : 'Matches'}
-          </Text>
+        <View style={styles.matchesSection}>
+          <View style={styles.sectionRow}>
+            <Sparkles size={16} color={BRAND.pink} />
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>{L('Yeni eşleşmeler', 'New matches')}</Text>
+            <View style={[styles.countPill, { backgroundColor: theme.primaryLight }]}>
+              <Text style={[styles.countPillText, { color: theme.primary }]}>{matches.length}</Text>
+            </View>
+          </View>
           <FlatList
             data={matches}
             renderItem={renderMatch}
@@ -469,24 +322,28 @@ export default function ChatListScreen() {
       )}
 
       <View style={styles.conversationsSection}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
-          {language === 'tr' ? 'Sohbetler' : 'Conversations'}
-        </Text>
+        <Text style={[styles.sectionTitle, styles.sectionTitlePad, { color: theme.text }]}>{L('Sohbetler', 'Chats')}</Text>
         <FlatList
           data={conversations}
           renderItem={renderConversation}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.conversationsList}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <MessageCircle size={64} color={theme.textSecondary} />
+            <Animated.View entering={FadeInDown.duration(500)} style={styles.emptyContainer}>
+              <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.emptyIcon}>
+                <MessageCircle size={36} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>{L('Henüz sohbet yok', 'No chats yet')}</Text>
               <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                {language === 'tr' ? 'Henüz mesajınız yok' : 'No messages yet'}
+                {L('Keşfet sekmesinde birini beğen; eşleşince sohbetin burada başlar.', 'Like someone in Explore; when you match, your chat starts here.')}
               </Text>
-            </View>
+              <GradientButton
+                title={L('Keşfetmeye başla', 'Start exploring')}
+                onPress={() => router.push('/(tabs)/explore')}
+                style={{ marginTop: 20, alignSelf: 'stretch' }}
+              />
+            </Animated.View>
           }
         />
       </View>
@@ -508,149 +365,77 @@ export default function ChatListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  center: { justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  matchesSection: {
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  matchesList: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  matchItem: {
-    alignItems: 'center',
-    width: 80,
-  },
-  matchAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginBottom: 8,
-  },
-  matchAvatarPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
+  headerTitle: { fontSize: 30, fontWeight: '900', letterSpacing: -0.6 },
+  headerSub: { fontSize: 13, marginTop: 2 },
+  matchesSection: { paddingTop: 12, paddingBottom: 8 },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '800' },
+  sectionTitlePad: { paddingHorizontal: 20, marginBottom: 10 },
+  countPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  countPillText: { fontSize: 12, fontWeight: '800' },
+  matchesList: { paddingHorizontal: 16, gap: 14 },
+  matchItem: { alignItems: 'center', width: 76 },
+  matchRing: { width: 72, height: 72, borderRadius: 36, padding: 3 },
+  matchRingInner: { flex: 1, borderRadius: 33, padding: 2 },
+  matchAvatar: { width: '100%', height: '100%', borderRadius: 31 },
+  newDot: {
+    position: 'absolute',
+    top: 2,
+    right: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#22C55E',
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: '#FFFFFF',
   },
-  matchName: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  conversationsSection: {
-    flex: 1,
-    paddingTop: 16,
-  },
-  conversationsList: {
-    paddingHorizontal: 16,
-  },
+  matchName: { fontSize: 12, fontWeight: '700', textAlign: 'center', marginTop: 6 },
+  initial: { fontSize: 22, fontWeight: '800' },
+  conversationsSection: { flex: 1, paddingTop: 12 },
+  conversationsList: { paddingHorizontal: 16, paddingBottom: 24 },
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
+    borderRadius: 18,
+    marginBottom: 10,
     gap: 12,
+    borderWidth: 1,
+    shadowColor: '#1E1450',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   conversationDeleteStrip: {
     justifyContent: 'center',
     alignItems: 'center',
     width: 80,
-    marginBottom: 8,
-    borderRadius: 12,
-    backgroundColor: '#E53935',
+    marginBottom: 10,
+    borderRadius: 18,
+    backgroundColor: '#EF4444',
   },
-  conversationDeleteText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  conversationAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  conversationAvatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  conversationInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  conversationMeta: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  conversationTime: {
-    fontSize: 12,
-  },
-  conversationName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  conversationLastMessage: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  unreadBadge: {
-    backgroundColor: '#FF6B9D',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  unreadText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    marginTop: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  conversationDeleteText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', marginTop: 4 },
+  conversationAvatar: { width: 54, height: 54, borderRadius: 27 },
+  conversationInfo: { flex: 1, minWidth: 0 },
+  conversationMeta: { alignItems: 'flex-end', gap: 6 },
+  conversationTime: { fontSize: 12, fontWeight: '600' },
+  conversationName: { fontSize: 16, fontWeight: '800', marginBottom: 3 },
+  conversationLastMessage: { fontSize: 14 },
+  unreadBadge: { borderRadius: 11, minWidth: 22, height: 22, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 7 },
+  unreadText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  emptyContainer: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 24 },
+  emptyIcon: { width: 84, height: 84, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  emptyTitle: { fontSize: 20, fontWeight: '800' },
+  emptyText: { fontSize: 15, marginTop: 8, textAlign: 'center', lineHeight: 22 },
 });

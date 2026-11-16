@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { getEffectiveSubscription } from '@/lib/subscription';
 
+import { L } from '@/lib/l10n';
 export default function StoreScreen() {
   const router = useRouter();
   const { theme } = useTheme();
@@ -32,14 +33,12 @@ export default function StoreScreen() {
     }, [refetchSubscription])
   );
 
-  const title = language === 'tr' ? 'Mağaza' : 'Store';
-  const premiumTitle = language === 'tr' ? 'Premium ol' : 'Go Premium';
-  const premiumSub = language === 'tr' ? 'Sınırsız mesaj, tüm filtreler ve daha fazlası' : 'Unlimited messages, all filters and more';
-  const creditsTitle = language === 'tr' ? 'Kredi satın al' : 'Buy credits';
+  const title = L('Mağaza', 'Store');
+  const premiumTitle = L('Premium ol', 'Go Premium');
+  const premiumSub = L('Sınırsız mesaj, tüm filtreler ve daha fazlası', 'Unlimited messages, all filters and more');
+  const creditsTitle = L('Kredi satın al', 'Buy credits');
   const creditsSub =
-    language === 'tr'
-      ? 'Her mesaj 50 kredi, Premium için mesajlar ücretsiz'
-      : 'Each message costs 50 credits, messages are free for Premium';
+    L('Her mesaj 50 kredi, Premium için mesajlar ücretsiz', 'Each message costs 50 credits, messages are free for Premium');
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>

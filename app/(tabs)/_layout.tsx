@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Tabs } from 'expo-router';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BRAND } from '@/lib/brand';
 import {
   Search,
   MessageCircle,
@@ -29,17 +31,32 @@ function TabIcon({
   color: string;
   focused: boolean;
 }) {
-  const scale = useSharedValue(focused ? 1.15 : 1);
+  const p = useSharedValue(focused ? 1 : 0);
   useEffect(() => {
-    scale.value = withSpring(focused ? 1.15 : 1, { damping: 10, stiffness: 220 });
-  }, [focused, scale]);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+    p.value = withSpring(focused ? 1 : 0, { damping: 12, stiffness: 220 });
+  }, [focused, p]);
+  // Gradient pill grows in behind the active icon.
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: p.value,
+    transform: [{ scaleX: 0.6 + p.value * 0.4 }, { scaleY: 0.8 + p.value * 0.2 }],
+  }));
+  const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + p.value * 0.08 }, { translateY: -p.value * 1 }] }));
   return (
-    <Animated.View style={style}>
-      <Icon size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
-    </Animated.View>
+    <View style={tabStyles.slot}>
+      <Animated.View style={[tabStyles.pill, pillStyle]}>
+        <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      </Animated.View>
+      <Animated.View style={iconStyle}>
+        <Icon size={size - 2} color={focused ? '#FFFFFF' : color} strokeWidth={focused ? 2.4 : 2} />
+      </Animated.View>
+    </View>
   );
 }
+
+const tabStyles = StyleSheet.create({
+  slot: { width: 58, height: 36, alignItems: 'center', justifyContent: 'center' },
+  pill: { ...StyleSheet.absoluteFillObject, borderRadius: 18, overflow: 'hidden' },
+});
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -105,11 +122,15 @@ export default function TabLayout() {
         tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: {
           backgroundColor: theme.tabBarBackground,
-          borderTopWidth: 1,
-          borderTopColor: theme.tabBarBorder,
-          height: (Platform.OS === 'ios' ? 60 : 65) + insets.bottom,
+          borderTopWidth: 0,
+          height: (Platform.OS === 'ios' ? 62 : 66) + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 8),
-          paddingTop: 8,
+          paddingTop: 10,
+          shadowColor: '#1E1450',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 16,
+          elevation: 16,
         },
         tabBarShowLabel: false,
         animation: 'shift',

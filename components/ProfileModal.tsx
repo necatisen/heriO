@@ -48,13 +48,14 @@ import { countries } from '@/lib/constants';
 import { FullScreenModal } from '@/components/FullScreenModal';
 import { formatLastSeen, isUserOnlineNow } from '@/lib/dateFormat';
 
+import { L } from '@/lib/l10n';
 function getCountryLabel(value: string | null | undefined, language: string): string {
   const raw = String(value ?? '').trim();
   const norm = raw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
   const isTr = language.toLowerCase().startsWith('tr');
 
   const match = countries.find((c) => c.value === norm);
-  if (match) return isTr ? match.label.tr : match.label.en;
+  if (match) return L(match.label.tr, match.label.en);
 
   return raw;
 }
@@ -135,16 +136,10 @@ export default function ProfileModal({
 
   const lastSeenChipText =
     onlineNow
-      ? language === 'tr'
-        ? 'Çevrimiçi'
-        : 'Online'
+      ? L('Çevrimiçi', 'Online')
       : profile?.last_seen
-        ? language === 'tr'
-          ? `Son görülme: ${formatLastSeen(profile.last_seen, 'tr')}`
-          : `Last seen: ${formatLastSeen(profile.last_seen, 'en')}`
-        : language === 'tr'
-          ? 'Son görülme: —'
-          : 'Last seen: —';
+        ? L('Son görülme: {0}', 'Last seen: {0}', [formatLastSeen(profile.last_seen)])
+        : L('Son görülme: —', 'Last seen: —');
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -206,12 +201,12 @@ export default function ProfileModal({
     const confirmTr = 'Bu kullanıcıyı engellemek istediğinize emin misiniz? Sohbet ve eşleşme görünmez olacak.';
     const confirmEn = 'Are you sure you want to block this user? Chat and match will be hidden.';
     Alert.alert(
-      language === 'tr' ? 'Engelle' : 'Block',
-      language === 'tr' ? confirmTr : confirmEn,
+      L('Engelle', 'Block'),
+      L(confirmTr, confirmEn),
       [
-        { text: language === 'tr' ? 'İptal' : 'Cancel', style: 'cancel' },
+        { text: L('İptal', 'Cancel'), style: 'cancel' },
         {
-          text: language === 'tr' ? 'Engelle' : 'Block',
+          text: L('Engelle', 'Block'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -223,7 +218,7 @@ export default function ProfileModal({
               onClose();
               onBlocked?.();
             } catch (e: any) {
-              Alert.alert('Error', e.message || (language === 'tr' ? 'Engelleme başarısız' : 'Block failed'));
+              Alert.alert(L('Hata', 'Error'), e.message || (L('Engelleme başarısız', 'Block failed')));
             }
           },
         },
@@ -241,28 +236,28 @@ export default function ProfileModal({
       });
       if (error) throw error;
       Alert.alert(
-        language === 'tr' ? 'Teşekkürler' : 'Thank you',
-        language === 'tr' ? 'Şikâyetiniz alındı. İncelenecektir.' : 'Your report has been received and will be reviewed.'
+        L('Teşekkürler', 'Thank you'),
+        L('Şikâyetiniz alındı. İncelenecektir.', 'Your report has been received and will be reviewed.')
       );
       onClose();
     } catch (e: any) {
-      Alert.alert('Error', e.message || (language === 'tr' ? 'Şikâyet gönderilemedi' : 'Report failed'));
+      Alert.alert(L('Hata', 'Error'), e.message || (L('Şikâyet gönderilemedi', 'Report failed')));
     }
   };
 
   const handleReport = () => {
     if (!user || !profile || profile.id === user.id) return;
-    const reasons = language === 'tr' ? REPORT_REASONS.tr : REPORT_REASONS.en;
+    const reasons = REPORT_REASONS.tr.map((tr, i) => L(tr, REPORT_REASONS.en[i]));
     Alert.alert(
-      language === 'tr' ? 'Şikâyet et' : 'Report',
-      language === 'tr' ? 'Sebep seçin' : 'Choose a reason',
+      L('Şikâyet et', 'Report'),
+      L('Sebep seçin', 'Choose a reason'),
       [
         { text: reasons[0], onPress: () => submitReport(reasons[0]) },
         { text: reasons[1], onPress: () => submitReport(reasons[1]) },
         { text: reasons[2], onPress: () => submitReport(reasons[2]) },
         { text: reasons[3], onPress: () => submitReport(reasons[3]) },
         { text: reasons[4], onPress: () => submitReport(reasons[4]) },
-        { text: language === 'tr' ? 'İptal' : 'Cancel', style: 'cancel' },
+        { text: L('İptal', 'Cancel'), style: 'cancel' },
       ]
     );
   };
@@ -300,7 +295,7 @@ export default function ProfileModal({
       onClose();
       router.push(`/conversation/${sessionId}`);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to start chat');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Sohbet başlatılamadı', 'Failed to start chat'));
     }
   };
 
@@ -416,7 +411,7 @@ export default function ProfileModal({
                     </Text>
                     <Text style={styles.photoUsernameText}>@{profile.username}</Text>
                     <Text style={styles.photoMetaText}>
-                      {age} {language === 'tr' ? 'yaşında' : 'years old'}
+                      {age} {L('yaşında', 'years old')}
                     </Text>
                     <Text style={styles.photoMetaText} numberOfLines={1}>
                       {profile.city ? `${profile.city}, ${getCountryLabel(profile.country, language)}` : '—'}
@@ -439,7 +434,7 @@ export default function ProfileModal({
                   </Text>
                   <Text style={styles.photoUsernameText}>@{profile.username}</Text>
                   <Text style={styles.photoMetaText}>
-                    {age} {language === 'tr' ? 'yaşında' : 'years old'}
+                    {age} {L('yaşında', 'years old')}
                   </Text>
                   <Text style={styles.photoMetaText} numberOfLines={1}>
                     {profile.city ? `${profile.city}, ${getCountryLabel(profile.country, language)}` : '—'}
@@ -457,19 +452,17 @@ export default function ProfileModal({
 
           <View style={styles.detailsSection}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {language === 'tr' ? 'Hakkımda' : 'About'}
+              {L('Hakkımda', 'About')}
             </Text>
 
             <Text style={[styles.aboutText, { color: theme.textSecondary }]}>
               {profile.bio
                 ? profile.bio
-                : language === 'tr'
-                  ? 'Hakkımda bilgisi yok.'
-                  : 'No bio.'}
+                : L('Hakkımda bilgisi yok.', 'No bio.')}
             </Text>
 
             <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 16 }]}>
-              {language === 'tr' ? 'Bilgilerim' : 'Information'}
+              {L('Bilgilerim', 'Information')}
             </Text>
 
             <View style={styles.chipsGrid}>
@@ -577,7 +570,7 @@ export default function ProfileModal({
                   style={[styles.reportBtn, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}
                   onPress={handleReport}>
                   <Text style={[styles.reportBtnText, { color: theme.text }]}>
-                    {language === 'tr' ? 'Şikayet et' : 'Report'}
+                    {L('Şikayet et', 'Report')}
                   </Text>
                 </TouchableOpacity>
 
@@ -586,7 +579,7 @@ export default function ProfileModal({
                     style={[styles.reportBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
                     onPress={handleStartChat}>
                     <Text style={[styles.reportBtnText, { color: '#FFFFFF' }]}>
-                      {language === 'tr' ? 'Sohbet et' : 'Chat'}
+                      {L('Sohbet et', 'Chat')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -595,7 +588,7 @@ export default function ProfileModal({
                   style={[styles.blockBtn, { backgroundColor: theme.error, borderColor: theme.error }]}
                   onPress={handleBlock}>
                   <Text style={[styles.reportBtnText, { color: '#FFFFFF' }]}>
-                    {language === 'tr' ? 'Engelle' : 'Block'}
+                    {L('Engelle', 'Block')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -607,7 +600,7 @@ export default function ProfileModal({
           <View style={[styles.actionButtons, { paddingBottom: Math.max(16, insets.bottom + 16) }]}>
             {onLike && (
               <TouchableOpacity style={[styles.actionButton, styles.likeButton]} onPress={onLike}>
-                <Text style={styles.buttonText}>{language === 'tr' ? 'Beğen' : 'Like'}</Text>
+                <Text style={styles.buttonText}>{L('Beğen', 'Like')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -989,7 +982,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
     paddingVertical: 12,
     borderRadius: 12,
   },

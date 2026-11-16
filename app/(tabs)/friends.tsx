@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BRAND } from '@/lib/brand';
 import {
   View,
   Text,
@@ -8,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Users, UserPlus, UserMinus, Ban, MessageCircle } from 'lucide-react-native';
 import VerifiedBadge from '@/components/VerifiedBadge';
@@ -17,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
 import ProfileModal from '@/components/ProfileModal';
 
+import { L } from '@/lib/l10n';
 type Friend = {
   id: string;
   friend_id: string;
@@ -135,22 +138,22 @@ export default function FriendsScreen() {
       fetchFriends();
       fetchPendingRequests();
       Alert.alert(
-        language === 'tr' ? 'Başarılı' : 'Success',
-        language === 'tr' ? 'Arkadaşlık isteği kabul edildi' : 'Friend request accepted'
+        L('Başarılı', 'Success'),
+        L('Arkadaşlık isteği kabul edildi', 'Friend request accepted')
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to accept request');
+      Alert.alert(L('Hata', 'Error'), error.message || L('İstek kabul edilemedi', 'Failed to accept request'));
     }
   };
 
   const removeFriend = async (friendshipId: string) => {
     Alert.alert(
-      language === 'tr' ? 'Arkadaşlıktan Çıkart' : 'Remove Friend',
-      language === 'tr' ? 'Bu kişiyi arkadaşlarınızdan çıkartmak istediğinize emin misiniz?' : 'Are you sure you want to remove this friend?',
+      L('Arkadaşlıktan Çıkart', 'Remove Friend'),
+      L('Bu kişiyi arkadaşlarınızdan çıkartmak istediğinize emin misiniz?', 'Are you sure you want to remove this friend?'),
       [
-        { text: language === 'tr' ? 'İptal' : 'Cancel', style: 'cancel' },
+        { text: L('İptal', 'Cancel'), style: 'cancel' },
         {
-          text: language === 'tr' ? 'Çıkart' : 'Remove',
+          text: L('Çıkart', 'Remove'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -163,11 +166,11 @@ export default function FriendsScreen() {
               fetchFriends();
               setSelectedFriend(null);
               Alert.alert(
-                language === 'tr' ? 'Başarılı' : 'Success',
-                language === 'tr' ? 'Arkadaş çıkartıldı' : 'Friend removed'
+                L('Başarılı', 'Success'),
+                L('Arkadaş çıkartıldı', 'Friend removed')
               );
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to remove friend');
+              Alert.alert(L('Hata', 'Error'), error.message || L('Arkadaşlıktan çıkarılamadı', 'Failed to remove friend'));
             }
           },
         },
@@ -177,12 +180,12 @@ export default function FriendsScreen() {
 
   const blockUser = async (userId: string, friendshipId: string) => {
     Alert.alert(
-      language === 'tr' ? 'Kullanıcıyı Engelle' : 'Block User',
-      language === 'tr' ? 'Bu kullanıcıyı engellemek istediğinize emin misiniz?' : 'Are you sure you want to block this user?',
+      L('Kullanıcıyı Engelle', 'Block User'),
+      L('Bu kullanıcıyı engellemek istediğinize emin misiniz?', 'Are you sure you want to block this user?'),
       [
-        { text: language === 'tr' ? 'İptal' : 'Cancel', style: 'cancel' },
+        { text: L('İptal', 'Cancel'), style: 'cancel' },
         {
-          text: language === 'tr' ? 'Engelle' : 'Block',
+          text: L('Engelle', 'Block'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -196,11 +199,11 @@ export default function FriendsScreen() {
               fetchFriends();
               setSelectedFriend(null);
               Alert.alert(
-                language === 'tr' ? 'Başarılı' : 'Success',
-                language === 'tr' ? 'Kullanıcı engellendi' : 'User blocked'
+                L('Başarılı', 'Success'),
+                L('Kullanıcı engellendi', 'User blocked')
               );
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to block user');
+              Alert.alert(L('Hata', 'Error'), error.message || L('Kullanıcı engellenemedi', 'Failed to block user'));
             }
           },
         },
@@ -220,7 +223,7 @@ export default function FriendsScreen() {
       setSelectedProfile(data);
       setProfileModalVisible(true);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load profile');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Profil yüklenemedi', 'Failed to load profile'));
     }
   };
 
@@ -254,12 +257,15 @@ export default function FriendsScreen() {
 
       router.push(`/conversation/${sessionId}`);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to open chat');
+      Alert.alert(L('Hata', 'Error'), error.message || L('Sohbet açılamadı', 'Failed to open chat'));
     }
   };
 
-  const renderFriend = ({ item }: { item: Friend }) => (
-    <View style={styles.friendCard}>
+  const renderFriend = ({ item, index }: { item: Friend; index: number }) => (
+    <Animated.View
+      entering={index < 12 ? FadeInDown.delay(index * 50).duration(380) : undefined}
+      layout={LinearTransition}
+      style={styles.friendCard}>
       <TouchableOpacity
         style={styles.friendHeader}
         onPress={() => openChat(item.friend_id)}
@@ -274,7 +280,7 @@ export default function FriendsScreen() {
           <Text style={styles.friendUsername}>@{item.username}</Text>
           {item.bio && <Text style={styles.friendBio}>{item.bio}</Text>}
         </View>
-        <MessageCircle size={20} color="#4A90E2" />
+        <MessageCircle size={20} color="#5B4BFF" />
       </TouchableOpacity>
 
       {selectedFriend?.id === item.id && (
@@ -287,7 +293,7 @@ export default function FriendsScreen() {
             }}>
             <UserMinus size={20} color="#FFFFFF" />
             <Text style={styles.actionButtonText}>
-              {language === 'tr' ? 'Arkadaşlıktan çıkar' : 'Remove friend'}
+              {L('Arkadaşlıktan çıkar', 'Remove friend')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -298,12 +304,12 @@ export default function FriendsScreen() {
             }}>
             <Ban size={20} color="#FFFFFF" />
             <Text style={styles.actionButtonText}>
-              {language === 'tr' ? 'Engelle' : 'Block'}
+              {L('Engelle', 'Block')}
             </Text>
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 
   const renderPendingRequest = ({ item }: { item: Friend }) => (
@@ -329,7 +335,9 @@ export default function FriendsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <LinearGradient
-        colors={['#4A90E2', '#50C9E9']}
+        colors={BRAND.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={styles.headerGradient}>
         <View style={styles.header}>
           <Users size={32} color="#FFFFFF" />
@@ -344,7 +352,7 @@ export default function FriendsScreen() {
             {pendingRequests.length > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>
-                  {language === 'tr' ? 'İstek Bekleyenler' : 'Pending Requests'}
+                  {L('İstek Bekleyenler', 'Pending Requests')}
                 </Text>
                 {pendingRequests.map((item) => (
                   <View key={item.id}>{renderPendingRequest({ item })}</View>
@@ -354,7 +362,7 @@ export default function FriendsScreen() {
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                {language === 'tr' ? 'Arkadaşlarım' : 'My Friends'} ({friends.length})
+                {L('Arkadaşlarım', 'My Friends')} ({friends.length})
               </Text>
             </View>
           </>
@@ -366,10 +374,10 @@ export default function FriendsScreen() {
           <View style={styles.emptyContainer}>
             <Users size={80} color="#CCCCCC" />
             <Text style={styles.emptyText}>
-              {language === 'tr' ? 'Henüz arkadaş yok' : 'No friends yet'}
+              {L('Henüz arkadaş yok', 'No friends yet')}
             </Text>
             <Text style={styles.emptySubtext}>
-              {language === 'tr' ? 'Sohbet ederek yeni arkadaşlar edin!' : 'Start chatting to make new friends!'}
+              {L('Sohbet ederek yeni arkadaşlar edin!', 'Start chatting to make new friends!')}
             </Text>
           </View>
         }
@@ -484,7 +492,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   chatButton: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
   },
   removeButton: {
     backgroundColor: '#FF6B6B',
@@ -501,7 +509,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
     justifyContent: 'center',
     alignItems: 'center',
   },

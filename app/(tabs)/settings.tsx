@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, Image } from 'react-native';
+import type { Language } from '@/lib/i18n';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings as SettingsIcon, LogOut, Globe, Palette, Trash2, Mail, Check, FileText, X, ShoppingBag, FileCheck, Shield } from 'lucide-react-native';
@@ -9,6 +10,17 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useState } from 'react';
 import { getErrorLogs, clearErrorLogs, ErrorLog } from '@/lib/errorLogger';
+
+import { L } from '@/lib/l10n';
+const LANGUAGE_OPTIONS: { code: Language; native: string; flag: string }[] = [
+  { code: 'tr', native: 'Türkçe', flag: '🇹🇷' },
+  { code: 'en', native: 'English', flag: '🇬🇧' },
+  { code: 'de', native: 'Deutsch', flag: '🇩🇪' },
+  { code: 'fr', native: 'Français', flag: '🇫🇷' },
+  { code: 'es', native: 'Español', flag: '🇪🇸' },
+  { code: 'ru', native: 'Русский', flag: '🇷🇺' },
+  { code: 'ar', native: 'العربية', flag: '🇸🇦' },
+];
 
 export default function SettingsScreen() {
   const { signOut, user } = useAuth();
@@ -21,8 +33,8 @@ export default function SettingsScreen() {
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
 
   const handleLogout = async () => {
-    const confirmText = language === 'tr' ? 'Çıkış yapmak istediğinize emin misiniz?' : 'Are you sure you want to logout?';
-    const cancelText = language === 'tr' ? 'İptal' : 'Cancel';
+    const confirmText = L('Çıkış yapmak istediğinize emin misiniz?', 'Are you sure you want to logout?');
+    const cancelText = L('İptal', 'Cancel');
 
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(confirmText);
@@ -31,7 +43,7 @@ export default function SettingsScreen() {
           await signOut();
           router.replace('/welcome');
         } catch (error: any) {
-          alert(error.message || 'Failed to logout');
+          alert(error.message || L('Çıkış yapılamadı', 'Failed to logout'));
         }
       }
     } else {
@@ -45,7 +57,7 @@ export default function SettingsScreen() {
               await signOut();
               router.replace('/welcome');
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to logout');
+              Alert.alert(L('Hata', 'Error'), error.message || L('Çıkış yapılamadı', 'Failed to logout'));
             }
           },
         },
@@ -54,35 +66,31 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmText = language === 'tr'
-      ? 'Hesabınızı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.'
-      : 'Are you sure you want to permanently delete your account? This action cannot be undone.';
-    const cancelText = language === 'tr' ? 'İptal' : 'Cancel';
-    const deleteText = language === 'tr' ? 'Evet, Sil' : 'Yes, Delete';
+    const confirmText = L('Hesabınızı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.', 'Are you sure you want to permanently delete your account? This action cannot be undone.');
+    const cancelText = L('İptal', 'Cancel');
+    const deleteText = L('Evet, Sil', 'Yes, Delete');
 
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(confirmText);
       if (confirmed) {
         try {
-          const { error } = await supabase.rpc('delete_user_account');
+          // Removes uploaded files (photos, verification images) and all account data.
+          const { data: delRes, error } = await supabase.functions.invoke('delete-account', { body: {} });
+          if (!error && delRes && delRes.success === false) throw new Error(delRes.message);
           if (error) throw error;
 
           await signOut();
-          const successMessage = language === 'tr'
-            ? 'Hesabınız kalıcı olarak silindi.'
-            : 'Your account has been permanently deleted.';
+          const successMessage = L('Hesabınız kalıcı olarak silindi.', 'Your account has been permanently deleted.');
           alert(successMessage);
           router.replace('/welcome');
         } catch (error: any) {
-          const errorMessage = language === 'tr'
-            ? 'Hesap silinirken bir hata oluştu: '
-            : 'Error deleting account: ';
-          alert(errorMessage + (error.message || 'Unknown error'));
+          const errorMessage = L('Hesap silinirken bir hata oluştu: ', 'Error deleting account: ');
+          alert(errorMessage + (error.message || L('Bilinmeyen hata', 'Unknown error')));
         }
       }
     } else {
       Alert.alert(
-        language === 'tr' ? 'Hesabı Sil' : 'Delete Account',
+        L('Hesabı Sil', 'Delete Account'),
         confirmText,
         [
           { text: cancelText, style: 'cancel' },
@@ -91,23 +99,21 @@ export default function SettingsScreen() {
             style: 'destructive',
             onPress: async () => {
               try {
-                const { error } = await supabase.rpc('delete_user_account');
+                // Removes uploaded files (photos, verification images) and all account data.
+          const { data: delRes, error } = await supabase.functions.invoke('delete-account', { body: {} });
+          if (!error && delRes && delRes.success === false) throw new Error(delRes.message);
                 if (error) throw error;
 
                 await signOut();
-                const successMessage = language === 'tr'
-                  ? 'Hesabınız kalıcı olarak silindi.'
-                  : 'Your account has been permanently deleted.';
+                const successMessage = L('Hesabınız kalıcı olarak silindi.', 'Your account has been permanently deleted.');
                 Alert.alert(
-                  language === 'tr' ? 'Başarılı' : 'Success',
+                  L('Başarılı', 'Success'),
                   successMessage
                 );
                 router.replace('/welcome');
               } catch (error: any) {
-                const errorMessage = language === 'tr'
-                  ? 'Hesap silinirken bir hata oluştu: '
-                  : 'Error deleting account: ';
-                Alert.alert('Error', errorMessage + (error.message || 'Unknown error'));
+                const errorMessage = L('Hesap silinirken bir hata oluştu: ', 'Error deleting account: ');
+                Alert.alert(L('Hata', 'Error'), errorMessage + (error.message || L('Bilinmeyen hata', 'Unknown error')));
               }
             },
           },
@@ -127,31 +133,29 @@ export default function SettingsScreen() {
   };
 
   const handleClearErrorLogs = async () => {
-    const confirmText = language === 'tr'
-      ? 'Tüm hata kayıtlarını silmek istediğinize emin misiniz?'
-      : 'Are you sure you want to clear all error logs?';
+    const confirmText = L('Tüm hata kayıtlarını silmek istediğinize emin misiniz?', 'Are you sure you want to clear all error logs?');
 
     if (Platform.OS === 'web') {
       if (window.confirm(confirmText)) {
         await clearErrorLogs();
         setErrorLogs([]);
-        alert(language === 'tr' ? 'Hata kayıtları temizlendi' : 'Error logs cleared');
+        alert(L('Hata kayıtları temizlendi', 'Error logs cleared'));
       }
     } else {
       Alert.alert(
-        language === 'tr' ? 'Kayıtları Temizle' : 'Clear Logs',
+        L('Kayıtları Temizle', 'Clear Logs'),
         confirmText,
         [
-          { text: language === 'tr' ? 'İptal' : 'Cancel', style: 'cancel' },
+          { text: L('İptal', 'Cancel'), style: 'cancel' },
           {
-            text: language === 'tr' ? 'Temizle' : 'Clear',
+            text: L('Temizle', 'Clear'),
             style: 'destructive',
             onPress: async () => {
               await clearErrorLogs();
               setErrorLogs([]);
               Alert.alert(
-                language === 'tr' ? 'Başarılı' : 'Success',
-                language === 'tr' ? 'Hata kayıtları temizlendi' : 'Error logs cleared'
+                L('Başarılı', 'Success'),
+                L('Hata kayıtları temizlendi', 'Error logs cleared')
               );
             },
           },
@@ -186,11 +190,9 @@ export default function SettingsScreen() {
       setShowBlockedUsers(true);
     } catch (e: any) {
       Alert.alert(
-        'Error',
+        L('Hata', 'Error'),
         e?.message ||
-          (language === 'tr'
-            ? 'Engellenen kullanıcılar yüklenemedi.'
-            : 'Failed to load blocked users.')
+          (L('Engellenen kullanıcılar yüklenemedi.', 'Failed to load blocked users.'))
       );
     }
   };
@@ -209,7 +211,7 @@ export default function SettingsScreen() {
           <View style={styles.sectionHeader}>
             <Palette size={24} color={theme.primary} />
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {language === 'tr' ? 'Tema' : 'Theme'}
+              {L('Tema', 'Theme')}
             </Text>
           </View>
 
@@ -226,7 +228,7 @@ export default function SettingsScreen() {
                 <View style={styles.themePreviewContent} />
               </View>
               <Text style={[styles.themeOptionText, { color: theme.text }]}>
-                {language === 'tr' ? 'Beyaz Tema' : 'Light Theme'}
+                {L('Beyaz Tema', 'Light Theme')}
               </Text>
               {themeType === 'light' && <Check size={20} color={theme.primary} style={styles.checkIcon} />}
             </TouchableOpacity>
@@ -243,7 +245,7 @@ export default function SettingsScreen() {
                 <View style={[styles.themePreviewContent, { backgroundColor: '#2A2A2A' }]} />
               </View>
               <Text style={[styles.themeOptionText, { color: theme.text }]}>
-                {language === 'tr' ? 'Siyah Tema' : 'Dark Theme'}
+                {L('Siyah Tema', 'Dark Theme')}
               </Text>
               {themeType === 'dark' && <Check size={20} color={theme.primary} style={styles.checkIcon} />}
             </TouchableOpacity>
@@ -263,7 +265,7 @@ export default function SettingsScreen() {
                 <View style={[styles.themePreviewContent, { backgroundColor: '#FFFFFF' }]} />
               </View>
               <Text style={[styles.themeOptionText, { color: theme.text }]}>
-                {language === 'tr' ? 'Renkli Tema' : 'Colored Theme'}
+                {L('Renkli Tema', 'Colored Theme')}
               </Text>
               {themeType === 'colored' && <Check size={20} color={theme.primary} style={styles.checkIcon} />}
             </TouchableOpacity>
@@ -274,46 +276,33 @@ export default function SettingsScreen() {
           <View style={styles.sectionHeader}>
             <Globe size={24} color={theme.primary} />
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {language === 'tr' ? 'Dil' : 'Language'}
+              {L('Dil', 'Language')}
             </Text>
           </View>
 
-          <View style={styles.languageButtons}>
-            <TouchableOpacity
-              style={[
-                styles.languageButton,
-                { borderColor: theme.border },
-                language === 'tr' && [styles.languageButtonActive, { backgroundColor: theme.primary }]
-              ]}
-              onPress={() => setLanguage('tr')}>
-              <Text style={[
-                styles.languageButtonText,
-                { color: language === 'tr' ? '#FFFFFF' : theme.text }
-              ]}>
-                Türkçe
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.languageButton,
-                { borderColor: theme.border },
-                language === 'en' && [styles.languageButtonActive, { backgroundColor: theme.primary }]
-              ]}
-              onPress={() => setLanguage('en')}>
-              <Text style={[
-                styles.languageButtonText,
-                { color: language === 'en' ? '#FFFFFF' : theme.text }
-              ]}>
-                English
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.languageGrid}>
+            {LANGUAGE_OPTIONS.map((opt) => {
+              const active = language === opt.code;
+              return (
+                <TouchableOpacity
+                  key={opt.code}
+                  style={[
+                    styles.languageChip,
+                    { borderColor: active ? theme.primary : theme.border },
+                    active && { backgroundColor: theme.primary },
+                  ]}
+                  onPress={() => setLanguage(opt.code)}>
+                  <Text style={styles.languageFlag}>{opt.flag}</Text>
+                  <Text style={[styles.languageButtonText, { color: active ? '#FFFFFF' : theme.text }]}>{opt.native}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Mağaza' : 'Store'}
+            {L('Mağaza', 'Store')}
           </Text>
           <TouchableOpacity
             style={[styles.settingItem, { borderBottomColor: theme.border }]}
@@ -321,7 +310,7 @@ export default function SettingsScreen() {
             <View style={styles.settingLeft}>
               <ShoppingBag size={24} color={theme.primary} />
               <Text style={[styles.settingText, { color: theme.text }]}>
-                {language === 'tr' ? 'Premium & Kredi' : 'Premium & Credits'}
+                {L('Premium & Kredi', 'Premium & Credits')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -329,7 +318,7 @@ export default function SettingsScreen() {
 
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Yasal' : 'Legal'}
+            {L('Yasal', 'Legal')}
           </Text>
           <TouchableOpacity
             style={[styles.settingItem, { borderBottomColor: theme.border }]}
@@ -337,7 +326,7 @@ export default function SettingsScreen() {
             <View style={styles.settingLeft}>
               <FileCheck size={24} color={theme.primary} />
               <Text style={[styles.settingText, { color: theme.text }]}>
-                {language === 'tr' ? 'Kullanım Şartları' : 'Terms of Use'}
+                {L('Kullanım Şartları', 'Terms of Use')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -347,7 +336,7 @@ export default function SettingsScreen() {
             <View style={styles.settingLeft}>
               <Shield size={24} color={theme.primary} />
               <Text style={[styles.settingText, { color: theme.text }]}>
-                {language === 'tr' ? 'Gizlilik Politikası' : 'Privacy Policy'}
+                {L('Gizlilik Politikası', 'Privacy Policy')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -355,7 +344,7 @@ export default function SettingsScreen() {
 
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Gizlilik & Güvenlik' : 'Privacy & Safety'}
+            {L('Gizlilik & Güvenlik', 'Privacy & Safety')}
           </Text>
           <TouchableOpacity
             style={[styles.settingItem, { borderBottomColor: theme.border }]}
@@ -363,7 +352,7 @@ export default function SettingsScreen() {
             <View style={styles.settingLeft}>
               <Shield size={24} color={theme.primary} />
               <Text style={[styles.settingText, { color: theme.text }]}>
-                {language === 'tr' ? 'Engellenen kullanıcılar' : 'Blocked users'}
+                {L('Engellenen kullanıcılar', 'Blocked users')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -371,7 +360,7 @@ export default function SettingsScreen() {
 
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Geliştirici' : 'Developer'}
+            {L('Geliştirici', 'Developer')}
           </Text>
           <TouchableOpacity
             style={[styles.settingItem, { borderBottomColor: theme.border }]}
@@ -379,7 +368,7 @@ export default function SettingsScreen() {
             <View style={styles.settingLeft}>
               <FileText size={24} color={theme.primary} />
               <Text style={[styles.settingText, { color: theme.text }]}>
-                {language === 'tr' ? 'Hata Kayıtları' : 'Error Logs'}
+                {L('Hata Kayıtları', 'Error Logs')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -387,22 +376,20 @@ export default function SettingsScreen() {
 
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            {language === 'tr' ? 'Yardım & Destek' : 'Help & Support'}
+            {L('Yardım & Destek', 'Help & Support')}
           </Text>
 
           <View style={styles.helpContainer}>
             <Mail size={32} color={theme.primary} />
             <Text style={[styles.helpTitle, { color: theme.text }]}>
-              {language === 'tr' ? 'İletişim' : 'Contact'}
+              {L('İletişim', 'Contact')}
             </Text>
             <View style={styles.emailContainer}>
               <Mail size={20} color={theme.textSecondary} />
-              <Text style={[styles.emailText, { color: theme.textSecondary }]}>destek@chatapp.com</Text>
+              <Text style={[styles.emailText, { color: theme.textSecondary }]}>heriohelp@gmail.com</Text>
             </View>
             <Text style={[styles.contactNote, { color: theme.textSecondary }]}>
-              {language === 'tr'
-                ? 'İletişim için bu e-posta adresini kullanabilirsiniz.'
-                : 'You can use this email address to contact us.'}
+              {L('İletişim için bu e-posta adresini kullanabilirsiniz.', 'You can use this email address to contact us.')}
             </Text>
           </View>
         </View>
@@ -419,7 +406,7 @@ export default function SettingsScreen() {
           onPress={handleDeleteAccount}>
           <Trash2 size={20} color={theme.error} />
           <Text style={[styles.settingButtonText, { color: theme.error }]}>
-            {language === 'tr' ? 'Hesabı Sil' : 'Delete Account'}
+            {L('Hesabı Sil', 'Delete Account')}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -432,7 +419,7 @@ export default function SettingsScreen() {
         <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
-              {language === 'tr' ? 'Hata Kayıtları' : 'Error Logs'}
+              {L('Hata Kayıtları', 'Error Logs')}
             </Text>
             <TouchableOpacity onPress={() => setShowErrorLogs(false)}>
               <X size={24} color={theme.text} />
@@ -444,7 +431,7 @@ export default function SettingsScreen() {
               <View style={styles.emptyLogsContainer}>
                 <FileText size={60} color="#CCCCCC" />
                 <Text style={[styles.emptyLogsText, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Hata kaydı bulunamadı' : 'No error logs found'}
+                  {L('Hata kaydı bulunamadı', 'No error logs found')}
                 </Text>
               </View>
             ) : (
@@ -458,7 +445,7 @@ export default function SettingsScreen() {
                   </Text>
                   {log.context && (
                     <Text style={[styles.logContext, { color: theme.textSecondary }]}>
-                      Context: {log.context}
+                      {L('Bağlam', 'Context')}: {log.context}
                     </Text>
                   )}
                   {log.stack && (
@@ -478,7 +465,7 @@ export default function SettingsScreen() {
               disabled={errorLogs.length === 0}>
               <Trash2 size={20} color="#FFFFFF" />
               <Text style={styles.clearLogsButtonText}>
-                {language === 'tr' ? 'Kayıtları Temizle' : 'Clear Logs'}
+                {L('Kayıtları Temizle', 'Clear Logs')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -493,7 +480,7 @@ export default function SettingsScreen() {
         <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
-              {language === 'tr' ? 'Engellenen kullanıcılar' : 'Blocked users'}
+              {L('Engellenen kullanıcılar', 'Blocked users')}
             </Text>
             <TouchableOpacity onPress={() => setShowBlockedUsers(false)}>
               <X size={24} color={theme.text} />
@@ -505,7 +492,7 @@ export default function SettingsScreen() {
               <View style={styles.emptyLogsContainer}>
                 <Shield size={60} color="#CCCCCC" />
                 <Text style={[styles.emptyLogsText, { color: theme.textSecondary }]}>
-                  {language === 'tr' ? 'Engellenen kullanıcı yok' : 'No blocked users'}
+                  {L('Engellenen kullanıcı yok', 'No blocked users')}
                 </Text>
               </View>
             ) : (
@@ -545,16 +532,14 @@ export default function SettingsScreen() {
                           setBlockedUsers((prev) => prev.filter((b) => b.id !== u.id));
                         } catch (e: any) {
                           Alert.alert(
-                            'Error',
+                            L('Hata', 'Error'),
                             e?.message ||
-                              (language === 'tr'
-                                ? 'Engel kaldırılamadı.'
-                                : 'Failed to unblock user.')
+                              (L('Engel kaldırılamadı.', 'Failed to unblock user.'))
                           );
                         }
                       }}>
                       <Text style={styles.unblockButtonText}>
-                        {language === 'tr' ? 'Engeli kaldır' : 'Unblock'}
+                        {L('Engeli kaldır', 'Unblock')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -632,7 +617,7 @@ const styles = StyleSheet.create({
   },
   themePreviewBar: {
     height: 20,
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#5B4BFF',
   },
   themePreviewContent: {
     flex: 1,
@@ -645,6 +630,23 @@ const styles = StyleSheet.create({
   },
   checkIcon: {
     marginLeft: 'auto',
+  },
+  languageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  languageChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  languageFlag: {
+    fontSize: 18,
   },
   languageButtons: {
     flexDirection: 'row',

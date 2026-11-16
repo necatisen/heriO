@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { L } from '@/lib/l10n';
 import {
   View,
   Text,
@@ -51,7 +52,7 @@ export default function ComboBox({
         <Text style={[styles.text, !selectedOption && styles.placeholder]}>
           {selectedOption ? selectedOption.label : placeholder || label}
         </Text>
-        <ChevronDown size={20} color="#4A90E2" />
+        <ChevronDown size={20} color="#5B4BFF" />
       </TouchableOpacity>
 
       <Modal
@@ -62,7 +63,7 @@ export default function ComboBox({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{label || placeholder || 'Select'}</Text>
+              <Text style={styles.modalTitle}>{label || placeholder || L('Seçin', 'Select')}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <X size={24} color="#333333" />
               </TouchableOpacity>
@@ -163,7 +164,7 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   optionTextSelected: {
-    color: '#4A90E2',
+    color: '#5B4BFF',
     fontWeight: '600',
   },
 });
