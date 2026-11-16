@@ -386,7 +386,7 @@ export default function SettingsScreen() {
             </Text>
             <View style={styles.emailContainer}>
               <Mail size={20} color={theme.textSecondary} />
-              <Text style={[styles.emailText, { color: theme.textSecondary }]}>birthchat@gmail.com</Text>
+              <Text style={[styles.emailText, { color: theme.textSecondary }]}>birthchathelp@gmail.com</Text>
             </View>
             <Text style={[styles.contactNote, { color: theme.textSecondary }]}>
               {L('İletişim için bu e-posta adresini kullanabilirsiniz.', 'You can use this email address to contact us.')}

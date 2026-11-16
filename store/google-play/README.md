@@ -81,7 +81,7 @@ Not: Veriler Supabase (AB / Frankfurt) üzerinde işlenir; bu bir "hizmet sağla
 Mağazada bulunma → **Ana mağaza girişi**
 - Metinler: `listing.json` → `tr` (varsayılan dil). Diğer diller için **Çeviriler → Kendi çevirilerimi ekle** ile `en`, `de`, `fr`, `es`, `ru`, `ar` bloklarını yapıştır.
 - Grafikler: simge, öne çıkan grafik, her dil için telefon + 7" + 10" tablet ekran görüntüleri.
-- Kategori: **Tanışma (Dating)** · İletişim e-postası: `birthchat@gmail.com`
+- Kategori: **Tanışma (Dating)** · İletişim e-postası: `birthchathelp@gmail.com`
 - Gizlilik politikası URL'si yukarıdakiyle aynı.
 
 ## 6. Sürüm
