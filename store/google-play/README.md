@@ -33,7 +33,7 @@ Paket adı ilk AAB yüklendiğinde kesinleşir: **com.necatisen.birthchat**.
 
 | Bölüm | Yanıt |
 |---|---|
-| **Gizlilik politikası** | `https://necatisen.github.io/heriO/privacy-policy` |
+| **Gizlilik politikası** | `https://necatisen.github.io/birthchat/privacy-policy` |
 | **Uygulama erişimi** | "Tüm işlevler özel erişim gerektiriyor" → inceleme için test hesabı bilgisi ver (bkz. aşağı) |
 | **Reklamlar** | Hayır, uygulamada reklam yok |
 | **İçerik derecelendirmesi** | Anketi doldur (bkz. madde 3) |
@@ -41,7 +41,7 @@ Paket adı ilk AAB yüklendiğinde kesinleşir: **com.necatisen.birthchat**.
 | **Veri güvenliği** | Bkz. madde 4 |
 | **Devlet uygulaması / Finansal / Sağlık** | Hayır |
 | **Haber uygulaması** | Hayır |
-| **Hesap silme** | Uygulama içi: Profil → Ayarlar → Hesabı Sil · Web: `https://necatisen.github.io/heriO/delete-account` |
+| **Hesap silme** | Uygulama içi: Profil → Ayarlar → Hesabı Sil · Web: `https://necatisen.github.io/birthchat/delete-account` |
 
 **Uygulama erişimi için inceleme hesabı:** Play inceleme ekibi giriş yapabilmeli. Uygulamada kendine ait bir test hesabı oluştur (ör. `review@…`), e-posta ve şifreyi bu bölüme yaz. Yüz doğrulamanın kamera ile yapıldığını, isteğe bağlı olduğunu not et.
 
@@ -81,7 +81,7 @@ Not: Veriler Supabase (AB / Frankfurt) üzerinde işlenir; bu bir "hizmet sağla
 Mağazada bulunma → **Ana mağaza girişi**
 - Metinler: `listing.json` → `tr` (varsayılan dil). Diğer diller için **Çeviriler → Kendi çevirilerimi ekle** ile `en`, `de`, `fr`, `es`, `ru`, `ar` bloklarını yapıştır.
 - Grafikler: simge, öne çıkan grafik, her dil için telefon + 7" + 10" tablet ekran görüntüleri.
-- Kategori: **Tanışma (Dating)** · İletişim e-postası: `heriohelp@gmail.com`
+- Kategori: **Tanışma (Dating)** · İletişim e-postası: `birthchat@gmail.com`
 - Gizlilik politikası URL'si yukarıdakiyle aynı.
 
 ## 6. Sürüm

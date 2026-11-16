@@ -5,7 +5,7 @@
  */
 import type { Language } from '@/lib/i18n';
 
-export const SUPPORT_EMAIL = 'heriohelp@gmail.com';
+export const SUPPORT_EMAIL = 'birthchat@gmail.com';
 const UPDATED = '16.11.2026';
 
 export const PRIVACY: Record<Language, string> = {

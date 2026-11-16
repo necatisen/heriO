@@ -1,10 +1,13 @@
 // Publishes the in-app legal texts (lib/legal.ts) as GitHub Pages documents for Google Play:
-//   docs/privacy-policy.md, docs/terms.md, docs/delete-account.md
-// Usage: node scripts/generate-legal-docs.cjs
+//   <siteDir>/privacy-policy.md, terms.md, delete-account.md, index.md
+// <siteDir> is the local clone of github.com/necatisen/birthchat (GitHub Pages).
+// Usage: node scripts/generate-legal-docs.cjs [siteDir=../../birthchat-site]
 const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
 const root = path.join(__dirname, '..');
+const site = path.resolve(process.argv[2] || path.join(root, '../../birthchat-site'));
+fs.mkdirSync(site, { recursive: true });
 
 const code = fs.readFileSync(path.join(root, 'lib/legal.ts'), 'utf8');
 const js = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
@@ -40,9 +43,8 @@ function page(title, dict) {
   return `---\ntitle: ${title}\n---\n\n# ${title}\n\n${nav}\n\n${body}\n`;
 }
 
-fs.writeFileSync(path.join(root, 'docs/privacy-policy.md'), page('Birthchat – Privacy Policy', PRIVACY));
-fs.writeFileSync(path.join(root, 'docs/terms.md'), page('Birthchat – Terms of Use', TERMS));
-fs.rmSync(path.join(root, 'docs/privacy-policy-en.md'), { force: true });
+fs.writeFileSync(path.join(site, 'privacy-policy.md'), page('Birthchat – Privacy Policy', PRIVACY));
+fs.writeFileSync(path.join(site, 'terms.md'), page('Birthchat – Terms of Use', TERMS));
 
 const del = `---
 title: Birthchat – Delete your account
@@ -82,5 +84,24 @@ title: Birthchat – Delete your account
 **Silinenler:** hesabınız, profil bilgileriniz, fotoğraflarınız, mesajlarınız, beğenileriniz, eşleşmeleriniz, ziyaretçi kayıtlarınız, bildirim anahtarlarınız ve yüz doğrulama görüntüleriniz.
 **Saklanabilecekler:** yasal olarak tutmamız gereken kayıtlar (ör. kural ihlali şikâyetleri) en fazla 6 ay; şifreli yedekler 30 gün içinde temizlenir.
 `;
-fs.writeFileSync(path.join(root, 'docs/delete-account.md'), del);
-console.log('wrote docs/privacy-policy.md, docs/terms.md, docs/delete-account.md');
+fs.writeFileSync(path.join(site, 'delete-account.md'), del);
+const index = `---
+title: Birthchat
+---
+
+# Birthchat
+
+Meet face-verified real people, see your match score and chat safely.
+
+- [Privacy Policy / Gizlilik Politikası](./privacy-policy)
+- [Terms of Use / Kullanım Koşulları](./terms)
+- [Delete your account / Hesabı silme](./delete-account)
+
+Contact / İletişim: **${SUPPORT_EMAIL}**
+`;
+fs.writeFileSync(path.join(site, 'index.md'), index);
+fs.writeFileSync(
+  path.join(site, '_config.yml'),
+  ['title: Birthchat', 'description: Meet face-verified real people and chat safely.', 'theme: jekyll-theme-cayman', ''].join('\n')
+);
+console.log('wrote legal pages to', site);

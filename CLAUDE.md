@@ -26,6 +26,12 @@ Expo 55 / React Native 0.83 tanışma ve sohbet uygulaması.
 6. GitHub'a yedekle: `git add -A && git commit -m "<özet>" && git push origin main`.
 7. Kullanıcıya AAB yolunu ve Play Console adımlarını kısaca bildir (`store/google-play/README.md`).
 
+## Yasal sayfalar (Google Play)
+
+- Ayrı depo: github.com/necatisen/birthchat → https://necatisen.github.io/birthchat/ (yerel kopya `C:\MOBIL_APP\birthchat-site`).
+- Kaynak metin `lib/legal.ts`; değiştirince `node scripts/generate-legal-docs.cjs` çalıştır, sonra birthchat-site deposunu commit + push et.
+- Destek e-postası: birthchat@gmail.com.
+
 ## Gizli bilgiler – ASLA commit etme
 
 - İmza şifreleri `~/.gradle/gradle.properties` içinde. Supabase DB şifresi `C:\MOBIL_APP\heriO\secrets\` (repo dışında).
