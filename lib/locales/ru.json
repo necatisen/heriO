@@ -685,5 +685,13 @@
  "Google ile giriş tamamlanamadı.": "Не удалось завершить вход через Google.",
  "Google ile giriş şu anda kullanılamıyor. E-posta ile devam edebilirsiniz.": "Вход через Google сейчас недоступен. Вы можете продолжить с почтой.",
  "Onay e-postası şu anda gönderilemiyor. Lütfen biraz sonra tekrar deneyin.": "Сейчас не удаётся отправить письмо для подтверждения. Попробуйте чуть позже.",
- "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Слишком много попыток. Подождите несколько минут."
+ "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Слишком много попыток. Подождите несколько минут.",
+ "Aurora": "Аврора",
+ "Gece": "Ночь",
+ "Gün Batımı": "Закат",
+ "Mavi, mor ve pembe": "Синий, фиолетовый и розовый",
+ "Turuncu, pembe ve mor": "Оранжевый, розовый и фиолетовый",
+ "Yumuşak koyu tema": "Мягкая тёмная тема",
+ "Şeftali": "Персик",
+ "Şeftali, mercan ve pembe": "Персиковый, коралловый и розовый"
 }

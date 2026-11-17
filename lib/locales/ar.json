@@ -685,5 +685,13 @@
  "Google ile giriş tamamlanamadı.": "تعذّر إكمال تسجيل الدخول عبر Google.",
  "Google ile giriş şu anda kullanılamıyor. E-posta ile devam edebilirsiniz.": "تسجيل الدخول عبر Google غير متاح حاليًا. يمكنك المتابعة بالبريد الإلكتروني.",
  "Onay e-postası şu anda gönderilemiyor. Lütfen biraz sonra tekrar deneyin.": "تعذّر إرسال رسالة التأكيد حاليًا. حاول مرة أخرى بعد قليل.",
- "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "محاولات كثيرة جدًا. يرجى الانتظار بضع دقائق."
+ "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "محاولات كثيرة جدًا. يرجى الانتظار بضع دقائق.",
+ "Aurora": "الشفق",
+ "Gece": "الليل",
+ "Gün Batımı": "الغروب",
+ "Mavi, mor ve pembe": "أزرق وبنفسجي ووردي",
+ "Turuncu, pembe ve mor": "برتقالي ووردي وبنفسجي",
+ "Yumuşak koyu tema": "مظهر داكن مريح",
+ "Şeftali": "الخوخ",
+ "Şeftali, mercan ve pembe": "خوخي ومرجاني ووردي"
 }

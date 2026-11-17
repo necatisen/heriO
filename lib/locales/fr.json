@@ -685,5 +685,13 @@
  "Google ile giriş tamamlanamadı.": "La connexion Google n'a pas pu aboutir.",
  "Google ile giriş şu anda kullanılamıyor. E-posta ile devam edebilirsiniz.": "La connexion Google est indisponible pour le moment. Vous pouvez continuer avec votre e-mail.",
  "Onay e-postası şu anda gönderilemiyor. Lütfen biraz sonra tekrar deneyin.": "Impossible d'envoyer l'e-mail de confirmation pour le moment. Réessayez un peu plus tard.",
- "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Trop de tentatives. Patientez quelques minutes."
+ "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Trop de tentatives. Patientez quelques minutes.",
+ "Aurora": "Aurore",
+ "Gece": "Nuit",
+ "Gün Batımı": "Coucher de soleil",
+ "Mavi, mor ve pembe": "Bleu, violet et rose",
+ "Turuncu, pembe ve mor": "Orange, rose et violet",
+ "Yumuşak koyu tema": "Thème sombre doux",
+ "Şeftali": "Pêche",
+ "Şeftali, mercan ve pembe": "Pêche, corail et rose"
 }

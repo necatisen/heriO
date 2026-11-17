@@ -685,5 +685,13 @@
  "Google ile giriş tamamlanamadı.": "Die Google-Anmeldung konnte nicht abgeschlossen werden.",
  "Google ile giriş şu anda kullanılamıyor. E-posta ile devam edebilirsiniz.": "Die Google-Anmeldung ist gerade nicht verfügbar. Du kannst mit E-Mail fortfahren.",
  "Onay e-postası şu anda gönderilemiyor. Lütfen biraz sonra tekrar deneyin.": "Die Bestätigungs-E-Mail kann gerade nicht gesendet werden. Bitte versuche es gleich noch einmal.",
- "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Zu viele Versuche. Bitte warte ein paar Minuten."
+ "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Zu viele Versuche. Bitte warte ein paar Minuten.",
+ "Aurora": "Aurora",
+ "Gece": "Nacht",
+ "Gün Batımı": "Sonnenuntergang",
+ "Mavi, mor ve pembe": "Blau, Lila und Pink",
+ "Turuncu, pembe ve mor": "Orange, Pink und Lila",
+ "Yumuşak koyu tema": "Sanftes dunkles Design",
+ "Şeftali": "Pfirsich",
+ "Şeftali, mercan ve pembe": "Pfirsich, Koralle und Pink"
 }

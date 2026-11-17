@@ -685,5 +685,13 @@
  "Google ile giriş tamamlanamadı.": "No se pudo completar el inicio con Google.",
  "Google ile giriş şu anda kullanılamıyor. E-posta ile devam edebilirsiniz.": "El inicio con Google no está disponible ahora. Puedes continuar con tu correo.",
  "Onay e-postası şu anda gönderilemiyor. Lütfen biraz sonra tekrar deneyin.": "Ahora no se puede enviar el correo de confirmación. Inténtalo de nuevo en un rato.",
- "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Demasiados intentos. Espera unos minutos."
+ "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Demasiados intentos. Espera unos minutos.",
+ "Aurora": "Aurora",
+ "Gece": "Noche",
+ "Gün Batımı": "Atardecer",
+ "Mavi, mor ve pembe": "Azul, morado y rosa",
+ "Turuncu, pembe ve mor": "Naranja, rosa y morado",
+ "Yumuşak koyu tema": "Tema oscuro suave",
+ "Şeftali": "Melocotón",
+ "Şeftali, mercan ve pembe": "Melocotón, coral y rosa"
 }
