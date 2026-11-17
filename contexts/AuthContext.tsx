@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import { unregisterPushToken } from '@/lib/pushNotifications';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { readCache, writeCache, clearCache } from '@/lib/cache';
@@ -269,6 +270,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Stop this phone from receiving the account's notifications after sign-out.
+    if (user?.id) await unregisterPushToken(user.id).catch(() => {});
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
@@ -320,7 +323,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    // The email link opens the app on the "new password" screen (allowed by birthchat://** in Supabase).
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: Platform.OS === 'web' ? undefined : Linking.createURL('auth/reset-password'),
+    });
     if (error) throw error;
   };
 

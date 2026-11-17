@@ -202,3 +202,8 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Push notifications need Firebase: put google-services.json (Firebase console, package com.necatisen.birthchat) next to this file.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}

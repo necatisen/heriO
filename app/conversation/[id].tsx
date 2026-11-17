@@ -31,6 +31,8 @@ import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { getEffectiveSubscription } from '@/lib/subscription';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { setActiveConversation } from '@/lib/pushNotifications';
+import { decryptMessage, decryptMessages } from '@/lib/messageCrypto';
 import ProfileModal from '@/components/ProfileModal';
 import SwipeableMessage from '@/components/SwipeableMessage';
 import { formatMessageTime, formatLastSeen, isUserOnlineNow } from '@/lib/dateFormat';
@@ -86,6 +88,13 @@ export default function ConversationScreen() {
   const messageIdsRef = useRef<string[]>([]);
   messageIdsRef.current = messages.map((m) => m.id);
   const insets = useSafeAreaInsets();
+
+  // While this chat is open, its own push notifications are not shown as banners.
+  useEffect(() => {
+    const sid = typeof params.id === 'string' ? params.id : null;
+    setActiveConversation(sid);
+    return () => setActiveConversation(null);
+  }, [params.id]);
 
   useEffect(() => {
     const sessionIdParam = params.id as string;
@@ -189,17 +198,19 @@ export default function ConversationScreen() {
         },
         async (payload) => {
           if (payload.eventType === 'INSERT') {
-            const newMsg = payload.new as Message;
+            // Realtime delivers the stored (encrypted) text; fetch the readable version.
+            const newMsg = await decryptMessage(payload.new as Message);
 
             // Reply referansını karşı tarafta gösterebilmek için INSERT anında
             // reply_to_id üzerinden mesaj içeriğini çekiyoruz.
             let msgWithReply: Message = newMsg;
             if (newMsg.reply_to_id) {
-              const { data: replyData } = await supabase
+              const { data: replyRaw } = await supabase
                 .from('messages')
-                .select('content, sender_id')
+                .select('id, content, sender_id')
                 .eq('id', newMsg.reply_to_id)
                 .maybeSingle();
+              const replyData = replyRaw ? await decryptMessage(replyRaw) : null;
 
               msgWithReply = {
                 ...newMsg,
@@ -221,17 +232,15 @@ export default function ConversationScreen() {
               return [...prev, msgWithReply];
             });
           } else if (payload.eventType === 'UPDATE') {
+            const updated = await decryptMessage(payload.new as Message);
             setMessages((prev) =>
               prev.map((msg) =>
-                msg.id === payload.new.id
+                msg.id === updated.id
                   ? {
                       ...msg,
-                      ...(payload.new as Message),
+                      ...updated,
                       // UPDATE payload'ında reply_to gelmediğinde mevcut referansı koru.
-                      reply_to:
-                        (payload.new as Message).reply_to !== undefined
-                          ? (payload.new as Message).reply_to
-                          : msg.reply_to,
+                      reply_to: updated.reply_to !== undefined ? updated.reply_to : msg.reply_to,
                     }
                   : msg
               )
@@ -273,13 +282,14 @@ export default function ConversationScreen() {
 
   const fetchMessages = async (sessionId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: raw, error } = await supabase
         .from('messages')
         .select('*')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true });
 
-      if (!error && data) {
+      if (!error && raw) {
+        const data = await decryptMessages(raw as Message[]);
         // İlk boyamayı hızlandır: mesajları önce ham haliyle hemen bas.
         setMessages(data as Message[]);
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
@@ -294,10 +304,11 @@ export default function ConversationScreen() {
         );
 
         if (replyIds.length > 0) {
-          const { data: replyRows } = await supabase
+          const { data: replyRaw } = await supabase
             .from('messages')
             .select('id, content, sender_id')
             .in('id', replyIds);
+          const replyRows = await decryptMessages((replyRaw || []) as any[]);
 
           const replyById = Object.fromEntries(
             (replyRows || []).map((r: any) => [r.id, { content: r.content, sender_id: r.sender_id }])

@@ -1152,7 +1152,7 @@ const createStyles = (t: Theme) =>
     flexGrow: 1,
     paddingHorizontal: 30,
     paddingTop: 60,
-    paddingBottom: 40,
+    paddingBottom: 88, // clears the Android navigation bar
   },
   backButton: {
     width: 40,

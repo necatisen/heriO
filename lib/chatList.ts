@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
 import { L } from '@/lib/l10n';
+import { decryptMessages } from '@/lib/messageCrypto';
 export type Match = {
   id: string;
   full_name: string;
@@ -30,7 +31,7 @@ export async function loadChatList(
     supabase.from('friends').select('friend_id').eq('user_id', userId).eq('status', 'accepted'),
     supabase
       .from('chat_sessions')
-      .select('id, user1_id, user2_id, started_at, messages(content, created_at, attachment_url, attachment_type)')
+      .select('id, user1_id, user2_id, started_at, messages(id, content, created_at, attachment_url, attachment_type)')
       .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
       .eq('status', 'active')
       .order('started_at', { ascending: false })
@@ -45,6 +46,14 @@ export async function loadChatList(
     return null;
   }
   const sessions = (sessionsRes.data || []) as any[];
+  // Last-message previews are stored encrypted; decrypt them in one request.
+  const lastPlain = new Map(
+    (await decryptMessages(sessions.map((s) => s.messages?.[0]).filter(Boolean))).map((m: any) => [m.id, m.content])
+  );
+  sessions.forEach((s) => {
+    const last = s.messages?.[0];
+    if (last?.id && lastPlain.has(last.id)) last.content = lastPlain.get(last.id);
+  });
 
   const blocked = new Set<string>();
   (blocksRes.data || []).forEach((b: any) => blocked.add(b.user_id === userId ? b.blocked_user_id : b.user_id));

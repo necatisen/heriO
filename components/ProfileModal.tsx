@@ -363,7 +363,10 @@ export default function ProfileModal({
             <X size={26} color="#FFFFFF" />
           </TouchableOpacity>
 
-          <ScrollView style={styles.scrollContent}>
+          <ScrollView
+            style={styles.scrollContent}
+            // Keep the last buttons above Android's gesture/3-button navigation bar.
+            contentContainerStyle={{ paddingBottom: showActionButtons ? 16 : insets.bottom + 24 }}>
           <View style={styles.profileSection}>
             {photos.length > 0 ? (
               <>

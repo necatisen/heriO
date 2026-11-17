@@ -71,3 +71,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Firebase config (push notifications)
+google-services.json

@@ -90,6 +90,8 @@ Deno.serve(async (req: Request) => {
       body: localizedBody,
       data,
       sound: 'default',
+      priority: 'high', // deliver right away even when the phone is idle
+      channelId: 'messages', // Android channel created by the app (lib/pushNotifications.ts)
     }));
 
     const res = await fetch('https://exp.host/--/api/v2/push/send', {

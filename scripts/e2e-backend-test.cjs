@@ -123,6 +123,11 @@ async function callFunction(c, name, body) {
   await step('Mesaj gönder / oku / tepki', async () => {
     messageId = check(await A.from('messages').insert({ session_id: sessionId, sender_id: idA, receiver_id: idB, content: 'Merhaba' }).select('id').single(), 'send').id;
     must(check(await B.from('messages').select('id').eq('session_id', sessionId), 'read').length === 1, 'B mesajı görmüyor');
+    // Stored text is encrypted; the participant gets the plain text through get_message_texts.
+    const stored = check(await B.from('messages').select('content').eq('id', messageId).single(), 'stored').content;
+    must(String(stored).startsWith('enc1:'), 'mesaj veritabanında şifresiz');
+    const plain = check(await B.rpc('get_message_texts', { p_ids: [messageId] }), 'decrypt');
+    must(plain[0]?.content === 'Merhaba', 'mesaj çözülemedi');
     check(await B.from('message_reactions').upsert({ message_id: messageId, user_id: idB, emoji: '❤️' }, { onConflict: 'message_id,user_id' }), 'reaction');
   });
   await step('Kredi düşme', async () => {
