@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import GoogleIcon from '@/components/GoogleIcon';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Globe, ShieldCheck, Sparkles, MessageCircleHeart } from 'lucide-react-native';
+import { ShieldCheck, Sparkles, MessageCircleHeart } from 'lucide-react-native';
 import Animated, {
   Easing,
   FadeInDown,
@@ -23,13 +24,27 @@ import { BrandLogo } from '@/components/BrandLogo';
 import GradientButton from '@/components/GradientButton';
 import HeartLoader from '@/components/HeartLoader';
 import { BRAND } from '@/lib/brand';
+import { authErrorMessage } from '@/lib/authErrors';
 
 import { L } from '@/lib/l10n';
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { session, loading } = useAuth();
+  const { session, loading, signInWithGoogle } = useAuth();
+  const [googleBusy, setGoogleBusy] = useState(false);
+
+  const handleGoogle = async () => {
+    setGoogleBusy(true);
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
+      const msg = String(e?.message || '');
+      if (!/cancel/i.test(msg)) Alert.alert(L('Google ile giriş başarısız oldu', 'Google sign-in failed'), authErrorMessage(msg));
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
   const { language, setLanguage, t } = useLanguage();
   const [checkedOnboarding, setCheckedOnboarding] = useState(false);
 
@@ -115,8 +130,10 @@ export default function WelcomeScreen() {
         <Animated.View entering={FadeInUp.delay(700).duration(600)} style={styles.buttonContainer}>
           <GradientButton title={t.register} onPress={() => router.push('/auth/register')} />
           <GradientButton title={t.login} variant="glass" onPress={() => router.push('/auth/login')} />
-          <TouchableOpacity style={styles.googleButton} onPress={() => router.push('/auth/login')}>
-            <Globe size={18} color="rgba(255,255,255,0.85)" />
+          <TouchableOpacity style={styles.googleButton} onPress={handleGoogle} disabled={googleBusy}>
+            <View style={styles.googleIconWrap}>
+              <GoogleIcon size={18} />
+            </View>
             <Text style={styles.googleButtonText}>{t.continueWithGoogle}</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -188,6 +205,7 @@ const styles = StyleSheet.create({
   },
   featureText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600', flex: 1 },
   buttonContainer: { gap: 12, paddingBottom: 12 },
-  googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
+  googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 12 },
+  googleIconWrap: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   googleButtonText: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: '600' },
 });

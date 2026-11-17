@@ -299,14 +299,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Google sign-in cancelled');
     }
 
+    // PKCE returns ?code=…; older/implicit flows return #access_token=…&refresh_token=…
     const url = new URL(result.url);
-    const code = url.searchParams.get('code');
-    const err = url.searchParams.get('error_description') || url.searchParams.get('error');
+    const hash = new URLSearchParams(url.hash.replace(/^#/, ''));
+    const param = (k: string) => url.searchParams.get(k) || hash.get(k);
+    const err = param('error_description') || param('error');
     if (err) throw new Error(err);
-    if (!code) throw new Error('OAuth code missing');
 
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    if (exchangeError) throw exchangeError;
+    const code = param('code');
+    if (code) {
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) throw exchangeError;
+      return;
+    }
+    const access_token = param('access_token');
+    const refresh_token = param('refresh_token');
+    if (!access_token || !refresh_token) throw new Error('OAuth code missing');
+    const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
+    if (setErr) throw setErr;
   };
 
   const resetPassword = async (email: string) => {

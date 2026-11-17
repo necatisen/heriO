@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { authErrorMessage } from '@/lib/authErrors';
+import GoogleIcon from '@/components/GoogleIcon';
 import {
   View,
   Text,
@@ -12,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BRAND } from '@/lib/brand';
-import { Mail, Lock, ArrowLeft, Globe, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import * as SecureStore from 'expo-secure-store';
@@ -110,11 +112,11 @@ export default function LoginScreen() {
       if (error.message?.includes('Invalid login credentials')) {
         setError(L('E-posta veya şifre hatalı', 'Email or password is incorrect'));
       } else if (error.message?.includes('Email not confirmed')) {
-        setError(L('E-posta adresiniz doğrulanmamış', 'Email not confirmed'));
+        setError(authErrorMessage(error.message));
       } else if (error.message?.includes('Database error')) {
         setError(L('Veritabanı hatası. Lütfen daha sonra tekrar deneyin.', 'Database error. Please try again later.'));
       } else {
-        setError(error.message || error.error_description || (L('Giriş yapılamadı. Lütfen tekrar deneyin.', 'Login failed. Please try again.')));
+        setError(error.message ? authErrorMessage(error.message) : L('Giriş yapılamadı. Lütfen tekrar deneyin.', 'Login failed. Please try again.'));
       }
     } finally {
       setLoading(false);
@@ -127,7 +129,7 @@ export default function LoginScreen() {
     try {
       await signInWithGoogle();
     } catch (error: any) {
-      setError(error.message || L('Google ile giriş başarısız oldu', 'Google sign-in failed'));
+      if (!/cancel/i.test(String(error?.message))) setError(authErrorMessage(error?.message) || L('Google ile giriş başarısız oldu', 'Google sign-in failed'));
     }
   };
 
@@ -227,7 +229,7 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={styles.googleButton}
               onPress={handleGoogleLogin}>
-              <Globe size={20} color="#5B4BFF" />
+              <GoogleIcon size={20} />
               <Text style={styles.googleButtonText}>
                 {t.continueWithGoogle}
               </Text>

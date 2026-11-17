@@ -679,5 +679,11 @@
  "%{0} uyum": "{0} % compatible",
  "%{0}": "{0} %",
  "E-postanızı onaylayın": "Confirma tu correo",
- "{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.": "Enviamos un enlace de confirmación a {0}. Tócalo para confirmar tu cuenta y luego inicia sesión. Tu foto de perfil se añadirá automáticamente al primer inicio de sesión."
+ "{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.": "Enviamos un enlace de confirmación a {0}. Tócalo para confirmar tu cuenta y luego inicia sesión. Tu foto de perfil se añadirá automáticamente al primer inicio de sesión.",
+ "E-posta adresiniz henüz onaylanmadı. Gelen kutunuzdaki bağlantıya dokunun.": "Tu correo aún no está confirmado. Toca el enlace de tu bandeja de entrada.",
+ "Geçerli bir e-posta adresi girin.": "Introduce un correo válido.",
+ "Google ile giriş tamamlanamadı.": "No se pudo completar el inicio con Google.",
+ "Google ile giriş şu anda kullanılamıyor. E-posta ile devam edebilirsiniz.": "El inicio con Google no está disponible ahora. Puedes continuar con tu correo.",
+ "Onay e-postası şu anda gönderilemiyor. Lütfen biraz sonra tekrar deneyin.": "Ahora no se puede enviar el correo de confirmación. Inténtalo de nuevo en un rato.",
+ "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Demasiados intentos. Espera unos minutos."
 }

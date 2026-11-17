@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { authErrorMessage } from '@/lib/authErrors';
 import {
   View,
   Text,
@@ -436,7 +437,7 @@ export default function RegisterScreen() {
       } else if (error.message?.includes('Database error')) {
         setError(L('Veritabanı hatası. Lütfen tekrar deneyin.', 'Database error. Please try again.'));
       } else {
-        setError(error.message || error.error_description || (L('Kayıt oluşturulamadı. Lütfen tekrar deneyin.', 'Registration failed. Please try again.')));
+        setError(error.message ? authErrorMessage(error.message) : L('Kayıt oluşturulamadı. Lütfen tekrar deneyin.', 'Registration failed. Please try again.'));
       }
     } finally {
       setLoading(false);

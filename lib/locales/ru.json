@@ -679,5 +679,11 @@
  "%{0} uyum": "Совпадение {0}%",
  "%{0}": "{0}%",
  "E-postanızı onaylayın": "Подтвердите почту",
- "{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.": "Мы отправили ссылку для подтверждения на {0}. Нажмите на неё, чтобы подтвердить аккаунт, затем войдите. Фото профиля добавится автоматически при первом входе."
+ "{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.": "Мы отправили ссылку для подтверждения на {0}. Нажмите на неё, чтобы подтвердить аккаунт, затем войдите. Фото профиля добавится автоматически при первом входе.",
+ "E-posta adresiniz henüz onaylanmadı. Gelen kutunuzdaki bağlantıya dokunun.": "Почта ещё не подтверждена. Нажмите на ссылку в письме.",
+ "Geçerli bir e-posta adresi girin.": "Введите корректный адрес почты.",
+ "Google ile giriş tamamlanamadı.": "Не удалось завершить вход через Google.",
+ "Google ile giriş şu anda kullanılamıyor. E-posta ile devam edebilirsiniz.": "Вход через Google сейчас недоступен. Вы можете продолжить с почтой.",
+ "Onay e-postası şu anda gönderilemiyor. Lütfen biraz sonra tekrar deneyin.": "Сейчас не удаётся отправить письмо для подтверждения. Попробуйте чуть позже.",
+ "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.": "Слишком много попыток. Подождите несколько минут."
 }

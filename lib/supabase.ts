@@ -29,7 +29,7 @@ const ExpoSecureStoreAdapter = {
       }
       return;
     }
-    SecureStore.setItemAsync(key, value);
+    return SecureStore.setItemAsync(key, value);
   },
   removeItem: (key: string) => {
     if (Platform.OS === 'web') {
@@ -38,7 +38,7 @@ const ExpoSecureStoreAdapter = {
       }
       return;
     }
-    SecureStore.deleteItemAsync(key);
+    return SecureStore.deleteItemAsync(key);
   },
 };
 
@@ -48,5 +48,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // Google sign-in returns an auth code that is exchanged in AuthContext.signInWithGoogle.
+    flowType: 'pkce',
   },
 });
