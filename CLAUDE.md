@@ -22,7 +22,8 @@ Expo 55 / React Native 0.83 tanışma ve sohbet uygulaması.
    ```
    cd android && gradlew.bat bundleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
    ```
-   Çıktıyı `C:\MOBIL_APP\heriO\release\birthchat-v<versionName>-<versionCode>.aab` olarak kopyala, eskileri sil.
+   Çıktıyı `C:\MOBIL_APP\BirthChat\release\birthchat-v<versionName>-<versionCode>.aab` olarak kopyala, eskileri sil.
+   Proje klasörü taşınır/yeniden adlandırılırsa önce `android/build`, `android/app/.cxx`, `android/app/build` ve `node_modules/**/android/{.cxx,build}` silinmeli (eski yolu önbellekte tutar).
 6. GitHub'a yedekle: `git add -A && git commit -m "<özet>" && git push origin main`.
 7. Kullanıcıya AAB yolunu ve Play Console adımlarını kısaca bildir (`store/google-play/README.md`).
 
@@ -34,7 +35,7 @@ Expo 55 / React Native 0.83 tanışma ve sohbet uygulaması.
 
 ## Gizli bilgiler – ASLA commit etme
 
-- İmza şifreleri `~/.gradle/gradle.properties` içinde. Supabase DB şifresi `C:\MOBIL_APP\heriO\secrets\` (repo dışında).
+- İmza şifreleri `~/.gradle/gradle.properties` içinde. Supabase DB şifresi `C:\MOBIL_APP\BirthChat\secrets\` (repo dışında).
 - `android/app/upload-keystore.jks`, `.env` gitignore'da. Depo herkese açık.
 
 ## Notlar
