@@ -4,7 +4,9 @@
  * 1. Selfie: face detection (single face, quality)
  * 2. Face match: selfie vs profile photo (similarity >= 0.80)
  * 3. Liveness: sağa/sola baş çevir + göz kırp frames (min 2 frames)
- * 4. Outcome: set verification_status to pending
+ * 4. Outcome: auto-approve (verification_status = verified). Liveness and face
+ *    detection run on the phone (ML Kit); with Azure keys the selfie is also
+ *    matched against the profile photo here.
  *
  * Env: AZURE_FACE_ENDPOINT, AZURE_FACE_KEY optional – when set, uses AI for detect + verify.
  */
@@ -236,7 +238,8 @@ Deno.serve(async (req: Request) => {
         stage_1_passed: stage1Passed,
         stage_2_similarity: stage2Similarity,
         stage_3_passed: true,
-        status: 'pending_review',
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
       });
 
     if (attemptError) {
@@ -246,7 +249,7 @@ Deno.serve(async (req: Request) => {
 
     const { error: updateError } = await supabaseAdmin.rpc('set_verification_status', {
       target_user_id: userId,
-      new_status: 'pending',
+      new_status: 'verified',
     });
 
     if (updateError) {
@@ -257,8 +260,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       success: true,
       stage: 'complete',
-      verification_status: 'pending',
-      message: 'Verification submitted for review. You will get the blue badge after approval.',
+      verification_status: 'verified',
+      message: 'Your account is verified.',
     });
   } catch (e) {
     console.error('verification-pipeline error:', e);

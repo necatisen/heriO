@@ -42,7 +42,7 @@ Expo 55 / React Native 0.83 tanışma ve sohbet uygulaması.
 - SQL: `npx supabase db query --linked "<sql>"`. Şema: `supabase/schema_birthchat.sql` (canlı veritabanından üretildi).
 - `storage.objects` SQL ile silinemez; dosya silme Storage API ile (bkz. `supabase/functions/delete-account`).
 - Edge function'lar varsayılan JWT kontrolüyle deploy edilir (`npx supabase functions deploy <ad> --use-api`).
-- Yüz doğrulama: telefonda ML Kit canlılık testi; sunucuda Azure Face anahtarı yoksa durum `pending` kalır.
+- Yüz doğrulama: telefonda ML Kit canlılık testi; geçerse `verification-pipeline` otomatik onaylar (`verified`). Azure Face anahtarı tanımlanırsa ek olarak selfie ↔ profil fotoğrafı eşleştirmesi yapılır.
 - Supabase Auth: yeni projede "Confirm email" varsayılan açık — yayından önce kapatılmalı veya SMTP tanımlanmalı.
 - Mesaj metni (`messages.content`) veritabanında şifreli (`enc1:…`, AES-256, anahtar Vault'ta `message_encryption_key`). Trigger yazarken şifreler; uygulama okurken `lib/messageCrypto.ts` → `get_message_texts` RPC kullanır. Mesaj okuyan her yeni kod `decryptMessages()` çağırmalı.
 - Push: Expo push → FCM. `android/app/google-services.json` (Firebase) varsa Gradle eklentisi otomatik uygulanır; FCM V1 servis hesabı anahtarı expo.dev → Credentials'a yüklenmeli. Kanal: `messages`.
