@@ -26,6 +26,9 @@ Expo 55 / React Native 0.83 tanışma ve sohbet uygulaması.
    Proje klasörü taşınır/yeniden adlandırılırsa önce `android/build`, `android/app/.cxx`, `android/app/build` ve `node_modules/**/android/{.cxx,build}` silinmeli (eski yolu önbellekte tutar).
 6. GitHub'a yedekle: `git add -A && git commit -m "<özet>" && git push origin main`.
 7. Kullanıcıya AAB yolunu ve Play Console adımlarını kısaca bildir (`store/google-play/README.md`).
+   Her derlemeden sonra Play Console "Sürüm bilgileri" için kopyalanmaya hazır şunları da ver:
+   - **Sürüm adı** (≤50 karakter): `<versionName> (<versionCode>) – <kısa özet>`
+   - **Sürüm notları**: önceki AAB'den bu yana kullanıcının gördüğü değişiklikler, `<tr-TR>…</tr-TR>` etiketiyle (dil başına ≤500 karakter).
 
 ## Yasal sayfalar (Google Play)
 
