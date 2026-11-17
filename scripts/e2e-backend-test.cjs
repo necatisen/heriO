@@ -162,6 +162,20 @@ async function callFunction(c, name, body) {
     must(r.status === 200 && r.body.success, `${r.status} ${r.body.message || r.body.msg || ''}`);
     return r.body.verification_status;
   });
+  await step('Güvenlik: kullanıcı rozeti kendisi veremez', async () => {
+    await B.from('profiles').update({ verification_status: 'verified', is_verified: true }).eq('id', idB);
+    const rpc = await B.rpc('set_verification_status', { target_user_id: idB, new_status: 'verified' });
+    must(!!rpc.error, 'set_verification_status istemciden çağrılabildi!');
+    const p = check(await B.from('profiles').select('verification_status, is_verified').eq('id', idB).single(), 'read');
+    must(p.verification_status !== 'verified' && !p.is_verified, 'kullanıcı kendini doğruladı!');
+  });
+  await step('Profil fotoğrafı değişince rozet düşer', async () => {
+    const before = check(await A.from('profiles').select('verification_status').eq('id', idA).single(), 'read');
+    check(await A.from('profiles').update({ profile_picture: `https://example.com/qa-${stamp}.jpg` }).eq('id', idA), 'update');
+    const after = check(await A.from('profiles').select('verification_status').eq('id', idA).single(), 'read');
+    must(after.verification_status === 'unverified', `durum: ${after.verification_status}`);
+    return `${before.verification_status} → ${after.verification_status}`;
+  });
 
   for (const [k, c] of [['b', B], ['a', A]]) {
     await step(`Hesap silme + dosya temizliği (${k.toUpperCase()})`, async () => {
