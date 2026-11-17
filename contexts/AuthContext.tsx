@@ -5,6 +5,9 @@ import * as Linking from 'expo-linking';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { readCache, writeCache, clearCache } from '@/lib/cache';
+import { uploadPendingAvatar } from '@/lib/pendingAvatar';
+
+const EMAIL_CONFIRMED_URL = 'https://necatisen.github.io/birthchat/email-confirmed';
 import { useLanguage, isSupportedLanguage } from '@/contexts/LanguageContext';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -191,6 +194,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
         setProfile(data);
         if (data) writeCache(`profile:${userId}`, data);
+        // Photo picked at sign-up while the email was still unconfirmed → upload it now.
+        if (data && !data.profile_picture) {
+          uploadPendingAvatar(userId)
+            .then((done) => {
+              if (!done) return;
+              profileRequestRef.current = null;
+              return fetchProfile(userId);
+            })
+            .catch((e) => console.warn('Pending avatar upload failed:', e));
+        }
       } catch (error) {
         // Keep the cached profile on network errors instead of blanking the UI.
         console.error('Error fetching profile:', error);
@@ -220,6 +233,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
       options: {
+        // Where the email confirmation link lands (must be listed in Supabase → Auth → URL Configuration).
+        emailRedirectTo: EMAIL_CONFIRMED_URL,
         data: {
           full_name: userData.full_name || '',
           username: userData.username || '',

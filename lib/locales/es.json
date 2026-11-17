@@ -677,5 +677,7 @@
  "Taciz": "Acoso",
  "Şikayet et": "Denunciar",
  "%{0} uyum": "{0} % compatible",
- "%{0}": "{0} %"
+ "%{0}": "{0} %",
+ "E-postanızı onaylayın": "Confirma tu correo",
+ "{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.": "Enviamos un enlace de confirmación a {0}. Tócalo para confirmar tu cuenta y luego inicia sesión. Tu foto de perfil se añadirá automáticamente al primer inicio de sesión."
 }

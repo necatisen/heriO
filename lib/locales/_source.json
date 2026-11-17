@@ -224,6 +224,8 @@
  "Şifreler eşleşmiyor": "Passwords do not match",
  "Şifre en az 6 karakter olmalıdır": "Password must be at least 6 characters",
  "Lütfen geçerli bir kullanıcı adı kullanın (sahte isimler yok)": "Please use a valid username (no fake names)",
+ "E-postanızı onaylayın": "Confirm your email",
+ "{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.": "We sent a confirmation link to {0}. Tap it to confirm your account, then sign in. Your profile photo will be added automatically on your first sign-in.",
  "Fotoğraf yüklenemedi": "Photo upload failed",
  "Hesabınız oluşturuldu ancak profil fotoğrafınız yüklenemedi. Profil sayfasından tekrar ekleyebilirsiniz.": "Your account was created but the profile photo could not be uploaded. You can add it again from your profile.",
  "Hesabınız oluşturuldu! Yönlendiriliyorsunuz...": "Account created! Redirecting...",

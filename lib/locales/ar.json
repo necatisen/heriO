@@ -677,5 +677,7 @@
  "Taciz": "تحرّش",
  "Şikayet et": "إبلاغ",
  "%{0} uyum": "توافق {0}%",
- "%{0}": "{0}%"
+ "%{0}": "{0}%",
+ "E-postanızı onaylayın": "أكّد بريدك الإلكتروني",
+ "{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.": "أرسلنا رابط تأكيد إلى {0}. اضغط عليه لتأكيد حسابك ثم سجّل الدخول. ستُضاف صورة ملفك تلقائيًا عند أول تسجيل دخول."
 }

@@ -677,5 +677,7 @@
  "Taciz": "Домогательство",
  "Şikayet et": "Пожаловаться",
  "%{0} uyum": "Совпадение {0}%",
- "%{0}": "{0}%"
+ "%{0}": "{0}%",
+ "E-postanızı onaylayın": "Подтвердите почту",
+ "{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.": "Мы отправили ссылку для подтверждения на {0}. Нажмите на неё, чтобы подтвердить аккаунт, затем войдите. Фото профиля добавится автоматически при первом входе."
 }

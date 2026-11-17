@@ -37,6 +37,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { uploadAvatarUri } from '@/lib/uploadAvatar';
+import { savePendingAvatar } from '@/lib/pendingAvatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   religionOptions,
@@ -378,6 +379,30 @@ export default function RegisterScreen() {
       });
       // The account already exists at this point, so a photo failure must not
       // leave the user stuck on the register screen with a raw error.
+      // With "Confirm email" on, sign-up returns no session: the user must confirm first.
+      const {
+        data: { session: newSession },
+      } = await supabase.auth.getSession();
+      if (!newSession) {
+        if (userId && profilePhotoUri) {
+          try {
+            await savePendingAvatar(userId, profilePhotoUri);
+          } catch (e) {
+            console.error('Could not keep sign-up photo:', e);
+          }
+        }
+        Alert.alert(
+          L('E-postanızı onaylayın', 'Confirm your email'),
+          L(
+            '{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.',
+            'We sent a confirmation link to {0}. Tap it to confirm your account, then sign in. Your profile photo will be added automatically on your first sign-in.',
+            [formData.email]
+          ),
+          [{ text: L('Tamam', 'OK'), onPress: () => router.replace('/auth/login') }]
+        );
+        return;
+      }
+
       let photoFailed = false;
       if (userId && profilePhotoUri) {
         try {

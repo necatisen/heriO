@@ -677,5 +677,7 @@
  "Taciz": "Belästigung",
  "Şikayet et": "Melden",
  "%{0} uyum": "{0} % Match",
- "%{0}": "{0} %"
+ "%{0}": "{0} %",
+ "E-postanızı onaylayın": "Bestätige deine E-Mail",
+ "{0} adresine bir onay bağlantısı gönderdik. Bağlantıya dokunup hesabınızı onaylayın, ardından giriş yapın. Profil fotoğrafınız ilk girişte otomatik eklenecek.": "Wir haben einen Bestätigungslink an {0} gesendet. Tippe darauf, um dein Konto zu bestätigen, und melde dich dann an. Dein Profilfoto wird bei der ersten Anmeldung automatisch hinzugefügt."
 }

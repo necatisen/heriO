@@ -100,6 +100,26 @@ Meet face-verified real people, see your match score and chat safely.
 Contact / İletişim: **${SUPPORT_EMAIL}**
 `;
 fs.writeFileSync(path.join(site, 'index.md'), index);
+
+// Landing page for the sign-up confirmation link (Supabase emailRedirectTo).
+const CONFIRMED = [
+  ['en', 'Your email is confirmed', 'Go back to the Birthchat app and sign in with your email and password.'],
+  ['tr', 'E-postanız onaylandı', 'Birthchat uygulamasına dönün ve e-posta adresiniz ile şifrenizle giriş yapın.'],
+  ['de', 'Deine E-Mail ist bestätigt', 'Kehre zur Birthchat-App zurück und melde dich mit E-Mail und Passwort an.'],
+  ['fr', 'Votre e-mail est confirmé', "Revenez dans l'application Birthchat et connectez-vous avec votre e-mail et votre mot de passe."],
+  ['es', 'Tu correo está confirmado', 'Vuelve a la app Birthchat e inicia sesión con tu correo y contraseña.'],
+  ['ru', 'Почта подтверждена', 'Вернитесь в приложение Birthchat и войдите, используя почту и пароль.'],
+  ['ar', 'تم تأكيد بريدك الإلكتروني', 'عد إلى تطبيق Birthchat وسجّل الدخول ببريدك الإلكتروني وكلمة المرور.'],
+];
+const confirmedBody = CONFIRMED.map(([l, title, text]) => {
+  const block = `## ✅ ${title}\n\n${text}`;
+  return l === 'ar' ? `<div dir="rtl" markdown="1">\n\n${block}\n\n</div>` : block;
+}).join('\n\n---\n\n');
+fs.writeFileSync(
+  path.join(site, 'email-confirmed.md'),
+  `---\ntitle: Birthchat – Email confirmed\n---\n\n${confirmedBody}\n\n---\n\n${SUPPORT_EMAIL}\n`
+);
+
 fs.writeFileSync(
   path.join(site, '_config.yml'),
   ['title: Birthchat', 'description: Meet face-verified real people and chat safely.', 'theme: jekyll-theme-cayman', ''].join('\n')
