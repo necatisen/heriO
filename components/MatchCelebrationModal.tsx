@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { View, Text, StyleSheet, Image, Modal, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -75,6 +76,7 @@ const HEARTS = Array.from({ length: 10 }).map((_, i) => ({
 export default function MatchCelebrationModal({ visible, matchedUser, sessionId, onClose }: MatchCelebrationModalProps) {
   const { language } = useLanguage();
   const { profile } = useAuth();
+  const { theme } = useTheme();
   const router = useRouter();
   const isTr = language === 'tr';
 
@@ -131,7 +133,7 @@ export default function MatchCelebrationModal({ visible, matchedUser, sessionId,
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <LinearGradient colors={['#FF5E8A', '#FF7A59', '#8B5CF6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.root}>
+      <LinearGradient colors={theme.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.root}>
         {HEARTS.map((h, i) => (
           <FloatingHeart key={i} {...h} />
         ))}
@@ -149,7 +151,7 @@ export default function MatchCelebrationModal({ visible, matchedUser, sessionId,
             <Avatar uri={profile?.profile_picture} name={profile?.full_name ?? ''} />
           </Animated.View>
           <Animated.View style={[styles.heartBadge, heartStyle]}>
-            <Heart size={30} color="#FF5E8A" fill="#FF5E8A" />
+            <Heart size={30} color={theme.primary} fill={theme.primary} />
           </Animated.View>
           <Animated.View style={[styles.avatarFrame, rightStyle]}>
             <Avatar uri={matchedUser.profile_picture} name={matchedUser.full_name} />
@@ -158,8 +160,8 @@ export default function MatchCelebrationModal({ visible, matchedUser, sessionId,
 
         <Animated.View style={[styles.actions, ctaStyle]}>
           <BouncyButton style={styles.chatButton} onPress={handleStartChat} pressedScale={0.95}>
-            <MessageCircle size={22} color="#FF5E8A" />
-            <Text style={styles.chatButtonText}>{L('Mesaj gönder', 'Send a message')}</Text>
+            <MessageCircle size={22} color={theme.primary} />
+            <Text style={[styles.chatButtonText, { color: theme.primary }]}>{L('Mesaj gönder', 'Send a message')}</Text>
           </BouncyButton>
           <BouncyButton style={styles.dismiss} onPress={onClose} pressedScale={0.95} haptic={false}>
             <Text style={styles.dismissText}>{L('Keşfetmeye devam et', 'Keep swiping')}</Text>
@@ -199,7 +201,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -10,
   },
   avatar: { width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2 },
-  avatarPlaceholder: { backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center' },
+  avatarPlaceholder: { backgroundColor: 'rgba(255,255,255,0.35)', alignItems: 'center', justifyContent: 'center' },
   avatarLetter: { fontSize: 48, fontWeight: '800', color: '#FFFFFF' },
   heartBadge: {
     zIndex: 2,
@@ -225,7 +227,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 30,
   },
-  chatButtonText: { fontSize: 17, fontWeight: '800', color: '#FF5E8A' },
+  chatButtonText: { fontSize: 17, fontWeight: '800' },
   dismiss: {
     alignItems: 'center',
     paddingVertical: 15,

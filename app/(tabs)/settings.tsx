@@ -5,13 +5,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings as SettingsIcon, LogOut, Globe, Palette, Trash2, Mail, Check, FileText, X, ShoppingBag, FileCheck, Shield } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useTheme, ThemeType } from '@/contexts/ThemeContext';
+import { useTheme, THEMES, THEME_TYPES, type ThemeType , type Theme } from '@/contexts/ThemeContext';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { getErrorLogs, clearErrorLogs, ErrorLog } from '@/lib/errorLogger';
 
 import { L } from '@/lib/l10n';
+const THEME_LABELS: Record<ThemeType, { tr: string; en: string; subTr: string; subEn: string }> = {
+  sunset: { tr: 'Gün Batımı', en: 'Sunset', subTr: 'Turuncu, pembe ve mor', subEn: 'Orange, pink and purple' },
+  aurora: { tr: 'Aurora', en: 'Aurora', subTr: 'Mavi, mor ve pembe', subEn: 'Blue, purple and pink' },
+  peach: { tr: 'Şeftali', en: 'Peach', subTr: 'Şeftali, mercan ve pembe', subEn: 'Peach, coral and pink' },
+  night: { tr: 'Gece', en: 'Night', subTr: 'Yumuşak koyu tema', subEn: 'Soft dark theme' },
+};
+
 const LANGUAGE_OPTIONS: { code: Language; native: string; flag: string }[] = [
   { code: 'tr', native: 'Türkçe', flag: '🇹🇷' },
   { code: 'en', native: 'English', flag: '🇬🇧' },
@@ -26,6 +33,7 @@ export default function SettingsScreen() {
   const { signOut, user } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const { theme, themeType, setTheme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const [showErrorLogs, setShowErrorLogs] = useState(false);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
@@ -216,59 +224,31 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.themeOptions}>
-            <TouchableOpacity
-              style={[
-                styles.themeOption,
-                { borderColor: theme.border },
-                themeType === 'light' && [styles.themeOptionActive, { borderColor: theme.primary }]
-              ]}
-              onPress={() => handleThemeChange('light')}>
-              <View style={[styles.themePreview, { backgroundColor: '#FFFFFF' }]}>
-                <View style={styles.themePreviewBar} />
-                <View style={styles.themePreviewContent} />
-              </View>
-              <Text style={[styles.themeOptionText, { color: theme.text }]}>
-                {L('Beyaz Tema', 'Light Theme')}
-              </Text>
-              {themeType === 'light' && <Check size={20} color={theme.primary} style={styles.checkIcon} />}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.themeOption,
-                { borderColor: theme.border },
-                themeType === 'dark' && [styles.themeOptionActive, { borderColor: theme.primary }]
-              ]}
-              onPress={() => handleThemeChange('dark')}>
-              <View style={[styles.themePreview, { backgroundColor: '#121212' }]}>
-                <View style={[styles.themePreviewBar, { backgroundColor: '#1E1E1E' }]} />
-                <View style={[styles.themePreviewContent, { backgroundColor: '#2A2A2A' }]} />
-              </View>
-              <Text style={[styles.themeOptionText, { color: theme.text }]}>
-                {L('Siyah Tema', 'Dark Theme')}
-              </Text>
-              {themeType === 'dark' && <Check size={20} color={theme.primary} style={styles.checkIcon} />}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.themeOption,
-                { borderColor: theme.border },
-                themeType === 'colored' && [styles.themeOptionActive, { borderColor: theme.primary }]
-              ]}
-              onPress={() => handleThemeChange('colored')}>
-              <View style={[styles.themePreview, { backgroundColor: '#FFF5F7' }]}>
-                <LinearGradient
-                  colors={['#FF6B9D', '#C44569']}
-                  style={styles.themePreviewBar}
-                />
-                <View style={[styles.themePreviewContent, { backgroundColor: '#FFFFFF' }]} />
-              </View>
-              <Text style={[styles.themeOptionText, { color: theme.text }]}>
-                {L('Renkli Tema', 'Colored Theme')}
-              </Text>
-              {themeType === 'colored' && <Check size={20} color={theme.primary} style={styles.checkIcon} />}
-            </TouchableOpacity>
+            {THEME_TYPES.map((type) => {
+              const t = THEMES[type];
+              const active = themeType === type;
+              const label = THEME_LABELS[type];
+              return (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.themeOption,
+                    { borderColor: theme.border },
+                    active && [styles.themeOptionActive, { borderColor: theme.primary }],
+                  ]}
+                  onPress={() => handleThemeChange(type)}>
+                  <View style={[styles.themePreview, { backgroundColor: t.background }]}>
+                    <LinearGradient colors={t.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.themePreviewBar} />
+                    <View style={[styles.themePreviewContent, { backgroundColor: t.cardBackground }]} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.themeOptionText, { color: theme.text }]}>{L(label.tr, label.en)}</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>{L(label.subTr, label.subEn)}</Text>
+                  </View>
+                  {active && <Check size={20} color={theme.primary} style={styles.checkIcon} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -553,7 +533,8 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -617,7 +598,7 @@ const styles = StyleSheet.create({
   },
   themePreviewBar: {
     height: 20,
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
   },
   themePreviewContent: {
     flex: 1,

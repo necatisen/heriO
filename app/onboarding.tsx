@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { BRAND } from '@/lib/brand';
+import { useState, useMemo } from 'react';
+import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import {
   View,
   Text,
@@ -18,6 +18,8 @@ import { L } from '@/lib/l10n';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { language } = useLanguage();
   const [page, setPage] = useState(0);
@@ -59,7 +61,7 @@ export default function OnboardingScreen() {
   const CurrentIcon = content[page].icon;
 
   return (
-    <LinearGradient colors={BRAND.gradient} style={styles.container}>
+    <LinearGradient colors={theme.gradient} style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconWrap}>
           <CurrentIcon size={64} color="#FFFFFF" strokeWidth={2} />
@@ -83,13 +85,14 @@ export default function OnboardingScreen() {
             ? L('Başla', 'Get started')
             : L('Devam', 'Next')}
         </Text>
-        <ArrowRight size={22} color="#5B4BFF" />
+        <ArrowRight size={22} color={theme.primary} />
       </TouchableOpacity>
     </LinearGradient>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'space-between',
@@ -159,6 +162,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#5B4BFF',
+    color: t.primary,
   },
 });

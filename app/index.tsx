@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import GoogleIcon from '@/components/GoogleIcon';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -23,13 +24,15 @@ import { getOnboardingSeen } from '@/lib/onboardingStorage';
 import { BrandLogo } from '@/components/BrandLogo';
 import GradientButton from '@/components/GradientButton';
 import HeartLoader from '@/components/HeartLoader';
-import { BRAND } from '@/lib/brand';
 import { authErrorMessage } from '@/lib/authErrors';
 
 import { L } from '@/lib/l10n';
 const { width, height } = Dimensions.get('window');
+/** Short phones: smaller logo and spacing so the hero never overlaps the language picker. */
+const COMPACT = height < 760;
 
 export default function WelcomeScreen() {
+  const { theme } = useTheme();
   const router = useRouter();
   const { session, loading, signInWithGoogle } = useAuth();
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -89,10 +92,10 @@ export default function WelcomeScreen() {
   ];
 
   return (
-    <LinearGradient colors={BRAND.night} style={styles.background}>
-      <Orb color={BRAND.blue} size={width * 0.9} x={-width * 0.35} y={-height * 0.08} delay={0} />
-      <Orb color={BRAND.violet} size={width * 0.8} x={width * 0.45} y={height * 0.28} delay={800} />
-      <Orb color={BRAND.pink} size={width * 0.7} x={-width * 0.2} y={height * 0.66} delay={1600} />
+    <LinearGradient colors={theme.gradient} style={styles.background}>
+      <Orb color="#FFFFFF" size={width * 0.9} x={-width * 0.35} y={-height * 0.08} delay={0} />
+      <Orb color="#FFFFFF" size={width * 0.8} x={width * 0.45} y={height * 0.28} delay={800} />
+      <Orb color="#FFFFFF" size={width * 0.7} x={-width * 0.2} y={height * 0.66} delay={1600} />
 
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <Animated.View entering={FadeInDown.duration(500)} style={styles.languageSelector}>
@@ -108,7 +111,7 @@ export default function WelcomeScreen() {
 
         <View style={styles.hero}>
           <Animated.View entering={FadeInDown.duration(700).springify().damping(14)}>
-            <BrandLogo size="lg" glow />
+            <BrandLogo size={COMPACT ? 'md' : 'lg'} glow />
           </Animated.View>
           <Animated.Text entering={FadeInDown.delay(200).duration(600)} style={styles.welcomeTitle}>
             {t.welcome}
@@ -179,16 +182,16 @@ const styles = StyleSheet.create({
   langButton: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)' },
   langButtonActive: { backgroundColor: '#FFFFFF' },
   langText: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.85)' },
-  langTextActive: { color: BRAND.violet },
-  hero: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  welcomeTitle: { fontSize: 30, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', marginTop: 28, letterSpacing: -0.5 },
+  langTextActive: { color: '#22202A' },
+  hero: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: COMPACT ? 8 : 0 },
+  welcomeTitle: { fontSize: COMPACT ? 26 : 30, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', marginTop: COMPACT ? 14 : 28, letterSpacing: -0.5 },
   welcomeSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.75)', textAlign: 'center', marginTop: 10, lineHeight: 23 },
-  features: { width: '100%', marginTop: 32, gap: 10 },
+  features: { width: '100%', marginTop: COMPACT ? 16 : 32, gap: COMPACT ? 8 : 10 },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 12,
+    paddingVertical: COMPACT ? 9 : 12,
     paddingHorizontal: 14,
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.07)',

@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
+import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import {
   View,
@@ -14,7 +15,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BRAND } from '@/lib/brand';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   MessageCircle,
@@ -52,6 +52,8 @@ import ComboBox from '@/components/ComboBox';
 
 import { L } from '@/lib/l10n';
 export default function RegisterScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { signUp } = useAuth();
   const { t, language, changeLanguage } = useLanguage();
@@ -445,7 +447,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <LinearGradient colors={BRAND.night} style={styles.container}>
+    <LinearGradient colors={theme.gradient} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
@@ -504,7 +506,7 @@ export default function RegisterScreen() {
                 <Image source={{ uri: profilePhotoUri }} style={styles.photoPreview} />
               ) : (
                 <View style={styles.photoPlaceholder}>
-                  <Camera size={40} color="#5B4BFF" />
+                  <Camera size={40} color={theme.primary} />
                   <Text style={styles.photoPlaceholderText}>
                     {L('Profil fotoğrafı (zorunlu)', 'Profile photo (required)')}
                   </Text>
@@ -513,11 +515,11 @@ export default function RegisterScreen() {
             </TouchableOpacity>
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <User size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.fullName}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.fullName}
                 onChangeText={(text) =>
                   setFormData({ ...formData, fullName: text })
@@ -526,11 +528,11 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <User size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.username}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.username}
                 onChangeText={(text) =>
                   setFormData({ ...formData, username: text })
@@ -540,11 +542,11 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Mail size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Mail size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.email}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.email}
                 onChangeText={(text) =>
                   setFormData({ ...formData, email: text })
@@ -555,7 +557,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Calendar size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Calendar size={20} color={theme.primary} style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowAgePicker(!showAgePicker)}>
@@ -621,11 +623,11 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Ruler size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Ruler size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={L('Boy (cm)', 'Height (cm)')}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.height}
                 onChangeText={(text) =>
                   setFormData({ ...formData, height: text.replace(/[^0-9]/g, '') })
@@ -635,11 +637,11 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Weight size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Weight size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={L('Kilo (kg)', 'Weight (kg)')}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.weight}
                 onChangeText={(text) =>
                   setFormData({ ...formData, weight: text.replace(/[^0-9]/g, '') })
@@ -649,7 +651,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <User size={20} color={theme.primary} style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowCountryPicker(!showCountryPicker)}>
@@ -692,7 +694,7 @@ export default function RegisterScreen() {
             )}
 
           <View style={styles.inputContainer}>
-            <User size={20} color="#5B4BFF" style={styles.inputIcon} />
+            <User size={20} color={theme.primary} style={styles.inputIcon} />
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={() => {
@@ -743,7 +745,7 @@ export default function RegisterScreen() {
               {L('İsteğe bağlı — sonra ekleyebilirsiniz', 'Optional — you can add later')}
             </Text>
             <View style={styles.inputContainer}>
-              <GraduationCap size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <GraduationCap size={20} color={theme.primary} style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowEducationPicker(!showEducationPicker)}>
@@ -786,7 +788,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Briefcase size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Briefcase size={20} color={theme.primary} style={styles.inputIcon} />
               <ComboBox
                 options={professionOptions.map((opt) => ({
                   value: opt.value,
@@ -799,7 +801,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Users size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Users size={20} color={theme.primary} style={styles.inputIcon} />
               <ComboBox
                 options={bodyTypeOptions}
                 selectedValue={formData.bodyType}
@@ -809,7 +811,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Baby size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Baby size={20} color={theme.primary} style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowChildrenPicker(!showChildrenPicker)}>
@@ -852,7 +854,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Cigarette size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Cigarette size={20} color={theme.primary} style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowSmokingPicker(!showSmokingPicker)}>
@@ -895,7 +897,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Cigarette size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Cigarette size={20} color={theme.primary} style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowAlcoholPicker(!showAlcoholPicker)}>
@@ -938,7 +940,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <User size={20} color={theme.primary} style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowReligionPicker(!showReligionPicker)}>
@@ -981,7 +983,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <User size={20} color={theme.primary} style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => {
@@ -1027,7 +1029,7 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <User size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <User size={20} color={theme.primary} style={styles.inputIcon} />
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => {
@@ -1072,11 +1074,11 @@ export default function RegisterScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Lock size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Lock size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.password}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.password}
                 onChangeText={(text) =>
                   setFormData({ ...formData, password: text })
@@ -1093,11 +1095,11 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Lock size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Lock size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.confirmPassword}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.confirmPassword}
                 onChangeText={(text) =>
                   setFormData({ ...formData, confirmPassword: text })
@@ -1138,7 +1140,8 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -1177,7 +1180,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   formContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: t.cardBackground,
     borderRadius: 30,
     padding: 30,
     shadowColor: '#000',
@@ -1189,7 +1192,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#5B4BFF',
+    color: t.primary,
     marginBottom: 12,
   },
   photoButton: {
@@ -1210,18 +1213,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#5B4BFF',
+    borderColor: t.primary,
   },
   photoPlaceholderText: {
     fontSize: 11,
-    color: '#5B4BFF',
+    color: t.primary,
     marginTop: 8,
     textAlign: 'center',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: t.inputBackground,
     borderRadius: 15,
     paddingHorizontal: 16,
     marginBottom: 16,
@@ -1236,16 +1239,16 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#333333',
+    color: t.text,
   },
   cityTextInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333333',
+    color: t.text,
     paddingVertical: 4,
   },
   placeholder: {
-    color: '#999999',
+    color: t.textSecondary,
   },
   calendarButton: {
     padding: 10,
@@ -1259,7 +1262,7 @@ const styles = StyleSheet.create({
   genderLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
+    color: t.text,
     marginBottom: 12,
   },
   genderButtons: {
@@ -1270,16 +1273,16 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: t.inputBackground,
     alignItems: 'center',
   },
   genderButtonActive: {
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
   },
   genderButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666666',
+    color: t.textSecondary,
   },
   genderButtonTextActive: {
     color: '#FFFFFF',
@@ -1291,11 +1294,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   registerButton: {
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
     paddingVertical: 18,
     borderRadius: 15,
     alignItems: 'center',
-    shadowColor: '#5B4BFF',
+    shadowColor: t.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1313,12 +1316,12 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: 14,
-    color: '#666666',
+    color: t.textSecondary,
   },
   loginLink: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#5B4BFF',
+    color: t.primary,
   },
   errorContainer: {
     backgroundColor: '#FFE5E5',
@@ -1352,18 +1355,18 @@ const styles = StyleSheet.create({
   },
   pickerButtonText: {
     fontSize: 16,
-    color: '#333333',
+    color: t.text,
   },
   pickerPlaceholder: {
-    color: '#999999',
+    color: t.textSecondary,
   },
   pickerContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: t.cardBackground,
     borderRadius: 15,
     marginBottom: 16,
     marginHorizontal: 30,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: t.border,
     maxHeight: 250,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1385,10 +1388,10 @@ const styles = StyleSheet.create({
   },
   pickerOptionText: {
     fontSize: 15,
-    color: '#333333',
+    color: t.text,
   },
   pickerOptionTextSelected: {
-    color: '#5B4BFF',
+    color: t.primary,
     fontWeight: '600',
   },
 });

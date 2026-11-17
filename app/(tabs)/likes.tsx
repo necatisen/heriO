@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import HeroFade from '@/components/HeroFade';
+import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import {
   View,
   Text,
@@ -22,7 +24,6 @@ import MatchCelebrationModal from '@/components/MatchCelebrationModal';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useMemo } from 'react';
 import HeartLoader from '@/components/HeartLoader';
-import { BRAND } from '@/lib/brand';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { isUserOnlineNow } from '@/lib/dateFormat';
@@ -52,6 +53,8 @@ type LikeUser = {
 type Tab = 'received' | 'visitors' | 'sent';
 
 export default function LikesScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { user, profile } = useAuth();
   const { language } = useLanguage();
   const router = useRouter();
@@ -813,6 +816,7 @@ export default function LikesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <HeroFade height={260} fadeFrom={0.5} />
       <View style={styles.headerBlock}>
         <Text style={styles.headerTitle}>{getActiveTitle()}</Text>
         <Text style={styles.headerSubtitle}>{getActiveSubtitle()}</Text>
@@ -825,7 +829,7 @@ export default function LikesScreen() {
             onPress={() => setActiveTab('received')}>
             <Heart
               size={18}
-              color={activeTab === 'received' ? '#FFFFFF' : '#667085'}
+              color={activeTab === 'received' ? '#FFFFFF' : theme.textSecondary}
             />
             <Text
               style={[
@@ -841,7 +845,7 @@ export default function LikesScreen() {
             onPress={() => setActiveTab('sent')}>
             <ThumbsUp
               size={18}
-              color={activeTab === 'sent' ? '#FFFFFF' : '#667085'}
+              color={activeTab === 'sent' ? '#FFFFFF' : theme.textSecondary}
             />
             <Text
               style={[
@@ -857,7 +861,7 @@ export default function LikesScreen() {
             onPress={() => setActiveTab('visitors')}>
             <Eye
               size={18}
-              color={activeTab === 'visitors' ? '#FFFFFF' : '#667085'}
+              color={activeTab === 'visitors' ? '#FFFFFF' : theme.textSecondary}
             />
             <Text
               style={[
@@ -876,7 +880,7 @@ export default function LikesScreen() {
         </View>
       ) : currentData.length === 0 ? (
         <Animated.View key={`empty-${activeTab}`} entering={FadeInDown.duration(450)} style={styles.emptyContainer}>
-          <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.emptyIconWrap}>
+          <LinearGradient colors={theme.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.emptyIconWrap}>
             {activeTab === 'received' && <Heart size={38} color="#FFFFFF" fill="#FFFFFF" />}
             {activeTab === 'visitors' && <Eye size={38} color="#FFFFFF" />}
             {activeTab === 'sent' && <ThumbsUp size={38} color="#FFFFFF" />}
@@ -956,10 +960,11 @@ export default function LikesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F6FA',
+    backgroundColor: t.background,
   },
   headerBlock: {
     paddingHorizontal: 16,
@@ -969,12 +974,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1A1F36',
+    color: '#FFFFFF',
   },
   headerSubtitle: {
     marginTop: 4,
     fontSize: 13,
-    color: '#667085',
+    color: 'rgba(255,255,255,0.9)',
   },
   tabContainer: {
     paddingHorizontal: 14,
@@ -982,7 +987,7 @@ const styles = StyleSheet.create({
   },
   tabSegment: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: t.cardBackground,
     borderRadius: 16,
     padding: 4,
     shadowColor: '#0F172A',
@@ -1001,12 +1006,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   activeTab: {
-    backgroundColor: '#8B3DFF',
+    backgroundColor: t.primary,
   },
   tabText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#667085',
+    color: t.textSecondary,
   },
   activeTabText: {
     color: '#FFFFFF',
@@ -1106,7 +1111,7 @@ const styles = StyleSheet.create({
     width: 25,
     height: 25,
     borderRadius: 19,
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#101828',
@@ -1130,7 +1135,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666666',
+    color: t.textSecondary,
     marginTop: 16,
   },
   watermarkOverlay: {

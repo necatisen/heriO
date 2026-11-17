@@ -107,10 +107,10 @@ await out("assets/images/notification-icon.png", sharp(notifSvg(96)));
   const icon = await sharp(src).extract(tileCrop(0.78)).resize(300, 300).png().toBuffer();
   const svg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B0E24"/><stop offset="0.6" stop-color="#141838"/><stop offset="1" stop-color="#1E1450"/></linearGradient>
-    <radialGradient id="o1"><stop offset="0" stop-color="#3D5AFE" stop-opacity="0.55"/><stop offset="1" stop-color="#3D5AFE" stop-opacity="0"/></radialGradient>
-    <radialGradient id="o2"><stop offset="0" stop-color="#FF3D8B" stop-opacity="0.45"/><stop offset="1" stop-color="#FF3D8B" stop-opacity="0"/></radialGradient>
-    <linearGradient id="tx" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFB3D1"/></linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF7A59"/><stop offset="0.55" stop-color="#FF4F8B"/><stop offset="1" stop-color="#B455F5"/></linearGradient>
+    <radialGradient id="o1"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.25"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+    <radialGradient id="o2"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.18"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="tx" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
   </defs>
   <rect width="${W}" height="${H}" fill="url(#bg)"/>
   <circle cx="150" cy="120" r="320" fill="url(#o1)"/>

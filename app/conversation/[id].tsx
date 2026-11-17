@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { getCountryLabel } from '@/lib/constants';
 import {
   View,
@@ -19,7 +19,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BRAND } from '@/lib/brand';
 import { LinearGradient } from 'expo-linear-gradient';
 import Reanimated, { FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,7 +27,7 @@ import VerifiedBadge from '@/components/VerifiedBadge';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { getEffectiveSubscription } from '@/lib/subscription';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -64,6 +63,7 @@ export default function ConversationScreen() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const params = useLocalSearchParams();
 
@@ -1058,7 +1058,7 @@ export default function ConversationScreen() {
                         ]}>
                         {isMine && !item.is_deleted && (
                           <LinearGradient
-                            colors={BRAND.gradient}
+                            colors={theme.gradient}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                             style={StyleSheet.absoluteFill}
@@ -1288,7 +1288,8 @@ export default function ConversationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -1524,7 +1525,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   myTextBubble: {
-    backgroundColor: '#8B3DFF',
+    backgroundColor: t.primary,
     overflow: 'hidden',
     alignSelf: 'flex-end',
     borderTopLeftRadius: 25,
@@ -1615,7 +1616,7 @@ const styles = StyleSheet.create({
   replyBarTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5B4BFF',
+    color: t.primary,
     marginBottom: 2,
   },
   replyBarText: {
@@ -1761,7 +1762,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },

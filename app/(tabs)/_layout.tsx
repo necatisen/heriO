@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BRAND } from '@/lib/brand';
 import {
   Search,
   MessageCircle,
@@ -31,6 +30,7 @@ function TabIcon({
   color: string;
   focused: boolean;
 }) {
+  const { theme } = useTheme();
   const p = useSharedValue(focused ? 1 : 0);
   useEffect(() => {
     p.value = withSpring(focused ? 1 : 0, { damping: 12, stiffness: 220 });
@@ -44,7 +44,7 @@ function TabIcon({
   return (
     <View style={tabStyles.slot}>
       <Animated.View style={[tabStyles.pill, pillStyle]}>
-        <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={theme.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       </Animated.View>
       <Animated.View style={iconStyle}>
         <Icon size={size - 2} color={focused ? '#FFFFFF' : color} strokeWidth={focused ? 2.4 : 2} />

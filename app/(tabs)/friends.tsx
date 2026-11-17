@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { BRAND } from '@/lib/brand';
+import { useState, useEffect, useMemo } from 'react';
+import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import {
   View,
   Text,
@@ -33,6 +33,8 @@ type Friend = {
 };
 
 export default function FriendsScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const router = useRouter();
@@ -280,7 +282,7 @@ export default function FriendsScreen() {
           <Text style={styles.friendUsername}>@{item.username}</Text>
           {item.bio && <Text style={styles.friendBio}>{item.bio}</Text>}
         </View>
-        <MessageCircle size={20} color="#5B4BFF" />
+        <MessageCircle size={20} color={theme.primary} />
       </TouchableOpacity>
 
       {selectedFriend?.id === item.id && (
@@ -335,7 +337,7 @@ export default function FriendsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <LinearGradient
-        colors={BRAND.gradient}
+        colors={theme.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}>
@@ -399,7 +401,8 @@ export default function FriendsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
@@ -492,7 +495,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   chatButton: {
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
   },
   removeButton: {
     backgroundColor: '#FF6B6B',
@@ -509,7 +512,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },

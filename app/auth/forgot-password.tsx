@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import { L } from '@/lib/l10n';
 import {
   View,
@@ -13,12 +14,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BRAND } from '@/lib/brand';
 import { MessageCircle, Mail, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ForgotPasswordScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { resetPassword } = useAuth();
   const { t } = useLanguage();
@@ -47,7 +49,7 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <LinearGradient colors={BRAND.night} style={styles.container}>
+    <LinearGradient colors={theme.gradient} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
@@ -70,11 +72,11 @@ export default function ForgotPasswordScreen() {
 
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
-              <Mail size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Mail size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.email}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -106,7 +108,8 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -146,7 +149,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   formContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: t.cardBackground,
     borderRadius: 30,
     padding: 30,
     shadowColor: '#000',
@@ -158,7 +161,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: t.inputBackground,
     borderRadius: 15,
     paddingHorizontal: 16,
     marginBottom: 24,
@@ -170,14 +173,14 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#333333',
+    color: t.text,
   },
   resetButton: {
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
     paddingVertical: 18,
     borderRadius: 15,
     alignItems: 'center',
-    shadowColor: '#5B4BFF',
+    shadowColor: t.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -195,11 +198,11 @@ const styles = StyleSheet.create({
   },
   backToLoginText: {
     fontSize: 14,
-    color: '#666666',
+    color: t.textSecondary,
   },
   backToLoginLink: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#5B4BFF',
+    color: t.primary,
   },
 });

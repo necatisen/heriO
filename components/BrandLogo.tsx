@@ -1,4 +1,5 @@
 import { memo, useEffect } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Image, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
@@ -8,7 +9,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { BRAND } from '@/lib/brand';
 
 type Props = {
   size?: 'sm' | 'md' | 'lg';
@@ -31,6 +31,7 @@ export const BrandLogo = memo(function BrandLogo({
   style,
 }: Props) {
   const s = SIZES[size];
+  const { theme } = useTheme();
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export const BrandLogo = memo(function BrandLogo({
   }, [glow, pulse]);
 
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: 0.35 + pulse.value * 0.35,
+    opacity: 0.12 + pulse.value * 0.12,
     transform: [{ scale: 1 + pulse.value * 0.12 }],
   }));
 
@@ -70,9 +71,9 @@ export const BrandLogo = memo(function BrandLogo({
         <Text
           style={[
             styles.wordmark,
-            { fontSize: s.font, color: variant === 'light' ? '#FFFFFF' : BRAND.navy },
+            { fontSize: s.font, color: variant === 'light' ? '#FFFFFF' : theme.text },
           ]}>
-          Birth<Text style={{ color: BRAND.pink }}>chat</Text>
+          Birth<Text style={{ color: variant === 'light' ? '#FFFFFF' : theme.primary, fontWeight: variant === 'light' ? '600' : '900' }}>chat</Text>
         </Text>
       )}
     </View>
@@ -81,6 +82,6 @@ export const BrandLogo = memo(function BrandLogo({
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: 12 },
-  glow: { position: 'absolute', backgroundColor: BRAND.violet },
+  glow: { position: 'absolute', backgroundColor: '#FFFFFF' },
   wordmark: { fontWeight: '900', letterSpacing: -0.8 },
 });

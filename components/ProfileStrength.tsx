@@ -5,7 +5,6 @@ import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-na
 import { ChevronRight, Sparkles } from 'lucide-react-native';
 import BouncyButton from '@/components/BouncyButton';
 import { useTheme } from '@/contexts/ThemeContext';
-import { BRAND } from '@/lib/brand';
 import { L } from '@/lib/l10n';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -54,9 +53,9 @@ export default function ProfileStrength({ profile, photoCount, onPress }: { prof
           <Svg width={SIZE} height={SIZE} style={{ transform: [{ rotate: '-90deg' }] }}>
             <Defs>
               <SvgGradient id="ps" x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor={BRAND.blue} />
-                <Stop offset="0.5" stopColor={BRAND.violet} />
-                <Stop offset="1" stopColor={BRAND.pink} />
+                <Stop offset="0" stopColor={theme.gradient[0]} />
+                <Stop offset="0.5" stopColor={theme.gradient[1]} />
+                <Stop offset="1" stopColor={theme.gradient[2] ?? theme.gradient[1]} />
               </SvgGradient>
             </Defs>
             <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke={theme.border} strokeWidth={STROKE} fill="none" />
@@ -78,7 +77,7 @@ export default function ProfileStrength({ profile, photoCount, onPress }: { prof
         </View>
         <View style={{ flex: 1 }}>
           <View style={styles.titleRow}>
-            <Sparkles size={14} color={BRAND.pink} />
+            <Sparkles size={14} color={theme.primary} />
             <Text style={[styles.title, { color: theme.text }]}>{L('Profil gücü', 'Profile strength')}</Text>
           </View>
           <Text style={[styles.sub, { color: theme.textSecondary }]}>

@@ -2,12 +2,29 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-export type ThemeType = 'light' | 'dark' | 'colored';
+/**
+ * Four app themes (Settings → Theme). Every screen reads its colors from here so a
+ * theme switch changes the whole app at once.
+ *   sunset – D · warm orange → pink → purple (default)
+ *   aurora – E · soft blue → purple → pink
+ *   peach  – F · peach → coral → pink
+ *   night  – G · soft dark grey with a pink → purple glow
+ */
+export type ThemeType = 'sunset' | 'aurora' | 'peach' | 'night';
+export const THEME_TYPES: ThemeType[] = ['sunset', 'aurora', 'peach', 'night'];
 
 export interface Theme {
+  isDark: boolean;
+  /** Main accent (buttons, links, active icons). */
   primary: string;
+  /** Very light tint of primary (chips, avatar placeholders). */
   primaryLight: string;
+  /** Second accent (stars, small highlights). */
   secondary: string;
+  /** Accent gradient: primary buttons, badges, active tab, hero headers. */
+  gradient: readonly [string, string, ...string[]];
+  /** Text/icon color on top of the gradient. */
+  onGradient: string;
   background: string;
   surface: string;
   text: string;
@@ -19,69 +36,102 @@ export interface Theme {
   cardBackground: string;
   inputBackground: string;
   inputBorder: string;
+  /** Kept for older screens; same as `gradient`. */
   headerGradient: readonly [string, string, ...string[]];
   tabBarBackground: string;
   tabBarBorder: string;
 }
 
-const lightTheme: Theme = {
-  primary: '#5B4BFF',
-  primaryLight: '#EEEBFF',
-  secondary: '#FF3D8B',
-  background: '#F6F5FB',
+const base = { error: '#EF4444', success: '#22C55E', warning: '#F59E0B', onGradient: '#FFFFFF' };
+
+const sunset: Theme = {
+  ...base,
+  isDark: false,
+  primary: '#FF4F8B',
+  primaryLight: '#FFE7EF',
+  secondary: '#FF7A59',
+  gradient: ['#FF7A59', '#FF4F8B', '#B455F5'],
+  headerGradient: ['#FF7A59', '#FF4F8B', '#B455F5'],
+  background: '#FFF6F4',
   surface: '#FFFFFF',
-  text: '#1A1A1A',
-  textSecondary: '#666666',
-  border: '#E0E0E0',
-  error: '#FF6B6B',
-  success: '#4CAF50',
-  warning: '#FFA726',
+  text: '#22202A',
+  textSecondary: '#77727F',
+  border: '#F1E7E6',
   cardBackground: '#FFFFFF',
-  inputBackground: '#F8F8F8',
-  inputBorder: '#E0E0E0',
-  headerGradient: ['#3D5AFE', '#8B3DFF', '#FF3D8B'],
+  inputBackground: '#FFF1EE',
+  inputBorder: '#F4DCD8',
   tabBarBackground: '#FFFFFF',
-  tabBarBorder: '#ECEAF5',
+  tabBarBorder: '#F1E7E6',
 };
 
-const darkTheme: Theme = {
-  primary: '#7C6CFF',
-  primaryLight: '#1E2050',
-  secondary: '#FF3D8B',
-  background: '#0B0E24',
-  surface: '#141838',
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  border: '#232A5A',
-  error: '#FF6B6B',
-  success: '#4CAF50',
-  warning: '#FFA726',
-  cardBackground: '#161B3D',
-  inputBackground: '#1B2047',
-  inputBorder: '#2A3066',
-  headerGradient: ['#141838', '#1E1A4D'],
-  tabBarBackground: '#0F1330',
-  tabBarBorder: '#1F2550',
+const aurora: Theme = {
+  ...base,
+  isDark: false,
+  primary: '#8A6CFF',
+  primaryLight: '#EFEAFF',
+  secondary: '#FF6FA8',
+  gradient: ['#6C7BFF', '#9B6BFF', '#FF6FA8'],
+  headerGradient: ['#6C7BFF', '#9B6BFF', '#FF6FA8'],
+  background: '#F7F5FF',
+  surface: '#FFFFFF',
+  text: '#1F2133',
+  textSecondary: '#71748A',
+  border: '#ECE9F7',
+  cardBackground: '#FFFFFF',
+  inputBackground: '#F1EEFD',
+  inputBorder: '#E2DCF7',
+  tabBarBackground: '#FFFFFF',
+  tabBarBorder: '#ECE9F7',
 };
 
-const coloredTheme: Theme = {
-  primary: '#FF6B9D',
-  primaryLight: '#FFE5EC',
-  secondary: '#C44569',
-  background: '#FFF5F7',
+const peach: Theme = {
+  ...base,
+  isDark: false,
+  primary: '#FF6E70',
+  primaryLight: '#FFEAE4',
+  secondary: '#FFB36B',
+  gradient: ['#FFB36B', '#FF8A6B', '#FF5E8E'],
+  headerGradient: ['#FFB36B', '#FF8A6B', '#FF5E8E'],
+  background: '#FFF8F1',
   surface: '#FFFFFF',
-  text: '#2C3E50',
-  textSecondary: '#7F8C8D',
-  border: '#FFE5EC',
-  error: '#E74C3C',
-  success: '#2ECC71',
-  warning: '#F39C12',
+  text: '#2A211D',
+  textSecondary: '#7D7069',
+  border: '#F4E8DE',
   cardBackground: '#FFFFFF',
-  inputBackground: '#FFF5F7',
-  inputBorder: '#FFE5EC',
-  headerGradient: ['#FF6B9D', '#C44569'],
+  inputBackground: '#FFF2E8',
+  inputBorder: '#F4E1D2',
   tabBarBackground: '#FFFFFF',
-  tabBarBorder: '#FFE5EC',
+  tabBarBorder: '#F4E8DE',
+};
+
+const night: Theme = {
+  ...base,
+  isDark: true,
+  primary: '#FF6F9C',
+  primaryLight: '#3A2632',
+  secondary: '#FFB36B',
+  gradient: ['#FF6F9C', '#C46BF0', '#8F7CFF'],
+  headerGradient: ['#FF6F9C', '#C46BF0', '#8F7CFF'],
+  background: '#16171D',
+  surface: '#20222B',
+  text: '#ECEDF2',
+  textSecondary: '#9A9DAA',
+  border: '#2C2F3A',
+  cardBackground: '#20222B',
+  inputBackground: '#2A2C36',
+  inputBorder: '#353845',
+  tabBarBackground: '#1B1D24',
+  tabBarBorder: '#2C2F3A',
+};
+
+export const THEMES: Record<ThemeType, Theme> = { sunset, aurora, peach, night };
+
+/** Values saved by older app versions. */
+const LEGACY: Record<string, ThemeType> = { light: 'sunset', dark: 'night', colored: 'peach' };
+const normalize = (v: string | null): ThemeType | null => {
+  if (!v) return null;
+  if ((THEME_TYPES as string[]).includes(v)) return v as ThemeType;
+  return LEGACY[v] ?? null;
 };
 
 interface ThemeContextType {
@@ -91,77 +141,51 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const KEY = 'app_theme';
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [themeType, setThemeType] = useState<ThemeType>('light');
-  const [theme, setThemeState] = useState<Theme>(lightTheme);
+async function readSaved(): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web') return typeof localStorage === 'undefined' ? null : localStorage.getItem(KEY);
+    return await SecureStore.getItemAsync(KEY);
+  } catch {
+    return null;
+  }
+}
+
+async function writeSaved(v: ThemeType): Promise<void> {
+  try {
+    if (Platform.OS === 'web') {
+      if (typeof localStorage !== 'undefined') localStorage.setItem(KEY, v);
+    } else {
+      await SecureStore.setItemAsync(KEY, v);
+    }
+  } catch {}
+}
+
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [themeType, setThemeType] = useState<ThemeType>('sunset');
 
   useEffect(() => {
-    loadTheme();
+    readSaved().then((saved) => {
+      const t = normalize(saved);
+      if (t) setThemeType(t);
+    });
   }, []);
 
-  const loadTheme = async () => {
-    try {
-      if (Platform.OS === 'web') {
-        const savedTheme = localStorage.getItem('app_theme');
-        if (savedTheme) {
-          const type = savedTheme as ThemeType;
-          setThemeType(type);
-          updateTheme(type);
-        }
-      } else {
-        const savedTheme = await SecureStore.getItemAsync('app_theme');
-        if (savedTheme) {
-          const type = savedTheme as ThemeType;
-          setThemeType(type);
-          updateTheme(type);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading theme:', error);
-    }
-  };
-
-  const updateTheme = (type: ThemeType) => {
-    switch (type) {
-      case 'dark':
-        setThemeState(darkTheme);
-        break;
-      case 'colored':
-        setThemeState(coloredTheme);
-        break;
-      default:
-        setThemeState(lightTheme);
-    }
-  };
-
-  const setTheme = async (type: ThemeType) => {
-    try {
-      if (Platform.OS === 'web') {
-        localStorage.setItem('app_theme', type);
-      } else {
-        await SecureStore.setItemAsync('app_theme', type);
-      }
-      setThemeType(type);
-      updateTheme(type);
-    } catch (error) {
-      console.error('Error saving theme:', error);
-    }
+  const setTheme = (type: ThemeType) => {
+    setThemeType(type);
+    writeSaved(type);
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, themeType, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme: THEMES[themeType], themeType, setTheme }}>{children}</ThemeContext.Provider>
   );
 };
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
 };

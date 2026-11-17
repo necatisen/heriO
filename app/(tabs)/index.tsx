@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import HeroFade from '@/components/HeroFade';
 import {
   View,
   Text,
@@ -18,7 +19,6 @@ import BouncyButton from '@/components/BouncyButton';
 import GradientButton from '@/components/GradientButton';
 import { BrandLogo } from '@/components/BrandLogo';
 import { ChatListSkeleton } from '@/components/Skeleton';
-import { BRAND } from '@/lib/brand';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -200,7 +200,7 @@ export default function ChatListScreen() {
   const renderMatch = ({ item, index }: { item: Match; index: number }) => (
     <Animated.View entering={FadeInRight.delay(index * 60).springify().damping(16)}>
       <BouncyButton style={styles.matchItem} onPress={() => handleMatchClick(item.id)}>
-        <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.matchRing}>
+        <LinearGradient colors={theme.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.matchRing}>
           <View style={[styles.matchRingInner, { backgroundColor: theme.background }]}>
             {item.profile_picture ? (
               <Image source={{ uri: item.profile_picture }} style={styles.matchAvatar} />
@@ -212,7 +212,7 @@ export default function ChatListScreen() {
           </View>
         </LinearGradient>
         <View style={styles.newDot} />
-        <Text style={[styles.matchName, { color: theme.text }]} numberOfLines={1}>
+        <Text style={[styles.matchName, { color: theme.onGradient }, styles.onHeroShadow]} numberOfLines={1}>
           {item.full_name?.split(' ')[0]}
         </Text>
       </BouncyButton>
@@ -263,7 +263,7 @@ export default function ChatListScreen() {
                 {formatLastMessageTime(item.last_message_time)}
               </Text>
               {unread && (
-                <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.unreadBadge}>
+                <LinearGradient colors={theme.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.unreadBadge}>
                   <Text style={styles.unreadText}>{item.unread_count > 99 ? '99+' : item.unread_count}</Text>
                 </LinearGradient>
               )}
@@ -277,8 +277,8 @@ export default function ChatListScreen() {
   const header = (
     <View style={styles.header}>
       <View>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>{L('Mesajlar', 'Messages')}</Text>
-        <Text style={[styles.headerSub, { color: theme.textSecondary }]}>
+        <Text style={[styles.headerTitle, { color: theme.onGradient }]}>{L('Mesajlar', 'Messages')}</Text>
+        <Text style={[styles.headerSub, { color: theme.onGradient, opacity: 0.9 }]}>
           {unreadTotal > 0
             ? L('{0} okunmamış mesaj', '{0} unread', [unreadTotal])
             : L('Hepsi okundu', 'All caught up')}
@@ -291,6 +291,7 @@ export default function ChatListScreen() {
   if (loading && conversations.length === 0 && matches.length === 0) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+        <HeroFade height={180} fadeFrom={0.5} />
         {header}
         <ChatListSkeleton />
       </SafeAreaView>
@@ -299,15 +300,16 @@ export default function ChatListScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <HeroFade height={matches.length > 0 ? 330 : 180} fadeFrom={matches.length > 0 ? 0.68 : 0.5} />
       {header}
 
       {matches.length > 0 && (
         <View style={styles.matchesSection}>
           <View style={styles.sectionRow}>
-            <Sparkles size={16} color={BRAND.pink} />
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>{L('Yeni eşleşmeler', 'New matches')}</Text>
-            <View style={[styles.countPill, { backgroundColor: theme.primaryLight }]}>
-              <Text style={[styles.countPillText, { color: theme.primary }]}>{matches.length}</Text>
+            <Sparkles size={16} color={theme.onGradient} />
+            <Text style={[styles.sectionTitle, { color: theme.onGradient }]}>{L('Yeni eşleşmeler', 'New matches')}</Text>
+            <View style={[styles.countPill, { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
+              <Text style={[styles.countPillText, { color: theme.onGradient }]}>{matches.length}</Text>
             </View>
           </View>
           <FlatList
@@ -331,7 +333,7 @@ export default function ChatListScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
           ListEmptyComponent={
             <Animated.View entering={FadeInDown.duration(500)} style={styles.emptyContainer}>
-              <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.emptyIcon}>
+              <LinearGradient colors={theme.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.emptyIcon}>
                 <MessageCircle size={36} color="#FFFFFF" />
               </LinearGradient>
               <Text style={[styles.emptyTitle, { color: theme.text }]}>{L('Henüz sohbet yok', 'No chats yet')}</Text>
@@ -399,6 +401,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
+  onHeroShadow: { textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   matchName: { fontSize: 12, fontWeight: '700', textAlign: 'center', marginTop: 6 },
   initial: { fontSize: 22, fontWeight: '800' },
   conversationsSection: { flex: 1, paddingTop: 12 },

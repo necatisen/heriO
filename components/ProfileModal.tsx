@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ import {
 } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { getEffectiveSubscription } from '@/lib/subscription';
 import { useRouter } from 'expo-router';
@@ -126,6 +126,7 @@ export default function ProfileModal({
   const { user } = useAuth();
   const router = useRouter();
   const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const [isPremium, setIsPremium] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -656,7 +657,8 @@ export default function ProfileModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -719,7 +721,7 @@ const styles = StyleSheet.create({
     width: PHOTO_CAROUSEL_WIDTH,
     height: PHOTO_CAROUSEL_HEIGHT,
     borderRadius: 18,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -974,7 +976,7 @@ const styles = StyleSheet.create({
   },
   likeButton: {
     flex: 1,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: t.primary,
   },
   chatButton: {
     flex: 1,
@@ -982,7 +984,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
     paddingVertical: 12,
     borderRadius: 12,
   },

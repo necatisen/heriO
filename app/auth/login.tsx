@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import GoogleIcon from '@/components/GoogleIcon';
 import {
@@ -13,7 +14,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BRAND } from '@/lib/brand';
 import { Mail, Lock, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,6 +25,8 @@ import { L } from '@/lib/l10n';
 const APP_VERSION = Constants.expoConfig?.version ?? '';
 
 export default function LoginScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const router = useRouter();
   const { signIn, signInWithGoogle } = useAuth();
   const { t, language, setLanguage } = useLanguage();
@@ -134,7 +136,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <LinearGradient colors={BRAND.night} style={styles.container}>
+    <LinearGradient colors={theme.gradient} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
@@ -164,11 +166,11 @@ export default function LoginScreen() {
               </View>
             ) : null}
             <View style={styles.inputContainer}>
-              <Mail size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Mail size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.email}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -177,11 +179,11 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Lock size={20} color="#5B4BFF" style={styles.inputIcon} />
+              <Lock size={20} color={theme.primary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder={t.password}
-                placeholderTextColor="#999999"
+                placeholderTextColor={theme.textSecondary}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -252,7 +254,8 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -314,10 +317,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   languageButtonTextActive: {
-    color: '#5B4BFF',
+    color: t.primary,
   },
   formContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: t.cardBackground,
     borderRadius: 30,
     padding: 30,
     shadowColor: '#000',
@@ -329,7 +332,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: t.inputBackground,
     borderRadius: 15,
     paddingHorizontal: 16,
     marginBottom: 16,
@@ -341,7 +344,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#333333',
+    color: t.text,
   },
   rememberMeContainer: {
     flexDirection: 'row',
@@ -359,12 +362,12 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 5,
     borderWidth: 2,
-    borderColor: '#5B4BFF',
+    borderColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
   },
   checkmark: {
     color: '#FFFFFF',
@@ -373,20 +376,20 @@ const styles = StyleSheet.create({
   },
   rememberMeText: {
     fontSize: 14,
-    color: '#666666',
+    color: t.textSecondary,
     fontWeight: '600',
   },
   forgotPassword: {
-    color: '#5B4BFF',
+    color: t.primary,
     fontSize: 14,
     fontWeight: '600',
   },
   loginButton: {
-    backgroundColor: '#5B4BFF',
+    backgroundColor: t.primary,
     paddingVertical: 18,
     borderRadius: 15,
     alignItems: 'center',
-    shadowColor: '#5B4BFF',
+    shadowColor: t.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -405,15 +408,15 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: t.border,
   },
   dividerText: {
     marginHorizontal: 16,
-    color: '#999999',
+    color: t.textSecondary,
     fontSize: 14,
   },
   googleButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: t.cardBackground,
     paddingVertical: 16,
     borderRadius: 15,
     flexDirection: 'row',
@@ -421,12 +424,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: t.border,
   },
   googleButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
+    color: t.text,
   },
   registerContainer: {
     flexDirection: 'row',
@@ -435,12 +438,12 @@ const styles = StyleSheet.create({
   },
   registerText: {
     fontSize: 14,
-    color: '#666666',
+    color: t.textSecondary,
   },
   registerLink: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#5B4BFF',
+    color: t.primary,
   },
   errorContainer: {
     backgroundColor: '#FFE5E5',

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import HeroFade from '@/components/HeroFade';
 import { getCountryLabel } from '@/lib/constants';
 import {
   View,
@@ -13,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Location from 'expo-location';
 import { ListFilter as Filter, Heart, X, MapPin, MessageCircle, Sparkles } from 'lucide-react-native';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -29,7 +30,6 @@ import { getProfessionLabel, getGenderLabel } from '@/lib/profileTranslations';
 import HeartLoader from '@/components/HeartLoader';
 import { peekCache, readCache, writeCache } from '@/lib/cache';
 import { compatibilityScore } from '@/lib/compatibility';
-import { BRAND } from '@/lib/brand';
 import { isUserOnlineNow } from '@/lib/dateFormat';
 
 import { L } from '@/lib/l10n';
@@ -68,6 +68,7 @@ const PAGE_SIZE = 48;
 
 export default function ExploreScreen() {
   const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { language } = useLanguage();
   const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
@@ -636,7 +637,7 @@ export default function ExploreScreen() {
       {(() => {
         const score = compatibilityScore(profile as any, u);
         return score != null ? (
-          <LinearGradient colors={BRAND.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.compatChip} pointerEvents="none">
+          <LinearGradient colors={theme.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.compatChip} pointerEvents="none">
             <Sparkles size={14} color="#FFFFFF" />
             <Text style={styles.compatText}>{L('%{0} uyum', '{0}% match', [score])}</Text>
           </LinearGradient>
@@ -681,13 +682,14 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
-      <View style={[styles.header, { backgroundColor: theme.cardBackground }]}>
+      <HeroFade height={320} fadeFrom={0.42} />
+      <View style={styles.header}>
         <TouchableOpacity
-          style={[styles.filterButton, { backgroundColor: theme.primary }]}
+          style={[styles.filterButton, { backgroundColor: 'rgba(255,255,255,0.25)' }]}
           onPress={openFilterModal}>
           <Filter size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>
+        <Text style={[styles.headerTitle, { color: theme.onGradient }]}>
           {L('Keşfet', 'Explore')}
         </Text>
         <View style={{ width: 48 }} />
@@ -773,7 +775,8 @@ export default function ExploreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -782,14 +785,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingVertical: 12,
   },
   filterButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -932,7 +933,7 @@ const styles = StyleSheet.create({
     borderRadius: 34,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: t.cardBackground,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
@@ -945,7 +946,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#1D9BF0',
+    backgroundColor: t.primary,
   },
   emptyContainer: {
     flex: 1,

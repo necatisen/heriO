@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useTheme, type Theme } from '@/contexts/ThemeContext';
 import { L } from '@/lib/l10n';
 import {
   View,
@@ -37,6 +38,8 @@ export default function ComboBox({
   placeholder,
   icon,
 }: ComboBoxProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [modalVisible, setModalVisible] = useState(false);
 
   const currentValue = selectedValue ?? value;
@@ -52,7 +55,7 @@ export default function ComboBox({
         <Text style={[styles.text, !selectedOption && styles.placeholder]}>
           {selectedOption ? selectedOption.label : placeholder || label}
         </Text>
-        <ChevronDown size={20} color="#5B4BFF" />
+        <ChevronDown size={20} color={theme.primary} />
       </TouchableOpacity>
 
       <Modal
@@ -65,7 +68,7 @@ export default function ComboBox({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{label || placeholder || L('Seçin', 'Select')}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <X size={24} color="#333333" />
+                <X size={24} color={theme.text} />
               </TouchableOpacity>
             </View>
 
@@ -98,7 +101,8 @@ export default function ComboBox({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -117,10 +121,10 @@ const styles = StyleSheet.create({
   text: {
     flex: 1,
     fontSize: 16,
-    color: '#333333',
+    color: t.text,
   },
   placeholder: {
-    color: '#999999',
+    color: t.textSecondary,
   },
   modalOverlay: {
     flex: 1,
@@ -128,7 +132,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: t.cardBackground,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -141,12 +145,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: t.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333333',
+    color: t.text,
   },
   optionsList: {
     paddingHorizontal: 20,
@@ -154,17 +158,17 @@ const styles = StyleSheet.create({
   option: {
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: t.border,
   },
   optionSelected: {
-    backgroundColor: '#F0F7FF',
+    backgroundColor: t.primaryLight,
   },
   optionText: {
     fontSize: 16,
-    color: '#333333',
+    color: t.text,
   },
   optionTextSelected: {
-    color: '#5B4BFF',
+    color: t.primary,
     fontWeight: '600',
   },
 });
