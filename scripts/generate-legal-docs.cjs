@@ -13,7 +13,7 @@ const code = fs.readFileSync(path.join(root, 'lib/legal.ts'), 'utf8');
 const js = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const mod = { exports: {} };
 new Function('module', 'exports', 'require', js)(mod, mod.exports, () => ({}));
-const { PRIVACY, TERMS, SUPPORT_EMAIL } = mod.exports;
+const { PRIVACY, TERMS, CHILD_SAFETY, SUPPORT_EMAIL } = mod.exports;
 
 const ORDER = [
   ['en', 'English'],
@@ -45,6 +45,7 @@ function page(title, dict) {
 
 fs.writeFileSync(path.join(site, 'privacy-policy.md'), page('Birthchat – Privacy Policy', PRIVACY));
 fs.writeFileSync(path.join(site, 'terms.md'), page('Birthchat – Terms of Use', TERMS));
+fs.writeFileSync(path.join(site, 'child-safety.md'), page('Birthchat – Child Safety Standards', CHILD_SAFETY));
 
 const del = `---
 title: Birthchat – Delete your account
@@ -96,6 +97,7 @@ Meet face-verified real people, see your match score and chat safely.
 - [Privacy Policy / Gizlilik Politikası](./privacy-policy)
 - [Terms of Use / Kullanım Koşulları](./terms)
 - [Delete your account / Hesabı silme](./delete-account)
+- [Child Safety Standards / Çocuk Güvenliği Standartları](./child-safety)
 
 Contact / İletişim: **${SUPPORT_EMAIL}**
 `;
