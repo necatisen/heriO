@@ -699,5 +699,6 @@
   "Hesabın için yeni bir şifre belirle.": "Choisissez un nouveau mot de passe pour votre compte.",
   "Güncelleme gerekli": "Mise à jour requise",
   "Birthchat'in yeni bir sürümü var. Devam etmek için lütfen uygulamayı Google Play'den güncelleyin.": "Une nouvelle version de Birthchat est disponible. Veuillez mettre à jour l'application sur Google Play pour continuer.",
-  "Uygulamayı güncelle": "Mettre à jour l'application"
+  "Uygulamayı güncelle": "Mettre à jour l'application",
+  "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.": "Le lien de réinitialisation du mot de passe a été envoyé à votre e-mail. Ouvrez-le sur ce téléphone, où Birthchat est installé ; il ne fonctionne pas sur un ordinateur."
 }

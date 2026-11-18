@@ -173,7 +173,7 @@
  "Bu sayfa mevcut değil.": "This screen doesn't exist.",
  "Ana sayfaya dön": "Go to home screen",
  "Lütfen e-posta adresinizi girin": "Please enter your email",
- "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.": "A password reset link has been sent to your email.",
+ "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.": "A password reset link has been sent to your email. Open the link on this phone, where Birthchat is installed; it will not work on a computer.",
  "Şifre sıfırlama başarısız oldu": "Password reset failed",
  "Şifre sıfırlama bağlantısı için e-posta adresinizi girin": "Enter your email to receive a password reset link",
  "Gönderiliyor...": "Sending...",
