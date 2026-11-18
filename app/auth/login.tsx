@@ -22,7 +22,13 @@ import { BrandLogo } from '@/components/BrandLogo';
 import Constants from 'expo-constants';
 
 import { L } from '@/lib/l10n';
-const APP_VERSION = Constants.expoConfig?.version ?? '';
+import { installedVersionCode } from '@/lib/appVersion';
+// "1.0.0 (11)": version name + build number (versionCode), which changes on every release.
+const APP_VERSION = (() => {
+  const name = Constants.expoConfig?.version ?? '';
+  const code = installedVersionCode();
+  return name && code ? `${name} (${code})` : name;
+})();
 
 export default function LoginScreen() {
   const { theme } = useTheme();
