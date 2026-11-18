@@ -3,6 +3,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import GoogleIcon from '@/components/GoogleIcon';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ShieldCheck, Sparkles, MessageCircleHeart } from 'lucide-react-native';
@@ -50,9 +51,12 @@ export default function WelcomeScreen() {
   };
   const { language, setLanguage, t } = useLanguage();
   const [checkedOnboarding, setCheckedOnboarding] = useState(false);
+  // Only route from here while this screen is on top: a deep link (e.g. password reset) can sign the
+  // user in while another screen is open above it, and replace() would swap that screen out.
+  const isFocused = useIsFocused();
 
   useEffect(() => {
-    if (!loading && session) {
+    if (!loading && session && isFocused) {
       getOnboardingSeen()
         .then((seen) => {
           setCheckedOnboarding(true);
@@ -63,7 +67,7 @@ export default function WelcomeScreen() {
           router.replace('/onboarding');
         });
     }
-  }, [loading, session]);
+  }, [loading, session, isFocused]);
 
   const languages: { code: Language; label: string }[] = [
     { code: 'tr', label: 'TR' },
