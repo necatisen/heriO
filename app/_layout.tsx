@@ -6,6 +6,7 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ForceUpdateGate } from '@/components/ForceUpdateGate';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -14,6 +15,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <LanguageProvider>
+          <ForceUpdateGate>
           <AuthProvider>
             <Stack
               screenOptions={{
@@ -38,6 +40,7 @@ export default function RootLayout() {
             </Stack>
             <StatusBar style="auto" />
           </AuthProvider>
+          </ForceUpdateGate>
         </LanguageProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

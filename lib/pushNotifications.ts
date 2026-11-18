@@ -6,6 +6,7 @@
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { L } from '@/lib/l10n';
+import { installedVersionCode } from '@/lib/appVersion';
 
 const platformKey = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
 /** Android channel used by chat messages (must match channelId in send-push-message). */
@@ -59,10 +60,28 @@ async function ensureChannel(Notifications: typeof import('expo-notifications'))
 }
 
 async function saveToken(userId: string, token: string) {
-  await supabase.from('push_tokens').upsert(
+  const { error } = await supabase.from('push_tokens').upsert(
     { user_id: userId, token, platform: platformKey, updated_at: new Date().toISOString() },
     { onConflict: 'user_id,platform' }
   );
+  if (error) throw new Error(`save_failed: ${error.message}`);
+}
+
+/** Records how the last registration ended (push_diagnostics), so failures are visible on the server. */
+async function report(userId: string, stage: string, detail?: string) {
+  try {
+    await supabase.from('push_diagnostics').upsert(
+      {
+        user_id: userId,
+        platform: platformKey,
+        stage,
+        detail: detail ? detail.slice(0, 500) : null,
+        app_version_code: installedVersionCode(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,platform' }
+    );
+  } catch {}
 }
 
 let tokenSub: { remove: () => void } | null = null;
@@ -75,18 +94,39 @@ export async function registerPushToken(userId: string): Promise<void> {
     try {
       Device = require('expo-device');
     } catch {}
-    if (Device && !Device.isDevice) return;
+    if (Device && !Device.isDevice) {
+      await report(userId, 'not_device');
+      return;
+    }
 
     await ensureChannel(Notifications);
 
     const { status: existing } = await Notifications.getPermissionsAsync();
     let status = existing;
     if (existing !== 'granted') status = (await Notifications.requestPermissionsAsync()).status;
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+      await report(userId, 'permission_denied', String(status));
+      return;
+    }
 
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: getProjectId() });
-    if (!token) return;
-    await saveToken(userId, token);
+    let token: string | undefined;
+    try {
+      token = (await Notifications.getExpoPushTokenAsync({ projectId: getProjectId() })).data;
+    } catch (e: any) {
+      await report(userId, 'token_failed', `${e?.code ?? ''} ${e?.message ?? e}`.trim());
+      return;
+    }
+    if (!token) {
+      await report(userId, 'token_failed', 'empty token');
+      return;
+    }
+    try {
+      await saveToken(userId, token);
+    } catch (e: any) {
+      await report(userId, 'save_failed', String(e?.message ?? e));
+      return;
+    }
+    await report(userId, 'ok');
 
     // FCM may rotate the device token; keep the stored Expo token fresh.
     tokenSub?.remove();
@@ -96,8 +136,9 @@ export async function registerPushToken(userId: string): Promise<void> {
         if (data) await saveToken(userId, data);
       } catch {}
     });
-  } catch (e) {
+  } catch (e: any) {
     console.warn('Push registration failed:', e);
+    await report(userId, 'error', String(e?.message ?? e));
   }
 }
 
