@@ -23,6 +23,7 @@ import Constants from 'expo-constants';
 
 import { L } from '@/lib/l10n';
 import { installedVersionCode } from '@/lib/appVersion';
+import { setOnboardingSeen } from '@/lib/onboardingStorage';
 // "1.0.0 (11)": version name + build number (versionCode), which changes on every release.
 const APP_VERSION = (() => {
   const name = Constants.expoConfig?.version ?? '';
@@ -109,6 +110,8 @@ export default function LoginScreen() {
       setLoading(true);
       await signIn(email, password);
       await saveCredentials();
+      // Signing in with email/password means the account already exists: skip the intro on later launches.
+      await setOnboardingSeen().catch(() => {});
       const successMessage = L('Giriş başarılı! Yönlendiriliyor...', 'Login successful! Redirecting...');
       setSuccess(successMessage);
       setTimeout(() => {

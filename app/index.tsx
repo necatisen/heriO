@@ -21,7 +21,7 @@ import Animated, {
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/lib/i18n';
-import { getOnboardingSeen } from '@/lib/onboardingStorage';
+import { getOnboardingSeen, setOnboardingSeen } from '@/lib/onboardingStorage';
 import { BrandLogo } from '@/components/BrandLogo';
 import GradientButton from '@/components/GradientButton';
 import HeartLoader from '@/components/HeartLoader';
@@ -58,9 +58,15 @@ export default function WelcomeScreen() {
   useEffect(() => {
     if (!loading && session && isFocused) {
       getOnboardingSeen()
-        .then((seen) => {
+        .then(async (seen) => {
+          // The intro is for brand-new accounts. An existing account signing in on this device
+          // (or after a reinstall) has no local flag yet, so mark it seen instead of showing the intro.
+          const createdAt = Date.parse(session.user.created_at ?? '');
+          const isNewAccount = !Number.isNaN(createdAt) && Date.now() - createdAt < 60 * 60 * 1000;
+          const showIntro = seen !== 'true' && isNewAccount;
+          if (seen !== 'true' && !showIntro) await setOnboardingSeen().catch(() => {});
           setCheckedOnboarding(true);
-          router.replace(seen === 'true' ? '/(tabs)' : '/onboarding');
+          router.replace(showIntro ? '/onboarding' : '/(tabs)');
         })
         .catch(() => {
           setCheckedOnboarding(true);
