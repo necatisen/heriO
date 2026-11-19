@@ -28,7 +28,7 @@ Expo 55 / React Native 0.83 tanışma ve sohbet uygulaması.
 7. Kullanıcıya AAB yolunu ve Play Console adımlarını kısaca bildir (`store/google-play/README.md`).
    Her derlemeden sonra Play Console "Sürüm bilgileri" için kopyalanmaya hazır şunları da ver:
    - **Sürüm adı** (≤50 karakter): `<versionName> (<versionCode>) – <kısa özet>`
-   - **Sürüm notları**: önceki AAB'den bu yana kullanıcının gördüğü değişiklikler, `<tr-TR>…</tr-TR>` etiketiyle (dil başına ≤500 karakter).
+   - **Sürüm notları**: önceki AAB'den bu yana kullanıcının gördüğü değişiklikler, `<tr-TR>…</tr-TR>` ve `<en-US>…</en-US>` etiketleriyle, ikisi tek blokta (dil başına ≤500 karakter).
 
 ## Yasal sayfalar (Google Play)
 
