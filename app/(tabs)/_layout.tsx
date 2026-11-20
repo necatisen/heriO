@@ -91,6 +91,8 @@ export default function TabLayout() {
           const sessionId = (data.session_id || data.sessionId) as string | undefined;
           if (sessionId) {
             router.push(`/conversation/${sessionId}`);
+          } else if (data.type === 'like') {
+            router.push('/(tabs)/likes' as Href);
           }
         }
 
@@ -100,6 +102,8 @@ export default function TabLayout() {
           const sessionId = (data.session_id || data.sessionId) as string | undefined;
           if (sessionId) {
             router.push(`/conversation/${sessionId}`);
+          } else if (data.type === 'like') {
+            router.push('/(tabs)/likes' as Href);
           }
         });
       } catch {

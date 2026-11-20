@@ -19,6 +19,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { getEffectiveSubscription } from '@/lib/subscription';
+import { sendLikePush } from '@/lib/pushNotifications';
 import FilterModal, { FilterOptions } from '@/components/FilterModal';
 import ProfileModal from '@/components/ProfileModal';
 import MatchCelebrationModal from '@/components/MatchCelebrationModal';
@@ -512,21 +513,22 @@ export default function ExploreScreen() {
             data: { matched_user_name: likedUser.full_name },
           });
 
+        sendLikePush(likedUser.id, 'match', sessionId);
         setMatchCelebration({ matchedUser: likedUser, sessionId });
       } else {
-        if (isUserOnlineNow(likedUser.is_online, likedUser.last_seen)) {
-          const { error: notifError } = await supabase
-            .from('notifications')
-            .insert({
-              user_id: likedUser.id,
-              actor_user_id: user?.id,
-              type: 'like',
-              data: { actor_name: profile?.full_name || '' },
-            });
-          if (notifError) {
-            console.error('Error creating notification:', notifError);
-          }
+        // Always record it (also when they are offline, so they see it next time they open the app) + push.
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: likedUser.id,
+            actor_user_id: user?.id,
+            type: 'like',
+            data: { actor_name: profile?.full_name || '' },
+          });
+        if (notifError) {
+          console.error('Error creating notification:', notifError);
         }
+        sendLikePush(likedUser.id, 'like');
       }
     } catch (error) {
       console.error('Error in handleLike:', error);

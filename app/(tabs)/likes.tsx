@@ -18,6 +18,7 @@ import VerifiedBadge from '@/components/VerifiedBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { sendLikePush } from '@/lib/pushNotifications';
 import { getEffectiveSubscription } from '@/lib/subscription';
 import ProfileModal from '@/components/ProfileModal';
 import MatchCelebrationModal from '@/components/MatchCelebrationModal';
@@ -493,6 +494,16 @@ export default function LikesScreen() {
         .eq('liked_user_id', user.id)
         .maybeSingle();
 
+      if (!mutualLike && !likeError) {
+        await supabase.from('notifications').insert({
+          user_id: visitorUserId,
+          actor_user_id: user.id,
+          type: 'like',
+          data: { actor_name: profile?.full_name || '' },
+        });
+        sendLikePush(visitorUserId, 'like');
+      }
+
       if (mutualLike) {
         const { error: friend1Error } = await supabase
           .from('friends')
@@ -533,6 +544,13 @@ export default function LikesScreen() {
           if (sessionError || !newSession) throw sessionError || new Error('Session not created');
           sessionId = newSession.id;
         }
+        await supabase.from('notifications').insert({
+          user_id: visitorUserId,
+          actor_user_id: user.id,
+          type: 'match',
+          data: { matched_user_name: profile?.full_name || '' },
+        });
+        sendLikePush(visitorUserId, 'match', sessionId);
         setMatchCelebration({
           matchedUser: {
             id: visitorUserId,
@@ -620,9 +638,11 @@ export default function LikesScreen() {
 
       await supabase.from('notifications').insert({
         user_id: likedUserId,
-        from_user_id: user?.id,
+        actor_user_id: user?.id,
         type: 'match',
+        data: { matched_user_name: profile?.full_name || '' },
       });
+      sendLikePush(likedUserId, 'match', sessionId);
 
       setMatchCelebration({
         matchedUser: {

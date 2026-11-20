@@ -142,6 +142,20 @@ export async function registerPushToken(userId: string): Promise<void> {
   }
 }
 
+/**
+ * Push to another user's phones for a like or a match (text is localized on the server).
+ * Fire-and-forget: a failed push never blocks the like itself.
+ */
+export function sendLikePush(toUserId: string, kind: 'like' | 'match', sessionId?: string | null): void {
+  try {
+    void supabase.functions
+      .invoke('send-push-message', {
+        body: { kind, to_user_id: toUserId, data: { type: kind, ...(sessionId ? { session_id: sessionId } : {}) } },
+      })
+      .catch(() => {});
+  } catch {}
+}
+
 /** Removes this device's token on sign-out so the next account on the phone doesn't get these messages. */
 export async function unregisterPushToken(userId: string): Promise<void> {
   if (!getNotifications()) return;

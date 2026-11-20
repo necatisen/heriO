@@ -14,17 +14,21 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 // Text the receiver sees, in the receiver's own app language.
-const PUSH_TEXT: Record<string, { newMessage: string; photo: string }> = {
-  tr: { newMessage: 'Yeni mesaj', photo: '📷 Fotoğraf' },
-  en: { newMessage: 'New message', photo: '📷 Photo' },
-  de: { newMessage: 'Neue Nachricht', photo: '📷 Foto' },
-  fr: { newMessage: 'Nouveau message', photo: '📷 Photo' },
-  es: { newMessage: 'Nuevo mensaje', photo: '📷 Foto' },
-  ru: { newMessage: 'Новое сообщение', photo: '📷 Фото' },
-  ar: { newMessage: 'رسالة جديدة', photo: '📷 صورة' },
+// {name} = sender's name.
+type PushText = { newMessage: string; photo: string; likeTitle: string; like: string; matchTitle: string; match: string };
+const PUSH_TEXT: Record<string, PushText> = {
+  tr: { newMessage: 'Yeni mesaj', photo: '📷 Fotoğraf', likeTitle: 'Yeni beğeni ❤️', like: '{name} seni beğendi. Görmek için dokun.', matchTitle: 'Yeni eşleşme 🎉', match: '{name} ile eşleştiniz! Hemen mesaj gönder.' },
+  en: { newMessage: 'New message', photo: '📷 Photo', likeTitle: 'New like ❤️', like: '{name} liked you. Tap to see.', matchTitle: "It's a match 🎉", match: 'You and {name} matched! Say hi now.' },
+  de: { newMessage: 'Neue Nachricht', photo: '📷 Foto', likeTitle: 'Neues Like ❤️', like: '{name} mag dich. Tippe zum Ansehen.', matchTitle: "It's a Match 🎉", match: 'Du und {name} habt ein Match! Schreib jetzt.' },
+  fr: { newMessage: 'Nouveau message', photo: '📷 Photo', likeTitle: 'Nouveau like ❤️', like: '{name} vous a liké. Touchez pour voir.', matchTitle: "C'est un match 🎉", match: 'Vous et {name} avez matché ! Écrivez maintenant.' },
+  es: { newMessage: 'Nuevo mensaje', photo: '📷 Foto', likeTitle: 'Nuevo me gusta ❤️', like: 'A {name} le gustas. Toca para ver.', matchTitle: '¡Es un match! 🎉', match: '¡Tú y {name} hicisteis match! Escríbele ahora.' },
+  ru: { newMessage: 'Новое сообщение', photo: '📷 Фото', likeTitle: 'Новая симпатия ❤️', like: 'Вы понравились: {name}. Нажмите, чтобы посмотреть.', matchTitle: 'Взаимная симпатия 🎉', match: 'У вас взаимная симпатия с {name}! Напишите сейчас.' },
+  ar: { newMessage: 'رسالة جديدة', photo: '📷 صورة', likeTitle: 'إعجاب جديد ❤️', like: 'أُعجب بك {name}. اضغط للمشاهدة.', matchTitle: 'تطابق جديد 🎉', match: 'حدث تطابق بينك وبين {name}! أرسل رسالة الآن.' },
 };
 
 type RequestBody = {
+  /** 'like' / 'match' → title and body are built here in the receiver's language */
+  kind?: 'message' | 'like' | 'match';
   /** 'photo' → body is replaced by a localized "Photo" label */
   media?: 'text' | 'photo';
   to_user_id?: string;
@@ -73,8 +77,22 @@ Deno.serve(async (req: Request) => {
     const receiver = (people || []).find((p: any) => p.id === toUserId);
     const sender = (people || []).find((p: any) => p.id === userRes.user.id);
     const txt = PUSH_TEXT[String(receiver?.preferred_language || 'en')] || PUSH_TEXT.en;
-    const localizedTitle = String(sender?.full_name || '').trim() || txt.newMessage;
-    const localizedBody = payload.media === 'photo' ? txt.photo : bodyText;
+    const senderName = String(sender?.full_name || '').trim();
+    let localizedTitle = senderName || txt.newMessage;
+    let localizedBody = payload.media === 'photo' ? txt.photo : bodyText;
+    if (payload.kind === 'like' || payload.kind === 'match') {
+      // Only a real like from the caller may trigger these (no spam pushes to arbitrary users).
+      const { data: like } = await admin
+        .from('likes')
+        .select('id')
+        .eq('user_id', userRes.user.id)
+        .eq('liked_user_id', toUserId)
+        .maybeSingle();
+      if (!like) return jsonResponse({ success: false, message: 'No like found' }, 403);
+      const name = senderName || 'Birthchat';
+      localizedTitle = payload.kind === 'like' ? txt.likeTitle : txt.matchTitle;
+      localizedBody = (payload.kind === 'like' ? txt.like : txt.match).replace('{name}', name);
+    }
     const { data: tokens, error: tokensErr } = await admin
       .from('push_tokens')
       .select('token')

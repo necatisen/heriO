@@ -161,6 +161,13 @@ async function callFunction(c, name, body) {
     must(r.status < 500 && r.status !== 401 && r.status !== 404, `${r.status} ${r.body.message || r.body.msg || ''}`);
     return `HTTP ${r.status}`;
   });
+  await step('Push: beğeni/eşleşme bildirimi (sahte beğeni reddedilir)', async () => {
+    const ok = await callFunction(A, 'send-push-message', { kind: 'match', to_user_id: idB });
+    must(ok.status === 200, `gerçek beğeni: ${ok.status} ${ok.body.message || ''}`);
+    const fake = await callFunction(A, 'send-push-message', { kind: 'like', to_user_id: idA });
+    must(fake.status === 403, `sahte beğeni kabul edildi: ${fake.status}`);
+    return `200 / 403`;
+  });
   await step('Fonksiyon: moderate-image', async () => {
     const img = (await randomJpeg(64, 64, 70)).toString('base64');
     const r = await callFunction(A, 'moderate-image', { image_base64: img });

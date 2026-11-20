@@ -11,10 +11,15 @@ export interface EffectiveSubscription {
 
 /**
  * Fetches subscription for user and returns effective premium status.
- * If subscription_end is in the past, updates the row to normal (is_premium false) and returns isPremium false.
+ * When payments are off (app_config.payments_enabled=false) everyone is premium. Otherwise premium = is_premium and not expired.
  */
 export async function getEffectiveSubscription(userId: string | undefined): Promise<EffectiveSubscription> {
   if (!userId) return { isPremium: false, subscriptionEnd: null, planType: null };
+
+  // Payments OFF (free mode): every account gets the full premium experience.
+  if (!(await loadPaymentsEnabled())) {
+    return { isPremium: true, subscriptionEnd: null, planType: null };
+  }
 
   let data: { is_premium: boolean; subscription_end: string | null; plan_type?: string | null } | null = null;
   let error: Error | null = null;
