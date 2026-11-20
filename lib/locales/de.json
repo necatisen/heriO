@@ -713,5 +713,16 @@
   "Devam etmeden önce birkaç bilgiye ihtiyacımız var.": "Bevor es weitergeht, brauchen wir noch ein paar Angaben.",
   "18 yaşından büyük olduğumu ve verdiğim bilgilerin doğru olduğunu beyan ederim.": "Ich bestätige, dass ich mindestens 18 Jahre alt bin und meine Angaben korrekt sind.",
   "Devam et": "Weiter",
-  "Çıkış yap": "Abmelden"
+  "Çıkış yap": "Abmelden",
+  "KVKK Aydınlatma Metni": "Datenschutzhinweis (KVKK)",
+  "Açık Rıza Metni": "Ausdrückliche Einwilligung",
+  "Devam etmek için tüm onay kutularını işaretleyin.": "Setze alle Häkchen, um fortzufahren.",
+  "Doğrulamayı başlatmak için biyometrik veri onay kutusunu işaretleyin.": "Setze das Häkchen für biometrische Daten, um die Verifizierung zu starten.",
+  "Bir sorun oluştu. Lütfen tekrar deneyin.": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+  "Selfie’mden elde edilen biyometrik verinin yalnızca kimlik doğrulaması için işlenmesine açık rıza veriyorum.": "Ich willige ausdrücklich ein, dass biometrische Daten aus meinem Selfie nur zur Identitätsprüfung verarbeitet werden.",
+  "Selfie’niz yalnızca doğrulama anında işlenir, saklanmaz ve profilinizde gösterilmez.": "Dein Selfie wird nur im Moment der Prüfung verarbeitet, nicht gespeichert und nie in deinem Profil gezeigt.",
+  "18 yaşından büyük olduğumu beyan eder, Kullanım Koşulları’nı ve Gizlilik Politikası’nı kabul ederim.": "Ich bestätige, dass ich mindestens 18 Jahre alt bin, und akzeptiere die Nutzungsbedingungen und die Datenschutzerklärung.",
+  "Kullanım Koşulları": "Nutzungsbedingungen",
+  "KVKK Aydınlatma Metni’ni okudum.": "Ich habe den Datenschutzhinweis (KVKK) gelesen.",
+  "Hizmetin sunulması için verilerimin yurt dışındaki hizmet sağlayıcılara (Supabase – AB, Google, Expo) aktarılmasına açık rıza veriyorum.": "Ich willige ausdrücklich ein, dass meine Daten zur Bereitstellung des Dienstes an Dienstleister im Ausland (Supabase – EU, Google, Expo) übermittelt werden."
 }

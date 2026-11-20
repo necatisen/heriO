@@ -713,5 +713,16 @@
   "Devam etmeden önce birkaç bilgiye ihtiyacımız var.": "نحتاج إلى بعض المعلومات قبل المتابعة.",
   "18 yaşından büyük olduğumu ve verdiğim bilgilerin doğru olduğunu beyan ederim.": "أُقرّ بأن عمري 18 عامًا أو أكثر وأن المعلومات التي أقدمها صحيحة.",
   "Devam et": "متابعة",
-  "Çıkış yap": "تسجيل الخروج"
+  "Çıkış yap": "تسجيل الخروج",
+  "KVKK Aydınlatma Metni": "إشعار حماية البيانات (KVKK)",
+  "Açık Rıza Metni": "الموافقة الصريحة",
+  "Devam etmek için tüm onay kutularını işaretleyin.": "ضع علامة على جميع المربعات للمتابعة.",
+  "Doğrulamayı başlatmak için biyometrik veri onay kutusunu işaretleyin.": "ضع علامة على مربع البيانات البيومترية لبدء التحقق.",
+  "Bir sorun oluştu. Lütfen tekrar deneyin.": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+  "Selfie’mden elde edilen biyometrik verinin yalnızca kimlik doğrulaması için işlenmesine açık rıza veriyorum.": "أوافق صراحةً على معالجة البيانات البيومترية من صورتي الذاتية فقط للتحقق من هويتي.",
+  "Selfie’niz yalnızca doğrulama anında işlenir, saklanmaz ve profilinizde gösterilmez.": "تُعالَج صورتك الذاتية لحظة التحقق فقط، ولا تُحفظ، ولا تظهر في ملفك الشخصي.",
+  "18 yaşından büyük olduğumu beyan eder, Kullanım Koşulları’nı ve Gizlilik Politikası’nı kabul ederim.": "أُقرّ بأن عمري 18 عامًا أو أكثر وأوافق على شروط الاستخدام وسياسة الخصوصية.",
+  "Kullanım Koşulları": "شروط الاستخدام",
+  "KVKK Aydınlatma Metni’ni okudum.": "قرأت إشعار حماية البيانات (KVKK).",
+  "Hizmetin sunulması için verilerimin yurt dışındaki hizmet sağlayıcılara (Supabase – AB, Google, Expo) aktarılmasına açık rıza veriyorum.": "أوافق صراحةً على نقل بياناتي إلى مزوّدي خدمات في الخارج (Supabase – الاتحاد الأوروبي، Google، Expo) لتقديم الخدمة."
 }

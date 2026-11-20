@@ -713,5 +713,16 @@
   "Devam etmeden önce birkaç bilgiye ihtiyacımız var.": "Прежде чем продолжить, нам нужно несколько данных.",
   "18 yaşından büyük olduğumu ve verdiğim bilgilerin doğru olduğunu beyan ederim.": "Подтверждаю, что мне исполнилось 18 лет и указанные мной данные верны.",
   "Devam et": "Продолжить",
-  "Çıkış yap": "Выйти"
+  "Çıkış yap": "Выйти",
+  "KVKK Aydınlatma Metni": "Уведомление о персональных данных (KVKK)",
+  "Açık Rıza Metni": "Явное согласие",
+  "Devam etmek için tüm onay kutularını işaretleyin.": "Отметьте все пункты, чтобы продолжить.",
+  "Doğrulamayı başlatmak için biyometrik veri onay kutusunu işaretleyin.": "Отметьте согласие на биометрические данные, чтобы начать проверку.",
+  "Bir sorun oluştu. Lütfen tekrar deneyin.": "Что-то пошло не так. Попробуйте ещё раз.",
+  "Selfie’mden elde edilen biyometrik verinin yalnızca kimlik doğrulaması için işlenmesine açık rıza veriyorum.": "Даю явное согласие на обработку биометрических данных из моего селфи только для подтверждения личности.",
+  "Selfie’niz yalnızca doğrulama anında işlenir, saklanmaz ve profilinizde gösterilmez.": "Селфи обрабатывается только в момент проверки, не сохраняется и не показывается в профиле.",
+  "18 yaşından büyük olduğumu beyan eder, Kullanım Koşulları’nı ve Gizlilik Politikası’nı kabul ederim.": "Подтверждаю, что мне исполнилось 18 лет, и принимаю Условия использования и Политику конфиденциальности.",
+  "Kullanım Koşulları": "Условия использования",
+  "KVKK Aydınlatma Metni’ni okudum.": "Я ознакомился(-ась) с уведомлением о персональных данных (KVKK).",
+  "Hizmetin sunulması için verilerimin yurt dışındaki hizmet sağlayıcılara (Supabase – AB, Google, Expo) aktarılmasına açık rıza veriyorum.": "Даю явное согласие на передачу моих данных зарубежным поставщикам услуг (Supabase – ЕС, Google, Expo) для работы сервиса."
 }

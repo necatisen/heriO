@@ -73,7 +73,7 @@ async function callFunction(c, name, body) {
   if (admin) for (const u of Object.values(users)) u.email = u.email.replace('@example.com', '@birthchat-qa.test');
   for (const [k, c] of [['a', A], ['b', B]]) {
     const u = users[k];
-    const meta = { full_name: u.full_name, username: u.username, birth_date: '1995-05-05', gender: u.gender, country: 'turkey', city: 'İstanbul', height: 175, preferred_language: 'tr' };
+    const meta = { full_name: u.full_name, username: u.username, birth_date: '1995-05-05', gender: u.gender, country: 'turkey', city: 'İstanbul', height: 175, preferred_language: 'tr', consents: { version: 'qa', accepted_at: new Date().toISOString(), app_version_code: 0, types: ['terms_privacy', 'kvkk_notice', 'transfer_abroad'] } };
     await step(`Kayıt (${k.toUpperCase()})`, async () => {
       if (admin) {
         check(await admin.auth.admin.createUser({ email: u.email, password: u.password, email_confirm: true, user_metadata: meta }), 'createUser');
@@ -100,6 +100,22 @@ async function callFunction(c, name, body) {
     const c = check(await A.from('credits').select('balance').eq('user_id', idA).maybeSingle(), 'credits');
     must(c && c.balance > 0, 'kredi yok');
     return `bakiye ${c.balance}`;
+  });
+  await step('Kayıt onayları kaydedildi (trigger)', async () => {
+    const rows = check(await A.from('user_consents').select('consent_type').eq('user_id', idA), 'user_consents');
+    must(rows.length === 3, `${rows.length} onay kaydı`);
+    check(await A.from('user_consents').insert({ user_id: idA, consent_type: 'biometric', version: 'qa' }), 'insert');
+    const del = await A.from('user_consents').delete().eq('user_id', idA).select('id');
+    must(!del.data || del.data.length === 0, 'onay kaydı silinebildi!');
+    return '3 + biyometrik';
+  });
+  await step('Güvenlik: kullanıcı kendine premium/kredi veremez', async () => {
+    await A.from('subscriptions').update({ is_premium: true }).eq('user_id', idA);
+    await A.from('credits').update({ balance: 999999 }).eq('user_id', idA);
+    const sub = check(await A.from('subscriptions').select('is_premium').eq('user_id', idA).maybeSingle(), 'sub');
+    const cr = check(await A.from('credits').select('balance').eq('user_id', idA).maybeSingle(), 'credits');
+    must(!sub?.is_premium, 'premium yazılabildi!');
+    must(cr.balance !== 999999, 'kredi yazılabildi!');
   });
   await step('Sıkıştırılmış profil fotoğrafı yükleme', async () => {
     const img = await sharp(await randomJpeg(2000, 2000, 95)).resize({ width: 1080 }).jpeg({ quality: 70 }).toBuffer();

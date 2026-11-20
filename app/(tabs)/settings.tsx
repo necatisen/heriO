@@ -6,10 +6,11 @@ import { Settings as SettingsIcon, LogOut, Globe, Palette, Trash2, Mail, Check, 
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme, THEMES, THEME_TYPES, type ThemeType , type Theme } from '@/contexts/ThemeContext';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useState, useMemo } from 'react';
 import { getErrorLogs, clearErrorLogs, ErrorLog } from '@/lib/errorLogger';
+import { paymentsEnabledSync } from '@/lib/payments';
 
 import { L } from '@/lib/l10n';
 const THEME_LABELS: Record<ThemeType, { tr: string; en: string; subTr: string; subEn: string }> = {
@@ -280,6 +281,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {paymentsEnabledSync() && (
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
             {L('Mağaza', 'Store')}
@@ -295,6 +297,7 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
         </View>
+        )}
 
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
@@ -317,6 +320,26 @@ export default function SettingsScreen() {
               <Shield size={24} color={theme.primary} />
               <Text style={[styles.settingText, { color: theme.text }]}>
                 {L('Gizlilik Politikası', 'Privacy Policy')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: theme.border }]}
+            onPress={() => router.push('/legal/kvkk' as Href)}>
+            <View style={styles.settingLeft}>
+              <FileCheck size={24} color={theme.primary} />
+              <Text style={[styles.settingText, { color: theme.text }]}>
+                {L('KVKK Aydınlatma Metni', 'Personal Data Notice')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: theme.border }]}
+            onPress={() => router.push('/legal/consent' as Href)}>
+            <View style={styles.settingLeft}>
+              <Shield size={24} color={theme.primary} />
+              <Text style={[styles.settingText, { color: theme.text }]}>
+                {L('Açık Rıza Metni', 'Explicit Consent')}
               </Text>
             </View>
           </TouchableOpacity>

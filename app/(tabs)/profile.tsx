@@ -20,6 +20,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { getEffectiveSubscription } from '@/lib/subscription';
+import { paymentsEnabledSync } from '@/lib/payments';
 import { useRouter } from 'expo-router';
 import { PREMIUM_PLANS } from '@/lib/storeProducts';
 import * as ImagePicker from 'expo-image-picker';
@@ -560,6 +561,7 @@ export default function ProfileScreen() {
               </View>
             </View>
 
+            {paymentsEnabledSync() && (
             <View style={styles.statsContainer}>
               <TouchableOpacity style={styles.statItem} onPress={() => router.push('/store/credits')}>
                 <Coins size={24} color="#FFD700" />
@@ -593,6 +595,7 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               )}
             </View>
+            )}
           </View>
         </LinearGradient>
 
@@ -603,7 +606,7 @@ export default function ProfileScreen() {
         />
 
         <View style={[styles.content, { backgroundColor: theme.background }]}>
-            {isPremium && subscriptionEnd && planType && (() => {
+            {paymentsEnabledSync() && isPremium && subscriptionEnd && planType && (() => {
               const planDef = PREMIUM_PLANS.find((p) => p.id === planType);
               const planLabel = planDef ? L(planDef.labelTr, planDef.labelEn) : planType;
               const endDate = new Date(subscriptionEnd);
@@ -621,6 +624,7 @@ export default function ProfileScreen() {
                 </View>
               );
             })()}
+            {paymentsEnabledSync() && (
             <View style={[styles.storeCard, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 {L('Mağaza', 'Store')}
@@ -646,6 +650,7 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+            )}
 
             <View style={[styles.infoCard, { backgroundColor: theme.cardBackground }]}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>

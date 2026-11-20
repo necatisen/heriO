@@ -13,7 +13,7 @@ const code = fs.readFileSync(path.join(root, 'lib/legal.ts'), 'utf8');
 const js = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const mod = { exports: {} };
 new Function('module', 'exports', 'require', js)(mod, mod.exports, () => ({}));
-const { PRIVACY, TERMS, CHILD_SAFETY, SUPPORT_EMAIL } = mod.exports;
+const { PRIVACY, TERMS, CHILD_SAFETY, KVKK, EXPLICIT_CONSENT, SUPPORT_EMAIL } = mod.exports;
 
 const ORDER = [
   ['en', 'English'],
@@ -34,9 +34,9 @@ function toMarkdown(text) {
   ].join('\n');
 }
 
-function page(title, dict) {
-  const nav = ORDER.map(([l, n]) => `[${n}](#${l})`).join(' · ');
-  const body = ORDER.map(([l]) => {
+function page(title, dict, order = ORDER) {
+  const nav = order.map(([l, n]) => `[${n}](#${l})`).join(' · ');
+  const body = order.map(([l]) => {
     const md = toMarkdown(dict[l]);
     return l === 'ar' ? `<a id="${l}"></a>\n<div dir="rtl" markdown="1">\n\n${md}\n\n</div>` : `<a id="${l}"></a>\n\n${md}`;
   }).join('\n\n---\n\n');
@@ -46,6 +46,10 @@ function page(title, dict) {
 fs.writeFileSync(path.join(site, 'privacy-policy.md'), page('Birthchat – Privacy Policy', PRIVACY));
 fs.writeFileSync(path.join(site, 'terms.md'), page('Birthchat – Terms of Use', TERMS));
 fs.writeFileSync(path.join(site, 'child-safety.md'), page('Birthchat – Child Safety Standards', CHILD_SAFETY));
+// KVKK texts exist in Turkish and English only.
+const TR_EN = ORDER.filter(([l]) => l === 'tr' || l === 'en');
+fs.writeFileSync(path.join(site, 'kvkk.md'), page('Birthchat – KVKK Aydınlatma Metni / Personal Data Notice', KVKK, TR_EN));
+fs.writeFileSync(path.join(site, 'explicit-consent.md'), page('Birthchat – Açık Rıza Metni / Explicit Consent', EXPLICIT_CONSENT, TR_EN));
 
 const del = `---
 title: Birthchat – Delete your account
@@ -98,6 +102,8 @@ Meet face-verified real people, see your match score and chat safely.
 - [Terms of Use / Kullanım Koşulları](./terms)
 - [Delete your account / Hesabı silme](./delete-account)
 - [Child Safety Standards / Çocuk Güvenliği Standartları](./child-safety)
+- [KVKK Aydınlatma Metni / Personal Data Notice](./kvkk)
+- [Açık Rıza Metni / Explicit Consent](./explicit-consent)
 
 Contact / İletişim: **${SUPPORT_EMAIL}**
 `;
@@ -125,5 +131,36 @@ fs.writeFileSync(
 fs.writeFileSync(
   path.join(site, '_config.yml'),
   ['title: Birthchat', 'description: Meet face-verified real people and chat safely.', 'theme: jekyll-theme-cayman', ''].join('\n')
+);
+// Own layout (Cayman look) without the theme's Google Fonts request: no visitor data goes to Google.
+fs.mkdirSync(path.join(site, '_layouts'), { recursive: true });
+fs.writeFileSync(
+  path.join(site, '_layouts', 'default.html'),
+  `<!DOCTYPE html>
+<html lang="{{ site.lang | default: 'en' }}">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page.title | default: site.title }}</title>
+    <meta name="description" content="{{ site.description }}">
+    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
+    <style>
+      body, h1, h2, h3, h4, .btn { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <header class="page-header" role="banner">
+      <h1 class="project-name">{{ site.title }}</h1>
+      <h2 class="project-tagline">{{ site.description }}</h2>
+    </header>
+    <main id="content" class="main-content" role="main">
+      {{ content }}
+      <footer class="site-footer">
+        <span class="site-footer-credits">${SUPPORT_EMAIL}</span>
+      </footer>
+    </main>
+  </body>
+</html>
+`
 );
 console.log('wrote legal pages to', site);

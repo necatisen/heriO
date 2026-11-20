@@ -24,7 +24,7 @@ import {
   Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Svg, { Defs, Mask, Rect, Ellipse } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
@@ -46,10 +46,12 @@ import {
   VolumeX,
   X,
   RotateCcw,
+  Check,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { submitVerification } from '@/lib/verification';
+import { recordConsents } from '@/lib/consents';
 
 import { L, localeTag } from '@/lib/l10n';
 const BLUE = '#1D9BF0';
@@ -192,6 +194,8 @@ export default function VerifyFaceScreen() {
   const [resultMessage, setResultMessage] = useState('');
   const [voiceOn, setVoiceOn] = useState(true);
   const [cameraReady, setCameraReady] = useState(false);
+  const [biometricConsent, setBiometricConsent] = useState(false);
+  const consentSavedRef = useRef(false);
 
   const cameraRef = useRef<CameraView>(null);
   const phaseRef = useRef<Phase>('intro');
@@ -265,6 +269,23 @@ export default function VerifyFaceScreen() {
     if (Platform.OS === 'web') {
       Alert.alert('', L('Yüz doğrulama yalnızca mobil uygulamada yapılabilir.', 'Face verification is only available in the mobile app.'));
       return;
+    }
+    if (!biometricConsent) {
+      Alert.alert(
+        L('Onay gerekli', 'Confirmation required'),
+        L('Doğrulamayı başlatmak için biyometrik veri onay kutusunu işaretleyin.', 'Tick the biometric data box to start verification.')
+      );
+      return;
+    }
+    if (!consentSavedRef.current) {
+      try {
+        await recordConsents(user.id, ['biometric']);
+        consentSavedRef.current = true;
+      } catch (e) {
+        console.warn('biometric consent not saved', e);
+        Alert.alert(L('Hata', 'Error'), L('Bir sorun oluştu. Lütfen tekrar deneyin.', 'Something went wrong. Please try again.'));
+        return;
+      }
     }
     if (!permission?.granted) {
       const { granted } = await requestPermission();
@@ -554,12 +575,23 @@ export default function VerifyFaceScreen() {
           </View>
         </View>
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.primaryBtn} onPress={start} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.consentRow} onPress={() => setBiometricConsent((v) => !v)} activeOpacity={0.7}>
+            <View style={[styles.consentBox, biometricConsent && styles.consentBoxOn]}>
+              {biometricConsent && <Check size={16} color="#FFF" />}
+            </View>
+            <Text style={styles.consentText}>
+              {L('Selfie’mden elde edilen biyometrik verinin yalnızca kimlik doğrulaması için işlenmesine açık rıza veriyorum.', 'I give my explicit consent to biometric data from my selfie being processed only to verify my identity.')}{' '}
+              <Text style={styles.consentLink} onPress={() => router.push('/legal/consent' as Href)}>
+                {L('Açık Rıza Metni', 'Explicit Consent')} ›
+              </Text>
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.primaryBtn, !biometricConsent && { opacity: 0.5 }]} onPress={start} activeOpacity={0.85}>
             <Camera size={22} color="#FFF" />
             <Text style={styles.primaryBtnText}>{L('Başla', 'Start')}</Text>
           </TouchableOpacity>
           <Text style={styles.privacy}>
-            {L('Görüntüleriniz yalnızca doğrulama için kullanılır ve profilinizde gösterilmez.', 'Images are only used for verification and never shown on your profile.')}
+            {L('Selfie’niz yalnızca doğrulama anında işlenir, saklanmaz ve profilinizde gösterilmez.', 'Your selfie is processed only at the moment of verification, is not stored and is never shown on your profile.')}
           </Text>
         </View>
       </SafeAreaView>
@@ -788,6 +820,21 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: { fontSize: 16, fontWeight: '600', color: '#334155' },
   privacy: { fontSize: 12, color: '#64748B', textAlign: 'center' },
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 },
+  consentBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: BLUE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    marginTop: 1,
+  },
+  consentBoxOn: { backgroundColor: BLUE },
+  consentText: { flex: 1, fontSize: 13, lineHeight: 19, color: '#334155' },
+  consentLink: { color: BLUE, fontWeight: '600' },
   ovalRing: {
     position: 'absolute',
     left: OVAL_CX - OVAL_W / 2,

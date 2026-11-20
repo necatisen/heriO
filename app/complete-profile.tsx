@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Calendar, Globe, MapPin, Check } from 'lucide-react-native';
+import { User, Calendar, Globe, MapPin } from 'lucide-react-native';
 import { useTheme, type Theme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -23,6 +23,8 @@ import { countries, generateAgeOptions, getCitiesForCountry } from '@/lib/consta
 import ComboBox from '@/components/ComboBox';
 import { BrandLogo } from '@/components/BrandLogo';
 import { L } from '@/lib/l10n';
+import { ConsentChecklist, signupConsentItems, allChecked } from '@/components/ConsentChecklist';
+import { recordConsents, SIGNUP_CONSENTS, type ConsentType } from '@/lib/consents';
 
 /**
  * Required for accounts created with Google: they skipped the sign-up form, so age (18+),
@@ -41,7 +43,8 @@ export default function CompleteProfileScreen() {
   const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
   const [country, setCountry] = useState('');
   const [city, setCity] = useState('');
-  const [adult, setAdult] = useState(false);
+  const [consents, setConsents] = useState<Partial<Record<ConsentType, boolean>>>({});
+  const consentItems = useMemo(() => signupConsentItems(), [language]);
   const [saving, setSaving] = useState(false);
 
   // Hardware back must not skip this step.
@@ -65,7 +68,7 @@ export default function CompleteProfileScreen() {
     if (n < 18) return Alert.alert(L('Hata', 'Error'), L('18 yaşından küçüksünüz!', 'You must be 18 or older!'));
     if (!gender) return Alert.alert(L('Eksik bilgi', 'Missing information'), L('Lütfen cinsiyetinizi seçin.', 'Please select your gender.'));
     if (!country) return Alert.alert(L('Eksik bilgi', 'Missing information'), L('Lütfen ülkenizi seçin.', 'Please select your country.'));
-    if (!adult) return Alert.alert(L('Onay gerekli', 'Confirmation required'), L('Devam etmek için 18 yaşından büyük olduğunuzu onaylayın.', 'Confirm that you are 18 or older to continue.'));
+    if (!allChecked(consentItems, consents)) return Alert.alert(L('Onay gerekli', 'Confirmation required'), L('Devam etmek için tüm onay kutularını işaretleyin.', 'Tick all the boxes to continue.'));
 
     const birthDate = `${new Date().getFullYear() - n}-01-01`;
     setSaving(true);
@@ -79,6 +82,7 @@ export default function CompleteProfileScreen() {
         data: { profile_completed: true, birth_date: birthDate, adult_confirmed_at: new Date().toISOString() },
       });
       if (metaErr) throw metaErr;
+      await recordConsents(user.id, SIGNUP_CONSENTS);
       router.replace('/onboarding');
     } catch (e: any) {
       Alert.alert(L('Hata', 'Error'), L('Bilgiler kaydedilemedi. Lütfen tekrar deneyin.', 'Could not save your details. Please try again.'));
@@ -168,12 +172,11 @@ export default function CompleteProfileScreen() {
               </View>
             )}
 
-            <TouchableOpacity style={styles.checkRow} onPress={() => setAdult(!adult)} activeOpacity={0.7}>
-              <View style={[styles.checkbox, adult && styles.checkboxOn]}>{adult && <Check size={16} color="#FFFFFF" />}</View>
-              <Text style={styles.checkText}>
-                {L('18 yaşından büyük olduğumu ve verdiğim bilgilerin doğru olduğunu beyan ederim.', 'I confirm that I am 18 or older and that the information I provide is accurate.')}
-              </Text>
-            </TouchableOpacity>
+            <ConsentChecklist
+              items={consentItems}
+              checked={consents}
+              onToggle={(k) => setConsents((c) => ({ ...c, [k]: !c[k] }))}
+            />
 
             <TouchableOpacity style={[styles.button, saving && styles.buttonDisabled]} onPress={save} disabled={saving}>
               {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>{L('Devam et', 'Continue')}</Text>}

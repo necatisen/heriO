@@ -713,5 +713,16 @@
   "Devam etmeden önce birkaç bilgiye ihtiyacımız var.": "Necesitamos algunos datos antes de continuar.",
   "18 yaşından büyük olduğumu ve verdiğim bilgilerin doğru olduğunu beyan ederim.": "Confirmo que tengo 18 años o más y que la información que proporciono es correcta.",
   "Devam et": "Continuar",
-  "Çıkış yap": "Cerrar sesión"
+  "Çıkış yap": "Cerrar sesión",
+  "KVKK Aydınlatma Metni": "Aviso de protección de datos (KVKK)",
+  "Açık Rıza Metni": "Consentimiento explícito",
+  "Devam etmek için tüm onay kutularını işaretleyin.": "Marca todas las casillas para continuar.",
+  "Doğrulamayı başlatmak için biyometrik veri onay kutusunu işaretleyin.": "Marca la casilla de datos biométricos para iniciar la verificación.",
+  "Bir sorun oluştu. Lütfen tekrar deneyin.": "Algo salió mal. Inténtalo de nuevo.",
+  "Selfie’mden elde edilen biyometrik verinin yalnızca kimlik doğrulaması için işlenmesine açık rıza veriyorum.": "Doy mi consentimiento explícito para que los datos biométricos de mi selfie se procesen solo para verificar mi identidad.",
+  "Selfie’niz yalnızca doğrulama anında işlenir, saklanmaz ve profilinizde gösterilmez.": "Tu selfie solo se procesa en el momento de la verificación, no se guarda y nunca se muestra en tu perfil.",
+  "18 yaşından büyük olduğumu beyan eder, Kullanım Koşulları’nı ve Gizlilik Politikası’nı kabul ederim.": "Confirmo que tengo 18 años o más y acepto los Términos de uso y la Política de privacidad.",
+  "Kullanım Koşulları": "Términos de uso",
+  "KVKK Aydınlatma Metni’ni okudum.": "He leído el aviso de protección de datos (KVKK).",
+  "Hizmetin sunulması için verilerimin yurt dışındaki hizmet sağlayıcılara (Supabase – AB, Google, Expo) aktarılmasına açık rıza veriyorum.": "Doy mi consentimiento explícito para que mis datos se transfieran a proveedores en el extranjero (Supabase – UE, Google, Expo) para prestar el servicio."
 }

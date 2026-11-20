@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { loadPaymentsEnabled } from '@/lib/payments';
 
 export type PlanType = 'monthly' | '3month' | 'yearly' | null;
 
@@ -43,21 +44,6 @@ export async function getEffectiveSubscription(userId: string | undefined): Prom
 
   const end = data.subscription_end ? new Date(data.subscription_end) : null;
   const now = new Date();
-  const expired = data.is_premium && end && end <= now;
-
-  if (expired) {
-    await supabase
-      .from('subscriptions')
-      .update({
-        is_premium: false,
-        subscription_start: null,
-        subscription_end: null,
-        ...(data.plan_type != null && { plan_type: null }),
-      })
-      .eq('user_id', userId);
-    return { isPremium: false, subscriptionEnd: null, planType: null };
-  }
-
   const isPremium = !!(data.is_premium && (!end || end > now));
   return {
     isPremium,

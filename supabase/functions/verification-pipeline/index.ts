@@ -223,17 +223,22 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const attemptId = crypto.randomUUID();
-    const storagePath = `${userId}/${attemptId}.jpg`;
-    await supabaseAdmin.storage
-      .from('verification-selfies')
-      .upload(storagePath, selfieBinary, { contentType: 'image/jpeg', upsert: false });
+    // Data minimisation: the selfie (biometric data) is checked in memory and never stored.
+    // Remove any selfie kept by older app versions for this user.
+    try {
+      const { data: old } = await supabaseAdmin.storage.from('verification-selfies').list(userId, { limit: 100 });
+      if (old && old.length > 0) {
+        await supabaseAdmin.storage.from('verification-selfies').remove(old.map((o) => `${userId}/${o.name}`));
+      }
+    } catch (e) {
+      console.warn('old selfie cleanup failed', e);
+    }
 
     const { error: attemptError } = await supabaseAdmin
       .from('verification_attempts')
       .insert({
         user_id: userId,
-        selfie_storage_path: storagePath,
+        selfie_storage_path: null,
         profile_photo_url: profile.profile_picture,
         stage_1_passed: stage1Passed,
         stage_2_similarity: stage2Similarity,

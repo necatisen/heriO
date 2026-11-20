@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { unregisterPushToken } from '@/lib/pushNotifications';
 import { getGoogleIdToken, googleSignOut } from '@/lib/googleSignIn';
+import { signupConsentMetadata } from '@/lib/consents';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { readCache, writeCache, clearCache } from '@/lib/cache';
@@ -258,6 +259,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           religion: userData.religion ?? '',
           relationship_status: userData.relationship_status ?? '',
           relationship_goal: userData.relationship_goal ?? '',
+          // The register form only submits after every sign-up consent box is ticked;
+          // a DB trigger copies this into user_consents (no session yet with email confirmation).
+          consents: signupConsentMetadata(),
         },
       },
     });

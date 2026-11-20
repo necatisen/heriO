@@ -6,7 +6,7 @@
 import type { Language } from '@/lib/i18n';
 
 export const SUPPORT_EMAIL = 'birthchathelp@gmail.com';
-const UPDATED = '16.11.2026';
+const UPDATED = '20.11.2026';
 
 export const PRIVACY: Record<Language, string> = {
   tr: `Birthchat Gizlilik Politikası
@@ -20,7 +20,7 @@ Bu politika, Birthchat mobil uygulamasını kullandığınızda kişisel veriler
 • Profil: ad, kullanıcı adı, doğum tarihi, cinsiyet, boy, kilo, ülke/şehir, eğitim, meslek, alışkanlıklar, din ve ilişki hedefi gibi sizin girdiğiniz bilgiler, biyografi ve fotoğraflar.
 • Konum: izin verirseniz, yakındaki kişileri göstermek için yaklaşık konumunuz.
 • İletişim: mesajlar, mesajlarda paylaştığınız fotoğraflar, beğeniler, eşleşmeler, profil ziyaretleri, engelleme ve şikâyet kayıtları.
-• Yüz doğrulama: selfie ve canlılık adımlarında çekilen kareler. Yüz algılama telefonunuzda (Google ML Kit) yapılır; görüntüler doğrulama incelemesi için gizli bir alanda saklanır ve profilinizde gösterilmez.
+• Yüz doğrulama (açık rızanızla): selfie ve canlılık adımlarında çekilen kareler. Yüz algılama telefonunuzda (Google ML Kit) yapılır; selfie sunucuda yalnızca doğrulama anında bellekte işlenir ve saklanmaz. Saklanan tek bilgi doğrulama sonucudur (rozet).
 • Cihaz: bildirim gönderebilmek için bildirim anahtarı (push token), dil tercihi ve uygulama hata kayıtları.
 
 3. Verileri neden kullanıyoruz
@@ -42,7 +42,7 @@ Verileriniz hesabınız açık olduğu sürece saklanır. Hesabınızı istediğ
 Verilerinize erişme, düzeltme, silme, işlemeye itiraz etme, rızanızı geri alma ve veri taşınabilirliği haklarınız vardır. Talepleriniz için ${SUPPORT_EMAIL}.
 
 9. Güvenlik
-Bağlantılar şifrelidir, veritabanı erişimi satır düzeyinde güvenlik kurallarıyla sınırlandırılmıştır.
+Bağlantılar şifrelidir; mesaj metinleri veritabanında AES-256 ile şifreli saklanır; veritabanı erişimi satır düzeyinde güvenlik kurallarıyla sınırlandırılmıştır. Olası bir veri ihlalinde Kişisel Verileri Koruma Kurulu’na ve etkilenen kullanıcılara yasal süre içinde bildirim yapılır.
 
 10. Çocuklar
 Birthchat 18 yaşından küçükler için değildir. Böyle bir hesap fark edildiğinde silinir.
@@ -61,7 +61,7 @@ This policy explains how your personal data is processed when you use the Birthc
 • Profile: information you enter such as name, username, date of birth, gender, height, weight, country/city, education, profession, habits, religion and relationship goal, plus your bio and photos.
 • Location: if you allow it, your approximate location to show people nearby.
 • Communication: messages, photos you share in chats, likes, matches, profile visits, blocks and reports.
-• Face verification: your selfie and the frames captured during the liveness steps. Face detection runs on your phone (Google ML Kit); the images are stored in a private area for verification review and are never shown on your profile.
+• Face verification (with your explicit consent): your selfie and the frames captured during the liveness steps. Face detection runs on your phone (Google ML Kit); on our server the selfie is processed in memory only at the moment of verification and is not stored. Only the result (the badge) is kept.
 • Device: push notification token, language preference and app error logs.
 
 3. How we use data
@@ -83,7 +83,7 @@ We keep your data while your account is open. You can delete your account at any
 You have the right to access, correct and delete your data, to object to processing, to withdraw consent and to data portability. Contact ${SUPPORT_EMAIL}.
 
 9. Security
-Connections are encrypted and database access is restricted by row-level security rules.
+Connections are encrypted, message texts are stored encrypted (AES-256) and database access is restricted by row-level security rules. In the event of a data breach we notify the competent authority and affected users within the legal time limits.
 
 10. Children
 Birthchat is not intended for anyone under 18. Such accounts are deleted when identified.
@@ -102,7 +102,7 @@ Diese Erklärung beschreibt, wie deine personenbezogenen Daten bei der Nutzung d
 • Profil: von dir eingegebene Angaben wie Name, Benutzername, Geburtsdatum, Geschlecht, Größe, Gewicht, Land/Stadt, Bildung, Beruf, Gewohnheiten, Religion und Beziehungsziel sowie Bio und Fotos.
 • Standort: mit deiner Erlaubnis dein ungefährer Standort, um Personen in der Nähe anzuzeigen.
 • Kommunikation: Nachrichten, in Chats geteilte Fotos, Likes, Matches, Profilbesuche, Blockierungen und Meldungen.
-• Gesichtsverifizierung: dein Selfie und die Bilder der Lebendigkeitsschritte. Die Gesichtserkennung läuft auf deinem Handy (Google ML Kit); die Bilder werden zur Prüfung in einem privaten Bereich gespeichert und nie im Profil gezeigt.
+• Gesichtsverifizierung (mit deiner ausdrücklichen Einwilligung): dein Selfie und die Bilder der Lebendigkeitsschritte. Die Gesichtserkennung läuft auf deinem Handy (Google ML Kit); auf unserem Server wird das Selfie nur im Moment der Prüfung im Arbeitsspeicher verarbeitet und nicht gespeichert. Gespeichert wird nur das Ergebnis (das Abzeichen).
 • Gerät: Push-Token, Spracheinstellung und Fehlerprotokolle der App.
 
 3. Zwecke
@@ -124,7 +124,7 @@ Wir speichern deine Daten, solange dein Konto besteht. Du kannst dein Konto jede
 Auskunft, Berichtigung, Löschung, Widerspruch, Widerruf der Einwilligung und Datenübertragbarkeit. Kontakt: ${SUPPORT_EMAIL}. Du kannst dich außerdem bei einer Datenschutzaufsichtsbehörde beschweren.
 
 9. Sicherheit
-Verbindungen sind verschlüsselt, der Datenbankzugriff ist durch Sicherheitsregeln auf Zeilenebene beschränkt.
+Verbindungen sind verschlüsselt, Nachrichtentexte werden verschlüsselt (AES-256) gespeichert und der Datenbankzugriff ist durch Sicherheitsregeln auf Zeilenebene beschränkt. Bei einer Datenschutzverletzung benachrichtigen wir die zuständige Behörde und betroffene Nutzer fristgerecht.
 
 10. Minderjährige
 Birthchat richtet sich nicht an Personen unter 18. Solche Konten werden gelöscht.
@@ -143,7 +143,7 @@ Cette politique explique comment vos données personnelles sont traitées lorsqu
 • Profil : informations que vous saisissez (nom, nom d'utilisateur, date de naissance, genre, taille, poids, pays/ville, études, profession, habitudes, religion, objectif de relation), votre bio et vos photos.
 • Localisation : si vous l'autorisez, votre position approximative pour afficher les personnes proches.
 • Communications : messages, photos partagées, likes, matchs, visites de profil, blocages et signalements.
-• Vérification faciale : votre selfie et les images des étapes de détection de présence. La détection du visage se fait sur votre téléphone (Google ML Kit) ; les images sont conservées dans un espace privé pour l'examen et ne sont jamais affichées sur votre profil.
+• Vérification faciale (avec votre consentement explicite) : votre selfie et les images des étapes de détection de présence. La détection du visage se fait sur votre téléphone (Google ML Kit) ; sur notre serveur, le selfie est traité uniquement en mémoire au moment de la vérification et n'est pas conservé. Seul le résultat (le badge) est conservé.
 • Appareil : jeton de notification, langue et journaux d'erreurs de l'application.
 
 3. Finalités
@@ -165,7 +165,7 @@ Nous conservons vos données tant que votre compte existe. Vous pouvez supprimer
 Accès, rectification, effacement, opposition, retrait du consentement et portabilité. Contact : ${SUPPORT_EMAIL}. Vous pouvez aussi saisir l'autorité de protection des données.
 
 9. Sécurité
-Les connexions sont chiffrées et l'accès à la base de données est limité par des règles de sécurité au niveau des lignes.
+Les connexions sont chiffrées, les textes des messages sont stockés chiffrés (AES-256) et l'accès à la base de données est limité par des règles de sécurité au niveau des lignes. En cas de violation de données, nous informons l'autorité compétente et les utilisateurs concernés dans les délais légaux.
 
 10. Mineurs
 Birthchat n'est pas destinée aux moins de 18 ans. Ces comptes sont supprimés.
@@ -184,7 +184,7 @@ Esta política explica cómo se tratan tus datos personales al usar la app Birth
 • Perfil: datos que introduces como nombre, usuario, fecha de nacimiento, género, altura, peso, país/ciudad, estudios, profesión, hábitos, religión y objetivo de relación, además de tu biografía y fotos.
 • Ubicación: si lo permites, tu ubicación aproximada para mostrar personas cercanas.
 • Comunicaciones: mensajes, fotos compartidas, me gusta, matches, visitas al perfil, bloqueos y denuncias.
-• Verificación facial: tu selfie y las imágenes de los pasos de prueba de vida. La detección facial se hace en tu móvil (Google ML Kit); las imágenes se guardan en un área privada para revisión y nunca se muestran en tu perfil.
+• Verificación facial (con tu consentimiento explícito): tu selfie y las imágenes de los pasos de prueba de vida. La detección facial se hace en tu móvil (Google ML Kit); en nuestro servidor el selfie solo se procesa en memoria en el momento de la verificación y no se guarda. Solo se conserva el resultado (la insignia).
 • Dispositivo: token de notificaciones, idioma y registros de errores de la app.
 
 3. Para qué los usamos
@@ -206,7 +206,7 @@ Conservamos tus datos mientras tu cuenta exista. Puedes eliminarla cuando quiera
 Acceso, rectificación, supresión, oposición, retirada del consentimiento y portabilidad. Contacto: ${SUPPORT_EMAIL}. También puedes reclamar ante la autoridad de protección de datos.
 
 9. Seguridad
-Las conexiones están cifradas y el acceso a la base de datos está limitado por reglas de seguridad a nivel de fila.
+Las conexiones están cifradas, los textos de los mensajes se guardan cifrados (AES-256) y el acceso a la base de datos está limitado por reglas de seguridad a nivel de fila. Ante una brecha de datos, informamos a la autoridad competente y a los usuarios afectados en los plazos legales.
 
 10. Menores
 Birthchat no está dirigida a menores de 18 años. Esas cuentas se eliminan.
@@ -225,7 +225,7 @@ Podemos actualizar esta política y anunciaremos los cambios importantes en la a
 • Профиль: введённые вами сведения — имя, имя пользователя, дата рождения, пол, рост, вес, страна/город, образование, профессия, привычки, религия и цель знакомства, а также описание и фотографии.
 • Местоположение: с вашего разрешения — приблизительное местоположение, чтобы показывать людей рядом.
 • Общение: сообщения, фото в чатах, лайки, совпадения, просмотры профиля, блокировки и жалобы.
-• Проверка лица: селфи и кадры шагов проверки живости. Распознавание лица выполняется на телефоне (Google ML Kit); изображения хранятся в закрытом хранилище для проверки и никогда не показываются в профиле.
+• Проверка лица (с вашего явного согласия): селфи и кадры шагов проверки живости. Распознавание лица выполняется на телефоне (Google ML Kit); на сервере селфи обрабатывается только в памяти в момент проверки и не сохраняется. Сохраняется только результат (значок).
 • Устройство: токен push-уведомлений, язык и журналы ошибок приложения.
 
 3. Цели обработки
@@ -247,7 +247,7 @@ Podemos actualizar esta política y anunciaremos los cambios importantes en la a
 Доступ, исправление, удаление, возражение против обработки, отзыв согласия и переносимость данных. Контакт: ${SUPPORT_EMAIL}.
 
 9. Безопасность
-Соединения шифруются, доступ к базе данных ограничен правилами безопасности на уровне строк.
+Соединения шифруются, тексты сообщений хранятся в зашифрованном виде (AES-256), доступ к базе данных ограничен правилами безопасности на уровне строк. При утечке данных мы уведомляем компетентный орган и затронутых пользователей в установленные законом сроки.
 
 10. Несовершеннолетние
 Birthchat не предназначен для лиц младше 18 лет. Такие аккаунты удаляются.
@@ -266,7 +266,7 @@ Birthchat не предназначен для лиц младше 18 лет. Т
 • الملف الشخصي: ما تدخله من اسم واسم مستخدم وتاريخ ميلاد وجنس وطول ووزن ودولة/مدينة وتعليم ومهنة وعادات ودين وهدف العلاقة، إضافة إلى النبذة والصور.
 • الموقع: بإذنك، موقعك التقريبي لعرض الأشخاص القريبين.
 • التواصل: الرسائل والصور المرسلة في المحادثات والإعجابات والتطابقات وزيارات الملف والحظر والبلاغات.
-• توثيق الوجه: صورتك الذاتية واللقطات أثناء خطوات اختبار الحيوية. يتم اكتشاف الوجه على هاتفك (Google ML Kit)، وتُحفظ الصور في مساحة خاصة للمراجعة ولا تظهر أبدًا في ملفك.
+• توثيق الوجه (بموافقتك الصريحة): صورتك الذاتية واللقطات أثناء خطوات اختبار الحيوية. يتم اكتشاف الوجه على هاتفك (Google ML Kit)، وعلى خادمنا تُعالَج الصورة في الذاكرة فقط لحظة التحقق ولا تُحفظ. يُحفظ فقط الناتج (الشارة).
 • الجهاز: رمز الإشعارات واللغة وسجلات أخطاء التطبيق.
 
 3. أغراض الاستخدام
@@ -288,7 +288,7 @@ Birthchat не предназначен для лиц младше 18 лет. Т
 الوصول والتصحيح والحذف والاعتراض وسحب الموافقة ونقل البيانات. للتواصل: ${SUPPORT_EMAIL}.
 
 9. الأمان
-الاتصالات مشفّرة، والوصول إلى قاعدة البيانات مقيّد بقواعد أمان على مستوى الصفوف.
+الاتصالات مشفّرة، ونصوص الرسائل مخزّنة بشكل مشفّر (AES-256)، والوصول إلى قاعدة البيانات مقيّد بقواعد أمان على مستوى الصفوف. في حال حدوث خرق للبيانات نُبلغ الجهة المختصة والمستخدمين المتأثرين ضمن المهل القانونية.
 
 10. القاصرون
 التطبيق غير موجّه لمن هم دون 18 عامًا، وتُحذف هذه الحسابات عند اكتشافها.
@@ -748,4 +748,135 @@ Birthchat предназначен только для лиц от 18 лет. П
 
 7. التواصل
 للاستفسار عن ممارساتنا في سلامة الأطفال: ${SUPPORT_EMAIL}`,
+};
+
+/**
+ * Version of the consent texts below. Stored with every consent record (user_consents.version);
+ * bump it when KVKK / explicit-consent / terms texts change materially.
+ */
+export const LEGAL_VERSION = '2026-11-20';
+/** Data controller (KVKK "veri sorumlusu"). Update when a company is founded. */
+export const DATA_CONTROLLER = 'Necati Şen';
+
+const KVKK_TR = `Birthchat KVKK Aydınlatma Metni
+Son güncelleme: 20.11.2026
+
+Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu’nun ("KVKK") 10. maddesi uyarınca, Birthchat uygulamasını kullanan kişileri bilgilendirmek amacıyla hazırlanmıştır.
+
+1. Veri sorumlusu
+${DATA_CONTROLLER} ("Birthchat"). İletişim: ${SUPPORT_EMAIL}
+
+2. İşlenen kişisel veriler
+• Kimlik ve iletişim: ad soyad, kullanıcı adı, e-posta adresi.
+• Profil: yaş/doğum yılı, cinsiyet, ülke/şehir, boy, kilo, eğitim, meslek, alışkanlıklar, ilişki hedefi, biyografi, fotoğraflar.
+• Özel nitelikli veriler (yalnızca açık rızanızla): din bilgisi (isteğe bağlı alan) ve yüz doğrulamasında işlenen biyometrik veri (selfie). Selfie saklanmaz; yalnızca doğrulama sonucu tutulur.
+• İletişim içerikleri: mesajlar (şifreli saklanır), sohbette paylaşılan fotoğraflar, beğeniler, eşleşmeler, ziyaretler, engelleme ve şikâyetler.
+• İşlem güvenliği: oturum kayıtları, bildirim anahtarı, uygulama sürümü, hata kayıtları, onay kayıtları.
+• Konum (izin verirseniz): yakındaki kişileri göstermek için yaklaşık konum.
+
+3. İşleme amaçları
+Üyelik oluşturma ve yönetme; kullanıcıları eşleştirme ve mesajlaşmayı sağlama; sahte profil, dolandırıcılık ve kötüye kullanımı önleme; 18 yaş sınırını uygulama; şikâyetleri inceleme ve içerik denetimi; bildirim gönderme; bilgi güvenliğini sağlama; yasal yükümlülükleri yerine getirme ve yetkili makamların taleplerini karşılama.
+
+4. Hukuki sebepler (KVKK m. 5 ve 6)
+• Sözleşmenin kurulması ve ifası (üyelik ve hizmetin sunulması),
+• Hukuki yükümlülüğün yerine getirilmesi,
+• Bir hakkın tesisi, kullanılması veya korunması,
+• Temel hak ve özgürlüklerinize zarar vermemek kaydıyla meşru menfaat (güvenlik, kötüye kullanımın önlenmesi),
+• Açık rızanız: özel nitelikli veriler (din, biyometrik yüz doğrulaması), konum ve yurt dışına aktarım.
+
+5. Aktarım
+Verileriniz hizmetin sunulması için şu hizmet sağlayıcılarla paylaşılır: Supabase (veritabanı ve dosya barındırma, sunucular Almanya/Frankfurt – AB), Google (Google ile giriş, Firebase Cloud Messaging bildirimleri), Expo (bildirim iletimi, ABD). Bu aktarımlar KVKK m. 9 kapsamında açık rızanıza dayanır. Verileriniz yasal zorunluluk halinde yetkili kamu kurum ve kuruluşlarıyla paylaşılabilir. Verileriniz reklam amacıyla satılmaz veya paylaşılmaz.
+
+6. Toplama yöntemi
+Veriler, uygulamaya girdiğiniz bilgiler, uygulama kullanımınız ve Google ile giriş yaptığınızda Google’dan alınan temel hesap bilgileri yoluyla elektronik ortamda toplanır.
+
+7. Saklama süresi
+Veriler hesabınız açık olduğu sürece saklanır. Hesabınızı sildiğinizde veriler silinir; yedeklerden silinme en geç 30 gün sürer. Kural ihlali şikâyetleri gibi yasal olarak saklanması gereken kayıtlar en fazla 6 ay tutulur.
+
+8. Haklarınız (KVKK m. 11)
+Kişisel verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, işlenme amacını öğrenme, aktarıldığı üçüncü kişileri bilme, eksik veya yanlış işlenmişse düzeltilmesini, silinmesini veya yok edilmesini isteme, bu işlemlerin aktarılan kişilere bildirilmesini isteme, otomatik sistemlerle analiz sonucu aleyhinize bir sonuca itiraz etme ve kanuna aykırı işleme nedeniyle zararın giderilmesini talep etme haklarına sahipsiniz. Açık rızanızı her zaman geri alabilirsiniz.
+
+9. Başvuru
+Taleplerinizi kayıtlı e-posta adresinizden ${SUPPORT_EMAIL} adresine iletebilirsiniz. Başvurular en geç 30 gün içinde ücretsiz olarak sonuçlandırılır.`;
+
+const KVKK_EN = `Birthchat Personal Data Notice (KVKK)
+Last updated: 20.11.2026
+
+This notice is provided under Article 10 of the Turkish Personal Data Protection Law No. 6698 ("KVKK") to inform users of the Birthchat app.
+
+1. Data controller
+${DATA_CONTROLLER} ("Birthchat"). Contact: ${SUPPORT_EMAIL}
+
+2. Personal data processed
+• Identity and contact: name, username, email address.
+• Profile: age/birth year, gender, country/city, height, weight, education, profession, habits, relationship goal, bio, photos.
+• Special categories (only with your explicit consent): religion (optional field) and biometric data processed during face verification (selfie). The selfie is not stored; only the verification result is kept.
+• Communications: messages (stored encrypted), photos shared in chats, likes, matches, visits, blocks and reports.
+• Security: session records, notification token, app version, error logs, consent records.
+• Location (if you allow it): approximate location to show people nearby.
+
+3. Purposes
+Creating and managing your account; matching users and enabling messaging; preventing fake profiles, fraud and abuse; enforcing the 18+ age limit; handling reports and moderating content; sending notifications; information security; meeting legal obligations and requests from competent authorities.
+
+4. Legal grounds (KVKK Art. 5 and 6)
+• Establishing and performing the contract (membership and the service),
+• Compliance with legal obligations,
+• Establishing, exercising or defending a right,
+• Legitimate interest, provided it does not harm your fundamental rights (security, abuse prevention),
+• Your explicit consent: special categories (religion, biometric face verification), location and transfers abroad.
+
+5. Transfers
+To provide the service, data is shared with: Supabase (database and file hosting, servers in Frankfurt, Germany – EU), Google (Google sign-in, Firebase Cloud Messaging notifications) and Expo (notification delivery, USA). These transfers are based on your explicit consent under KVKK Art. 9. Data may be disclosed to competent public authorities where required by law. Your data is never sold or shared for advertising.
+
+6. Collection method
+Data is collected electronically from the information you enter, your use of the app and, if you sign in with Google, basic account details received from Google.
+
+7. Retention
+Data is kept while your account is open and deleted when you delete your account; removal from backups takes up to 30 days. Records that must be kept by law, such as reports of rule violations, are kept for up to 6 months.
+
+8. Your rights (KVKK Art. 11)
+You may learn whether your data is processed, request information, learn the purpose of processing and the third parties it is transferred to, request correction, deletion or destruction, request that these actions be notified to recipients, object to a result against you produced solely by automated analysis, and claim compensation for damage caused by unlawful processing. You may withdraw your consent at any time.
+
+9. Applications
+Send your request from your registered email address to ${SUPPORT_EMAIL}. Requests are answered free of charge within 30 days.`;
+
+/** KVKK is Turkish law: the notice is provided in Turkish and English (English for other app languages). */
+export const KVKK: Record<Language, string> = { tr: KVKK_TR, en: KVKK_EN, de: KVKK_EN, fr: KVKK_EN, es: KVKK_EN, ru: KVKK_EN, ar: KVKK_EN };
+
+const CONSENT_TR = `Birthchat Açık Rıza Metni
+Son güncelleme: 20.11.2026
+
+KVKK Aydınlatma Metni’ni okudum. Aşağıdaki işlemlere, ilgili ekranda ayrıca onay vererek açık rıza veriyorum. Rızamı istediğim zaman ${SUPPORT_EMAIL} adresine yazarak veya hesabımı silerek geri alabilirim; geri alma, önceki işlemleri etkilemez.
+
+1. Yurt dışına aktarım
+Kişisel verilerimin, hizmetin sunulması için Supabase (AB – Almanya), Google ve Expo (ABD) hizmet sağlayıcılarına aktarılmasına ve bu sağlayıcıların sunucularında işlenmesine açık rıza veriyorum. Bu rıza üyelik için gereklidir; vermezseniz hizmet sunulamaz.
+
+2. Biyometrik veri (yüz doğrulama – isteğe bağlı)
+Yüz doğrulamasını başlattığımda, selfie’mden ve canlılık karelerimden elde edilen biyometrik verinin yalnızca kimliğimin profil fotoğrafımla eşleştiğini ve gerçek kişi olduğumu doğrulamak amacıyla işlenmesine açık rıza veriyorum. Selfie doğrulama anında işlenir ve saklanmaz. Doğrulama isteğe bağlıdır; rıza vermemem üyeliğimi etkilemez.
+
+3. Din bilgisi (isteğe bağlı)
+Profilime din bilgisi eklersem, bu bilginin profilimde diğer kullanıcılara gösterilmesine açık rıza veriyorum. Bu alan tamamen isteğe bağlıdır.`;
+
+const CONSENT_EN = `Birthchat Explicit Consent
+Last updated: 20.11.2026
+
+I have read the KVKK Personal Data Notice. I give my explicit consent to the processing below by confirming it separately on the relevant screen. I can withdraw my consent at any time by writing to ${SUPPORT_EMAIL} or by deleting my account; withdrawal does not affect processing carried out before.
+
+1. Transfer abroad
+I consent to my personal data being transferred to and processed on the servers of the service providers Supabase (EU – Germany), Google and Expo (USA) in order to provide the service. This consent is required for membership; without it the service cannot be provided.
+
+2. Biometric data (face verification – optional)
+When I start face verification, I consent to the biometric data derived from my selfie and liveness frames being processed solely to verify that I match my profile photo and that I am a real person. The selfie is processed at the moment of verification and is not stored. Verification is optional; not consenting does not affect my membership.
+
+3. Religion (optional)
+If I add religion to my profile, I consent to it being shown to other users on my profile. This field is entirely optional.`;
+
+export const EXPLICIT_CONSENT: Record<Language, string> = {
+  tr: CONSENT_TR,
+  en: CONSENT_EN,
+  de: CONSENT_EN,
+  fr: CONSENT_EN,
+  es: CONSENT_EN,
+  ru: CONSENT_EN,
+  ar: CONSENT_EN,
 };

@@ -49,6 +49,8 @@ import {
   getCitiesForCountry,
 } from '@/lib/constants';
 import ComboBox from '@/components/ComboBox';
+import { ConsentChecklist, signupConsentItems, allChecked } from '@/components/ConsentChecklist';
+import type { ConsentType } from '@/lib/consents';
 
 import { L } from '@/lib/l10n';
 export default function RegisterScreen() {
@@ -98,6 +100,8 @@ export default function RegisterScreen() {
   const [showRelationshipPicker, setShowRelationshipPicker] = useState(false);
   const [showRelationshipGoalPicker, setShowRelationshipGoalPicker] = useState(false);
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+  const [consents, setConsents] = useState<Partial<Record<ConsentType, boolean>>>({});
+  const consentItems = useMemo(() => signupConsentItems(), [language]);
 
   const scrollRef = useRef<ScrollView | null>(null);
   const fullNameRef = useRef<TextInput | null>(null);
@@ -355,6 +359,11 @@ export default function RegisterScreen() {
 
     if (!validateUsername(formData.username)) {
       setError(L('Lütfen geçerli bir kullanıcı adı kullanın (sahte isimler yok)', 'Please use a valid username (no fake names)'));
+      return;
+    }
+
+    if (!allChecked(consentItems, consents)) {
+      setError(L('Devam etmek için tüm onay kutularını işaretleyin.', 'Tick all the boxes to continue.'));
       return;
     }
 
@@ -1117,6 +1126,12 @@ export default function RegisterScreen() {
             </View>
 
             <Text style={styles.ageWarning}>{t.ageVerification}</Text>
+
+            <ConsentChecklist
+              items={consentItems}
+              checked={consents}
+              onToggle={(k) => setConsents((c) => ({ ...c, [k]: !c[k] }))}
+            />
 
             <TouchableOpacity
               style={styles.registerButton}
