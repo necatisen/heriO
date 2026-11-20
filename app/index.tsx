@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import GoogleIcon from '@/components/GoogleIcon';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/lib/i18n';
 import { getOnboardingSeen, setOnboardingSeen } from '@/lib/onboardingStorage';
+import { needsProfileCompletion } from '@/lib/profileCompletion';
 import { BrandLogo } from '@/components/BrandLogo';
 import GradientButton from '@/components/GradientButton';
 import HeartLoader from '@/components/HeartLoader';
@@ -57,6 +58,12 @@ export default function WelcomeScreen() {
 
   useEffect(() => {
     if (!loading && session && isFocused) {
+      // Google sign-ups skipped the form: ask for age (18+), gender and location first.
+      if (needsProfileCompletion(session.user)) {
+        setCheckedOnboarding(true);
+        router.replace('/complete-profile' as Href);
+        return;
+      }
       getOnboardingSeen()
         .then(async (seen) => {
           // The intro is for brand-new accounts. An existing account signing in on this device

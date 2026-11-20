@@ -31,6 +31,7 @@ export default function RootLayout() {
               <Stack.Screen name="auth/forgot-password" />
               <Stack.Screen name="auth/reset-password" options={{ animation: 'fade', gestureEnabled: false }} />
               <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+              <Stack.Screen name="complete-profile" options={{ animation: 'fade', gestureEnabled: false }} />
               <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
               <Stack.Screen name="conversation/[id]" />
               <Stack.Screen name="verify-face" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />

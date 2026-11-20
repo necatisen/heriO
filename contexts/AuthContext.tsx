@@ -3,6 +3,7 @@ import { AppState, Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { unregisterPushToken } from '@/lib/pushNotifications';
+import { getGoogleIdToken, googleSignOut } from '@/lib/googleSignIn';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { readCache, writeCache, clearCache } from '@/lib/cache';
@@ -272,6 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     // Stop this phone from receiving the account's notifications after sign-out.
     if (user?.id) await unregisterPushToken(user.id).catch(() => {});
+    await googleSignOut();
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
@@ -284,7 +286,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Native: open auth session and exchange code for session
+    // Native Android account picker (shows "Birthchat"); falls back to the browser flow below.
+    const idToken = await getGoogleIdToken();
+    if (idToken) {
+      const { error: idErr } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
+      if (idErr) throw idErr;
+      return;
+    }
+
+    // Browser: open auth session and exchange code for session
     const redirectTo = Linking.createURL('auth/callback');
 
     const { data, error } = await supabase.auth.signInWithOAuth({

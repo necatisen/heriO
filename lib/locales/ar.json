@@ -700,5 +700,18 @@
   "Güncelleme gerekli": "التحديث مطلوب",
   "Birthchat'in yeni bir sürümü var. Devam etmek için lütfen uygulamayı Google Play'den güncelleyin.": "يتوفر إصدار جديد من Birthchat. يُرجى تحديث التطبيق من Google Play للمتابعة.",
   "Uygulamayı güncelle": "تحديث التطبيق",
-  "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.": "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. افتح الرابط على هذا الهاتف المثبّت عليه Birthchat؛ لن يعمل على الكمبيوتر."
+  "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.": "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. افتح الرابط على هذا الهاتف المثبّت عليه Birthchat؛ لن يعمل على الكمبيوتر.",
+  "Eksik bilgi": "معلومات ناقصة",
+  "Lütfen adınızı girin.": "يرجى إدخال اسمك.",
+  "Lütfen yaşınızı seçin.": "يرجى اختيار عمرك.",
+  "Lütfen cinsiyetinizi seçin.": "يرجى اختيار جنسك.",
+  "Lütfen ülkenizi seçin.": "يرجى اختيار بلدك.",
+  "Onay gerekli": "التأكيد مطلوب",
+  "Devam etmek için 18 yaşından büyük olduğunuzu onaylayın.": "أكّد أن عمرك 18 عامًا أو أكثر للمتابعة.",
+  "Bilgiler kaydedilemedi. Lütfen tekrar deneyin.": "تعذّر حفظ بياناتك. يرجى المحاولة مرة أخرى.",
+  "Profilini tamamla": "أكمل ملفك الشخصي",
+  "Devam etmeden önce birkaç bilgiye ihtiyacımız var.": "نحتاج إلى بعض المعلومات قبل المتابعة.",
+  "18 yaşından büyük olduğumu ve verdiğim bilgilerin doğru olduğunu beyan ederim.": "أُقرّ بأن عمري 18 عامًا أو أكثر وأن المعلومات التي أقدمها صحيحة.",
+  "Devam et": "متابعة",
+  "Çıkış yap": "تسجيل الخروج"
 }

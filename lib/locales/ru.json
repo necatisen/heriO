@@ -700,5 +700,18 @@
   "Güncelleme gerekli": "Требуется обновление",
   "Birthchat'in yeni bir sürümü var. Devam etmek için lütfen uygulamayı Google Play'den güncelleyin.": "Доступна новая версия Birthchat. Чтобы продолжить, обновите приложение в Google Play.",
   "Uygulamayı güncelle": "Обновить приложение",
-  "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.": "Ссылка для сброса пароля отправлена на вашу почту. Откройте её на этом телефоне, где установлен Birthchat; на компьютере она не сработает."
+  "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.": "Ссылка для сброса пароля отправлена на вашу почту. Откройте её на этом телефоне, где установлен Birthchat; на компьютере она не сработает.",
+  "Eksik bilgi": "Не хватает данных",
+  "Lütfen adınızı girin.": "Пожалуйста, введите имя.",
+  "Lütfen yaşınızı seçin.": "Пожалуйста, выберите возраст.",
+  "Lütfen cinsiyetinizi seçin.": "Пожалуйста, выберите пол.",
+  "Lütfen ülkenizi seçin.": "Пожалуйста, выберите страну.",
+  "Onay gerekli": "Требуется подтверждение",
+  "Devam etmek için 18 yaşından büyük olduğunuzu onaylayın.": "Подтвердите, что вам исполнилось 18 лет, чтобы продолжить.",
+  "Bilgiler kaydedilemedi. Lütfen tekrar deneyin.": "Не удалось сохранить данные. Попробуйте ещё раз.",
+  "Profilini tamamla": "Заполните профиль",
+  "Devam etmeden önce birkaç bilgiye ihtiyacımız var.": "Прежде чем продолжить, нам нужно несколько данных.",
+  "18 yaşından büyük olduğumu ve verdiğim bilgilerin doğru olduğunu beyan ederim.": "Подтверждаю, что мне исполнилось 18 лет и указанные мной данные верны.",
+  "Devam et": "Продолжить",
+  "Çıkış yap": "Выйти"
 }

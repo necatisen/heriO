@@ -14,7 +14,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerPushToken, setNotificationHandler } from '@/lib/pushNotifications';
-import { useRouter } from 'expo-router';
+import { needsProfileCompletion } from '@/lib/profileCompletion';
+import { useRouter, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
@@ -69,6 +70,11 @@ export default function TabLayout() {
   useEffect(() => {
     setNotificationHandler();
   }, []);
+
+  // Safety net: an incomplete Google account must not reach the app without the 18+ step.
+  useEffect(() => {
+    if (needsProfileCompletion(user)) router.replace('/complete-profile' as Href);
+  }, [user]);
 
   // When user taps a notification, navigate to the relevant screen (e.g. conversation)
   useEffect(() => {

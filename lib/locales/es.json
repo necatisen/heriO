@@ -700,5 +700,18 @@
   "Güncelleme gerekli": "Actualización necesaria",
   "Birthchat'in yeni bir sürümü var. Devam etmek için lütfen uygulamayı Google Play'den güncelleyin.": "Hay una nueva versión de Birthchat disponible. Actualiza la app en Google Play para continuar.",
   "Uygulamayı güncelle": "Actualizar la app",
-  "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.": "Se ha enviado el enlace para restablecer la contraseña a tu correo. Ábrelo en este teléfono, donde está instalada Birthchat; no funciona en un ordenador."
+  "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.": "Se ha enviado el enlace para restablecer la contraseña a tu correo. Ábrelo en este teléfono, donde está instalada Birthchat; no funciona en un ordenador.",
+  "Eksik bilgi": "Faltan datos",
+  "Lütfen adınızı girin.": "Introduce tu nombre.",
+  "Lütfen yaşınızı seçin.": "Selecciona tu edad.",
+  "Lütfen cinsiyetinizi seçin.": "Selecciona tu género.",
+  "Lütfen ülkenizi seçin.": "Selecciona tu país.",
+  "Onay gerekli": "Confirmación necesaria",
+  "Devam etmek için 18 yaşından büyük olduğunuzu onaylayın.": "Confirma que tienes 18 años o más para continuar.",
+  "Bilgiler kaydedilemedi. Lütfen tekrar deneyin.": "No se pudieron guardar tus datos. Inténtalo de nuevo.",
+  "Profilini tamamla": "Completa tu perfil",
+  "Devam etmeden önce birkaç bilgiye ihtiyacımız var.": "Necesitamos algunos datos antes de continuar.",
+  "18 yaşından büyük olduğumu ve verdiğim bilgilerin doğru olduğunu beyan ederim.": "Confirmo que tengo 18 años o más y que la información que proporciono es correcta.",
+  "Devam et": "Continuar",
+  "Çıkış yap": "Cerrar sesión"
 }
