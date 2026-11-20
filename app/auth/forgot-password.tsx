@@ -38,7 +38,9 @@ export default function ForgotPasswordScreen() {
       await resetPassword(email);
       Alert.alert(
         L('Başarılı', 'Success'),
-        L('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.', 'A password reset link has been sent to your email. Open the link on this phone, where Birthchat is installed; it will not work on a computer.'),
+        L('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Bağlantıyı bu telefonda, Birthchat yüklü cihazda açın; bilgisayarda açılırsa çalışmaz.', 'A password reset link has been sent to your email. Open the link on this phone, where Birthchat is installed; it will not work on a computer.') +
+          '\n\n' +
+          L('E-posta birkaç dakika içinde gelmezse Spam / Gereksiz klasörünü kontrol edin.', "If the email doesn't arrive within a few minutes, check your Spam / Junk folder."),
         [{ text: L('Tamam', 'OK'), onPress: () => router.back() }]
       );
     } catch (error: any) {
