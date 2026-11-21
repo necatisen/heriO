@@ -52,5 +52,5 @@ Expo 55 / React Native 0.83 tanışma ve sohbet uygulaması.
 - Google ile giriş: Android'de yerel hesap seçici (`lib/googleSignIn.ts`, Web client ID + Play imza SHA-1 ile Android client); Google ile ilk girişte `/complete-profile` zorunlu (18+).
 - Supabase Auth: yeni projede "Confirm email" varsayılan açık — yayından önce kapatılmalı veya SMTP tanımlanmalı.
 - Mesaj metni (`messages.content`) veritabanında şifreli (`enc1:…`, AES-256, anahtar Vault'ta `message_encryption_key`). Trigger yazarken şifreler; uygulama okurken `lib/messageCrypto.ts` → `get_message_texts` RPC kullanır. Mesaj okuyan her yeni kod `decryptMessages()` çağırmalı.
-- Push: Expo push → FCM. `android/app/google-services.json` (Firebase) varsa Gradle eklentisi otomatik uygulanır; FCM V1 servis hesabı anahtarı expo.dev → Credentials'a yüklenmeli. Kanal: `messages`.
+- Push: Expo push → FCM. `android/app/google-services.json` (Firebase) varsa Gradle eklentisi otomatik uygulanır; FCM V1 servis hesabı anahtarı expo.dev → Credentials'a yüklenmeli. Kanal: `messages`. Beğeni/eşleşme push metni sunucuda alıcının dilinde (`kind`). Uygulama silinmesi sessizce tespit edilir: önceki push makbuzu `DeviceNotRegistered` → token silinir, `push_diagnostics.stage = 'uninstalled'`.
 - Şifre sıfırlama linki `birthchat://auth/reset-password` ekranına döner (`app/auth/reset-password.tsx`).

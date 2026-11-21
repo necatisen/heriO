@@ -37,6 +37,23 @@ type RequestBody = {
   data?: Record<string, unknown>;
 };
 
+type TokenRow = { token: string; platform: string; last_ticket_id?: string | null };
+
+/** App removed from the phone: forget the token and record it for statistics. Nothing is sent to the user. */
+async function markUninstalled(admin: any, userId: string, rows: TokenRow[]) {
+  for (const r of rows) {
+    try {
+      await admin.from('push_tokens').delete().eq('user_id', userId).eq('token', r.token);
+      // updated_at is left unchanged so it still shows when the app was last opened.
+      await admin
+        .from('push_diagnostics')
+        .update({ stage: 'uninstalled', detail: `DeviceNotRegistered ${new Date().toISOString()}` })
+        .eq('user_id', userId)
+        .eq('platform', r.platform || 'android');
+    } catch {}
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
   if (req.method !== 'POST') return jsonResponse({ success: false, message: 'Method not allowed' }, 405);
@@ -93,14 +110,42 @@ Deno.serve(async (req: Request) => {
       localizedTitle = payload.kind === 'like' ? txt.likeTitle : txt.matchTitle;
       localizedBody = (payload.kind === 'like' ? txt.like : txt.match).replace('{name}', name);
     }
-    const { data: tokens, error: tokensErr } = await admin
+    // last_ticket_id comes from migration 20261121120000; fall back if it has not been applied yet.
+    let { data: tokens, error: tokensErr } = await admin
       .from('push_tokens')
-      .select('token')
+      .select('token, platform, last_ticket_id')
       .eq('user_id', toUserId);
+    if (tokensErr) {
+      ({ data: tokens, error: tokensErr } = await admin.from('push_tokens').select('token, platform').eq('user_id', toUserId));
+    }
 
     if (tokensErr) return jsonResponse({ success: false, message: tokensErr.message }, 500);
-    const to = Array.from(new Set((tokens || []).map((t: any) => t.token).filter(Boolean)));
-    if (to.length === 0) return jsonResponse({ success: true, delivered: 0 });
+    const rows = (tokens || []) as TokenRow[];
+
+    // Silent uninstall detection: the receipt of the previous push says DeviceNotRegistered → app was removed.
+    const gone = new Set<string>();
+    const ticketIds = rows.map((r) => r.last_ticket_id).filter(Boolean) as string[];
+    if (ticketIds.length > 0) {
+      try {
+        const rr = await fetch('https://exp.host/--/api/v2/push/getReceipts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ ids: ticketIds }),
+        });
+        const receipts = ((await rr.json().catch(() => ({}))) as any)?.data || {};
+        for (const r of rows) {
+          const rec = r.last_ticket_id ? receipts[r.last_ticket_id] : null;
+          if (rec?.status === 'error' && rec?.details?.error === 'DeviceNotRegistered') gone.add(r.token);
+        }
+      } catch {}
+    }
+
+    const live = rows.filter((r) => r.token && !gone.has(r.token));
+    const to = Array.from(new Set(live.map((r) => r.token)));
+    if (to.length === 0) {
+      await markUninstalled(admin, toUserId, rows.filter((r) => gone.has(r.token)));
+      return jsonResponse({ success: true, delivered: 0 });
+    }
 
     const expoMessages = to.map((expoToken) => ({
       to: expoToken,
@@ -121,7 +166,29 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify(expoMessages),
     });
 
-    const json = await res.json().catch(() => ({}));
+    const json = (await res.json().catch(() => ({}))) as any;
+
+    // Tickets come back in the same order as the messages: remember ok ticket ids, drop tokens Expo already rejects.
+    const tickets: any[] = Array.isArray(json?.data) ? json.data : [];
+    const now = new Date().toISOString();
+    await Promise.all(
+      tickets.map(async (t, i) => {
+        const token = to[i];
+        if (!token) return;
+        if (t?.status === 'error' && t?.details?.error === 'DeviceNotRegistered') {
+          gone.add(token);
+        } else if (t?.status === 'ok' && t?.id) {
+          await admin
+            .from('push_tokens')
+            .update({ last_ticket_id: t.id, last_ticket_at: now })
+            .eq('user_id', toUserId)
+            .eq('token', token)
+            .then(() => {}, () => {});
+        }
+      })
+    );
+    await markUninstalled(admin, toUserId, rows.filter((r) => gone.has(r.token)));
+
     return jsonResponse({ success: res.ok, delivered: to.length, expo: json }, res.ok ? 200 : 502);
   } catch (e) {
     console.error('send-push-message error:', e);
