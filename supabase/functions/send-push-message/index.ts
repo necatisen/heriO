@@ -26,9 +26,21 @@ const PUSH_TEXT: Record<string, PushText> = {
   ar: { newMessage: 'رسالة جديدة', photo: '📷 صورة', likeTitle: 'إعجاب جديد ❤️', like: 'أُعجب بك {name}. اضغط للمشاهدة.', matchTitle: 'تطابق جديد 🎉', match: 'حدث تطابق بينك وبين {name}! أرسل رسالة الآن.' },
 };
 
+// Plan notifications ({name} = sender, {plan} = plan title).
+const PLAN_TEXT: Record<string, { joinTitle: string; join: string; acceptTitle: string; accept: string }> = {
+  tr: { joinTitle: 'Planına katılmak istiyor 🙋', join: '{name}: "{plan}"', acceptTitle: 'Plan isteğin kabul edildi 🎉', accept: '{name} seni "{plan}" planına kabul etti. Sohbet açıldı!' },
+  en: { joinTitle: 'Someone wants to join 🙋', join: '{name}: "{plan}"', acceptTitle: 'Your request was accepted 🎉', accept: '{name} accepted you for "{plan}". Your chat is open!' },
+  de: { joinTitle: 'Jemand möchte mitmachen 🙋', join: '{name}: "{plan}"', acceptTitle: 'Deine Anfrage wurde angenommen 🎉', accept: '{name} hat dich für "{plan}" angenommen. Der Chat ist offen!' },
+  fr: { joinTitle: "Quelqu'un veut participer 🙋", join: '{name} : « {plan} »', acceptTitle: 'Demande acceptée 🎉', accept: '{name} vous a accepté pour « {plan} ». La discussion est ouverte !' },
+  es: { joinTitle: 'Alguien quiere unirse 🙋', join: '{name}: "{plan}"', acceptTitle: 'Solicitud aceptada 🎉', accept: '{name} te aceptó en "{plan}". ¡El chat está abierto!' },
+  ru: { joinTitle: 'Хотят присоединиться 🙋', join: '{name}: «{plan}»', acceptTitle: 'Заявка принята 🎉', accept: '{name} принял(а) вас в план «{plan}». Чат открыт!' },
+  ar: { joinTitle: 'شخص يريد الانضمام 🙋', join: '{name}: «{plan}»', acceptTitle: 'تم قبول طلبك 🎉', accept: 'قبلك {name} في خطة «{plan}». المحادثة مفتوحة!' },
+};
+
 type RequestBody = {
-  /** 'like' / 'match' → title and body are built here in the receiver's language */
-  kind?: 'message' | 'like' | 'match';
+  /** 'like' / 'match' / 'plan_join' / 'plan_accept' → title and body are built here in the receiver's language */
+  kind?: 'message' | 'like' | 'match' | 'plan_join' | 'plan_accept';
+  plan_id?: string;
   /** 'photo' → body is replaced by a localized "Photo" label */
   media?: 'text' | 'photo';
   to_user_id?: string;
@@ -109,6 +121,24 @@ Deno.serve(async (req: Request) => {
       const name = senderName || 'Birthchat';
       localizedTitle = payload.kind === 'like' ? txt.likeTitle : txt.matchTitle;
       localizedBody = (payload.kind === 'like' ? txt.like : txt.match).replace('{name}', name);
+    }
+    if (payload.kind === 'plan_join' || payload.kind === 'plan_accept') {
+      // Only a real join request (caller → receiver's plan) or a real acceptance (caller's plan → receiver).
+      const planId = String(payload.plan_id || '');
+      const { data: plan } = await admin.from('plans').select('id, user_id, title').eq('id', planId).maybeSingle();
+      const joinerId = payload.kind === 'plan_join' ? userRes.user.id : toUserId;
+      const ownerId = payload.kind === 'plan_join' ? toUserId : userRes.user.id;
+      const { data: join } = plan
+        ? await admin.from('plan_joins').select('status').eq('plan_id', planId).eq('user_id', joinerId).maybeSingle()
+        : { data: null };
+      const valid =
+        !!plan && plan.user_id === ownerId && !!join && (payload.kind === 'plan_join' || join.status === 'accepted');
+      if (!valid) return jsonResponse({ success: false, message: 'No such plan request' }, 403);
+      const pt = PLAN_TEXT[String(receiver?.preferred_language || 'en')] || PLAN_TEXT.en;
+      const name = senderName || 'Birthchat';
+      const planTitle = String(plan.title || '').slice(0, 60);
+      localizedTitle = payload.kind === 'plan_join' ? pt.joinTitle : pt.acceptTitle;
+      localizedBody = (payload.kind === 'plan_join' ? pt.join : pt.accept).replace('{name}', name).replace('{plan}', planTitle);
     }
     // last_ticket_id comes from migration 20261121120000; fall back if it has not been applied yet.
     let { data: tokens, error: tokensErr } = await admin

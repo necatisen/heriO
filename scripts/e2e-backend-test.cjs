@@ -185,6 +185,31 @@ async function callFunction(c, name, body) {
     const s = check(await A.from('chat_sessions').select('closed_by').eq('id', sessionId).single(), 'A görüyor');
     must(s.closed_by === idB, 'kapanış bilgisi görünmüyor');
   });
+  await step('Planlar: paylaş / katıl / kabul / güvenlik', async () => {
+    const at = (h) => new Date(Date.now() + h * 3600 * 1000).toISOString();
+    const plan = check(
+      await A.from('plans').insert({ user_id: idA, category: 'coffee', title: 'QA kahve planı', starts_at: at(24), city: 'İzmir' }).select('id').single(),
+      'plan oluştur'
+    );
+    must(check(await B.from('plans').select('id').eq('id', plan.id), 'B görüyor').length === 1, 'B planı görmüyor');
+    const own = await A.from('plan_joins').insert({ plan_id: plan.id, user_id: idA });
+    must(own.error, 'kendi planına katılabildi!');
+    const join = check(await B.from('plan_joins').insert({ plan_id: plan.id, user_id: idB }).select('id').single(), 'B katıl');
+    must(check(await A.from('plan_joins').select('id').eq('plan_id', plan.id), 'A istekleri').length === 1, 'A isteği görmüyor');
+    await B.from('plan_joins').update({ status: 'accepted' }).eq('id', join.id);
+    must(check(await A.from('plan_joins').select('status').eq('id', join.id).single(), 'durum').status === 'pending', 'B kendini kabul edebildi!');
+    const pj = await callFunction(B, 'send-push-message', { kind: 'plan_join', plan_id: plan.id, to_user_id: idA });
+    must(pj.status === 200, `plan_join push ${pj.status}`);
+    const fake = await callFunction(B, 'send-push-message', { kind: 'plan_accept', plan_id: plan.id, to_user_id: idA });
+    must(fake.status === 403, `sahte kabul push ${fake.status}`);
+    check(await A.from('plan_joins').update({ status: 'accepted' }).eq('id', join.id), 'A kabul');
+    const pa = await callFunction(A, 'send-push-message', { kind: 'plan_accept', plan_id: plan.id, to_user_id: idB });
+    must(pa.status === 200, `plan_accept push ${pa.status}`);
+    check(await A.from('plans').insert({ user_id: idA, category: 'walk', title: 'QA plan 2', starts_at: at(30) }), 'plan 2');
+    check(await A.from('plans').insert({ user_id: idA, category: 'food', title: 'QA plan 3', starts_at: at(40) }), 'plan 3');
+    const fourth = await A.from('plans').insert({ user_id: idA, category: 'games', title: 'QA plan 4', starts_at: at(50) });
+    must(fourth.error, '4. açık plan engellenmedi!');
+  });
   await step('Fonksiyon: moderate-image', async () => {
     const img = (await randomJpeg(64, 64, 70)).toString('base64');
     const r = await callFunction(A, 'moderate-image', { image_base64: img });

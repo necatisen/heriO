@@ -8,6 +8,7 @@ import {
   Users,
   User,
   Heart,
+  CalendarHeart,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -93,6 +94,8 @@ export default function TabLayout() {
             router.push(`/conversation/${sessionId}`);
           } else if (data.type === 'like') {
             router.push('/(tabs)/likes' as Href);
+          } else if (data.type === 'plan_join') {
+            router.push('/(tabs)/plans' as Href);
           }
         }
 
@@ -104,6 +107,8 @@ export default function TabLayout() {
             router.push(`/conversation/${sessionId}`);
           } else if (data.type === 'like') {
             router.push('/(tabs)/likes' as Href);
+          } else if (data.type === 'plan_join') {
+            router.push('/(tabs)/plans' as Href);
           }
         });
       } catch {
@@ -154,6 +159,12 @@ export default function TabLayout() {
         name="explore"
         options={{
           tabBarIcon: ({ size, color, focused }) => <TabIcon Icon={Search} size={size} color={color} focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="plans"
+        options={{
+          tabBarIcon: ({ size, color, focused }) => <TabIcon Icon={CalendarHeart} size={size} color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen

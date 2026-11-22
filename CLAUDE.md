@@ -56,3 +56,4 @@ Expo 55 / React Native 0.83 tanışma ve sohbet uygulaması.
 - Şifre sıfırlama linki `birthchat://auth/reset-password` ekranına döner (`app/auth/reset-password.tsx`).
 - Doğum günü: `profiles.birth_date_exact` (gerçek gün/ay seçildi mi; eski hesaplarda sadece yaş → `YYYY-01-01`). `lib/birthday.ts`: doğum günü haftası (Keşfet'te öne çıkma + rozet, RPC `birthday_week_ids`), ikizler (RPC `birthday_twins`), burç. Doğum tarihi başkalarına gösterilmez, sadece burç.
 - Kibar kapanış: `chat_sessions.closed_by/closed_at`; kapalı sohbete mesaj RLS ile engellenir (`components/ChatExtras.tsx`). Eşleşme ekranındaki "Neden eşleştiniz?" `lib/matchReasons.ts`.
+- Plan ile tanış: tablolar `plans`, `plan_joins`, `plan_reports` (3 şikâyet → gizlenir, kişi başı en fazla 3 açık plan; RLS). Kod `lib/plans.ts`, `app/(tabs)/plans.tsx`, `components/CreatePlanModal.tsx`. Kabul edilince sohbet açılır; push türleri `plan_join`/`plan_accept` sunucuda doğrulanır.
