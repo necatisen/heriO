@@ -25,6 +25,7 @@ import {
   Baby,
   Cigarette,
   Heart,
+  Eye,
 } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +47,7 @@ import {
 } from '@/lib/profileTranslations';
 import { countries } from '@/lib/constants';
 import { FullScreenModal } from '@/components/FullScreenModal';
+import { ProfileExtrasView, useProfileExtras } from '@/components/ProfileExtras';
 import { formatLastSeen, isUserOnlineNow } from '@/lib/dateFormat';
 
 import { L } from '@/lib/l10n';
@@ -109,6 +111,8 @@ type ProfileModalProps = {
   showActionButtons?: boolean;
   /** Dil (tr/en): verilirse vücut tipi vb. bu dile göre gösterilir; yoksa uygulama dilinden alınır. */
   language?: string;
+  /** Own profile opened from "Profilim → 👁": shows a banner, no action buttons. */
+  previewMode?: boolean;
 };
 
 export default function ProfileModal({
@@ -120,7 +124,9 @@ export default function ProfileModal({
   onBlocked,
   showActionButtons = true,
   language: languageProp,
+  previewMode = false,
 }: ProfileModalProps) {
+  const extras = useProfileExtras(visible ? profile?.id : null);
   const { language: contextLanguage } = useLanguage();
   const language = languageProp ?? contextLanguage;
   const { user } = useAuth();
@@ -367,6 +373,14 @@ export default function ProfileModal({
             style={styles.scrollContent}
             // Keep the last buttons above Android's gesture/3-button navigation bar.
             contentContainerStyle={{ paddingBottom: showActionButtons ? 16 : insets.bottom + 24 }}>
+          {previewMode && (
+            <View style={[styles.previewBanner, { marginTop: Math.max(8, insets.top + 10), backgroundColor: theme.primary }]}>
+              <Eye size={18} color="#FFFFFF" />
+              <Text style={styles.previewBannerText}>
+                {L('Diğer kullanıcılar profilini böyle görüyor', 'This is how other users see your profile')}
+              </Text>
+            </View>
+          )}
           <View style={styles.profileSection}>
             {photos.length > 0 ? (
               <>
@@ -568,6 +582,8 @@ export default function ProfileModal({
               ) : null}
             </View>
 
+            <ProfileExtrasView extras={extras} />
+
             {!isOwnProfile && (
               <View style={styles.reportBlockRow}>
                 <TouchableOpacity
@@ -693,6 +709,17 @@ const createStyles = (t: Theme) =>
   headerActionBlock: { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 8 },
   headerActionText: { fontSize: 12, fontWeight: '600', color: '#FFFFFF' },
   closeButton: { padding: 4 },
+  previewBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingLeft: 14,
+    paddingRight: 48,
+    marginBottom: 12,
+  },
+  previewBannerText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', flexShrink: 1 },
   closeFloating: {
     position: 'absolute',
     right: 16,

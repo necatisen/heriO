@@ -17,6 +17,8 @@ import { supabase } from '@/lib/supabase';
 import { religionOptions, alcoholConsumptionOptions, generateAgeOptions, getCitiesForCountry, countries } from '@/lib/constants';
 import ComboBox from '@/components/ComboBox';
 import { FullScreenModal } from '@/components/FullScreenModal';
+import { ProfileExtrasEditor, loadProfileExtras, saveProfileExtras } from '@/components/ProfileExtras';
+import { EMPTY_EXTRAS, type ProfileExtras } from '@/lib/profileExtras';
 
 import { L } from '@/lib/l10n';
 type Profile = {
@@ -89,6 +91,12 @@ export default function EditProfileModal({
   const [showChildrenPicker, setShowChildrenPicker] = useState(false);
   const [showRelationshipPicker, setShowRelationshipPicker] = useState(false);
   const [showRelationshipGoalPicker, setShowRelationshipGoalPicker] = useState(false);
+
+  const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
+
+  useEffect(() => {
+    if (visible) loadProfileExtras(userId).then(setExtras);
+  }, [visible, userId]);
 
   const ageOptions = generateAgeOptions();
 
@@ -331,6 +339,13 @@ export default function EditProfileModal({
         .eq('id', userId);
 
       if (error) throw error;
+
+      // Separate update: hobbies need migration 20261122120000; never lose the main profile save over it.
+      try {
+        await saveProfileExtras(userId, extras);
+      } catch (e) {
+        console.warn('Profile extras not saved:', e);
+      }
 
       const message = L('Profil güncellendi', 'Profile updated');
       if (Platform.OS === 'web') {
@@ -920,6 +935,10 @@ export default function EditProfileModal({
                   </ScrollView>
                 </View>
               )}
+            </View>
+
+            <View style={{ paddingBottom: 32 }}>
+              <ProfileExtrasEditor value={extras} onChange={setExtras} />
             </View>
           </ScrollView>
 

@@ -18,6 +18,7 @@ const THEME_LABELS: Record<ThemeType, { tr: string; en: string; subTr: string; s
   aurora: { tr: 'Aurora', en: 'Aurora', subTr: 'Mavi, mor ve pembe', subEn: 'Blue, purple and pink' },
   peach: { tr: 'Şeftali', en: 'Peach', subTr: 'Şeftali, mercan ve pembe', subEn: 'Peach, coral and pink' },
   night: { tr: 'Gece', en: 'Night', subTr: 'Yumuşak koyu tema', subEn: 'Soft dark theme' },
+  mono: { tr: 'Koyu (renksiz)', en: 'Dark (monochrome)', subTr: 'Siyah, gri ve beyaz', subEn: 'Black, grey and white' },
 };
 
 const LANGUAGE_OPTIONS: { code: Language; native: string; flag: string }[] = [

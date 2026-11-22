@@ -9,9 +9,10 @@ import { Platform } from 'react-native';
  *   aurora – E · soft blue → purple → pink
  *   peach  – F · peach → coral → pink
  *   night  – G · soft dark grey with a pink → purple glow
+ *   mono   – H · colourless dark mode: black, greys and white only
  */
-export type ThemeType = 'sunset' | 'aurora' | 'peach' | 'night';
-export const THEME_TYPES: ThemeType[] = ['sunset', 'aurora', 'peach', 'night'];
+export type ThemeType = 'sunset' | 'aurora' | 'peach' | 'night' | 'mono';
+export const THEME_TYPES: ThemeType[] = ['sunset', 'aurora', 'peach', 'night', 'mono'];
 
 export interface Theme {
   isDark: boolean;
@@ -124,7 +125,27 @@ const night: Theme = {
   tabBarBorder: '#2C2F3A',
 };
 
-export const THEMES: Record<ThemeType, Theme> = { sunset, aurora, peach, night };
+const mono: Theme = {
+  ...base,
+  isDark: true,
+  primary: '#7C7C84',
+  primaryLight: '#2C2C31',
+  secondary: '#BDBDC2',
+  gradient: ['#3A3A40', '#2A2A2F', '#1C1C20'],
+  headerGradient: ['#3A3A40', '#2A2A2F', '#1C1C20'],
+  background: '#0E0E10',
+  surface: '#18181B',
+  text: '#EDEDED',
+  textSecondary: '#9A9AA0',
+  border: '#2A2A2E',
+  cardBackground: '#18181B',
+  inputBackground: '#222226',
+  inputBorder: '#323238',
+  tabBarBackground: '#121214',
+  tabBarBorder: '#2A2A2E',
+};
+
+export const THEMES: Record<ThemeType, Theme> = { sunset, aurora, peach, night, mono };
 
 /** Values saved by older app versions. */
 const LEGACY: Record<string, ThemeType> = { light: 'sunset', dark: 'night', colored: 'peach' };

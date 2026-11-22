@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Coins, Crown, Settings, Camera, X, Plus, CreditCard as Edit2, CreditCard as Edit } from 'lucide-react-native';
+import { User, Coins, Crown, Settings, Eye, Camera, X, Plus, CreditCard as Edit2, CreditCard as Edit } from 'lucide-react-native';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,6 +25,7 @@ import { useRouter } from 'expo-router';
 import { PREMIUM_PLANS } from '@/lib/storeProducts';
 import * as ImagePicker from 'expo-image-picker';
 import EditProfileModal from '@/components/EditProfileModal';
+import ProfileModal from '@/components/ProfileModal';
 import ProfileStrength from '@/components/ProfileStrength';
 import { uploadGalleryPhoto, deletePhotoFromStorage } from '@/lib/uploadAvatar';
 import {
@@ -72,6 +73,7 @@ export default function ProfileScreen() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [uploading, setUploading] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
   const [bioText, setBioText] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -497,6 +499,12 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(tabs)/settings' as any)}>
             <Settings size={24} color="#FFFFFF" />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.settingsButton, { right: 72 }]}
+            accessibilityLabel={L('Profilimi diğerleri gibi gör', 'View my profile as others see it')}
+            onPress={() => setPreviewVisible(true)}>
+            <Eye size={24} color="#FFFFFF" />
+          </TouchableOpacity>
 
           <View style={styles.header}>
             <View style={styles.profileHeader}>
@@ -919,6 +927,14 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <ProfileModal
+        visible={previewVisible}
+        profile={displayProfile as any}
+        onClose={() => setPreviewVisible(false)}
+        showActionButtons={false}
+        previewMode
+      />
 
       <EditProfileModal
         visible={showEditModal}
