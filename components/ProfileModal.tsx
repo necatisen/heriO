@@ -26,7 +26,9 @@ import {
   Cigarette,
   Heart,
   Eye,
+  Cake,
 } from 'lucide-react-native';
+import { zodiacLabel } from '@/lib/birthday';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme , type Theme } from '@/contexts/ThemeContext';
@@ -581,6 +583,17 @@ export default function ProfileModal({
                 </View>
               ) : null}
             </View>
+
+            {zodiacLabel(profile.birth_date, (profile as any).birth_date_exact) ? (
+              <View style={[styles.chipsGrid, { marginTop: 10 }]}>
+                <View style={[styles.infoChip, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+                  <Cake size={16} color={theme.textSecondary} />
+                  <Text style={[styles.infoChipText, { color: theme.text }]}>
+                    {zodiacLabel(profile.birth_date, (profile as any).birth_date_exact)}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
 
             <ProfileExtrasView extras={extras} />
 

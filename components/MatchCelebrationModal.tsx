@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { View, Text, StyleSheet, Image, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, Modal, Dimensions, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
@@ -18,10 +18,11 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import BouncyButton from '@/components/BouncyButton';
+import { loadMatchInsight, type MatchInsight } from '@/lib/matchReasons';
 
 import { L } from '@/lib/l10n';
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const AVATAR = Math.min(132, SCREEN_W * 0.34);
+const AVATAR = Math.min(112, SCREEN_W * 0.28);
 
 type MatchedUser = {
   id: string;
@@ -75,7 +76,18 @@ const HEARTS = Array.from({ length: 10 }).map((_, i) => ({
 
 export default function MatchCelebrationModal({ visible, matchedUser, sessionId, onClose }: MatchCelebrationModalProps) {
   const { language } = useLanguage();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const [insight, setInsight] = useState<MatchInsight | null>(null);
+
+  useEffect(() => {
+    setInsight(null);
+    if (!visible || !user?.id || !matchedUser?.id) return;
+    let alive = true;
+    loadMatchInsight(user.id, matchedUser.id, language).then((i) => alive && setInsight(i));
+    return () => {
+      alive = false;
+    };
+  }, [visible, user?.id, matchedUser?.id, language]);
   const { theme } = useTheme();
   const router = useRouter();
   const isTr = language === 'tr';
@@ -120,10 +132,11 @@ export default function MatchCelebrationModal({ visible, matchedUser, sessionId,
   const heartStyle = useAnimatedStyle(() => ({ transform: [{ scale: heartScale.value }] }));
   const ctaStyle = useAnimatedStyle(() => ({ opacity: ctaOpacity.value, transform: [{ translateY: ctaY.value }] }));
 
-  const handleStartChat = () => {
+  const handleStartChat = (draft?: string) => {
     onClose();
     if (sessionId && matchedUser?.id) {
-      router.push(`/conversation/${sessionId}?friendId=${matchedUser.id}`);
+      const q = draft ? `&draft=${encodeURIComponent(draft)}` : '';
+      router.push(`/conversation/${sessionId}?friendId=${matchedUser.id}${q}` as any);
     } else {
       router.push('/(tabs)');
     }
@@ -137,6 +150,7 @@ export default function MatchCelebrationModal({ visible, matchedUser, sessionId,
         {HEARTS.map((h, i) => (
           <FloatingHeart key={i} {...h} />
         ))}
+        <ScrollView style={{ width: '100%' }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         <Animated.View style={[styles.titleWrap, titleStyle]}>
           <Text style={styles.titleSmall}>{L('Tebrikler!', 'Congrats!')}</Text>
@@ -158,24 +172,74 @@ export default function MatchCelebrationModal({ visible, matchedUser, sessionId,
           </Animated.View>
         </View>
 
+        {insight && insight.reasons.length > 0 && (
+          <Animated.View style={[styles.reasonsCard, ctaStyle]}>
+            <Text style={styles.reasonsTitle}>{L('Neden eşleştiniz?', 'Why you matched')}</Text>
+            {insight.reasons.map((r) => (
+              <View key={r.kind} style={styles.reasonRow}>
+                <Text style={styles.reasonText}>{r.title}</Text>
+                {r.chips && r.chips.length > 0 && (
+                  <View style={styles.reasonChips}>
+                    {r.chips.map((c) => (
+                      <Text key={c} style={styles.reasonChip}>
+                        {c}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
+          </Animated.View>
+        )}
+
+        {insight?.opener && (
+          <Animated.View style={[styles.openerBox, ctaStyle]}>
+            <Text style={styles.openerLabel}>{L('Sohbeti şununla aç', 'Start the chat with')}</Text>
+            <Text style={styles.openerText}>{insight.opener}</Text>
+          </Animated.View>
+        )}
+
         <Animated.View style={[styles.actions, ctaStyle]}>
-          <BouncyButton style={styles.chatButton} onPress={handleStartChat} pressedScale={0.95}>
-            <MessageCircle size={22} color={theme.primary} />
-            <Text style={[styles.chatButtonText, { color: theme.primary }]}>{L('Mesaj gönder', 'Send a message')}</Text>
-          </BouncyButton>
+          {insight?.opener ? (
+            <BouncyButton style={styles.chatButton} onPress={() => handleStartChat(insight.opener!)} pressedScale={0.95}>
+              <MessageCircle size={22} color={theme.primary} />
+              <Text style={[styles.chatButtonText, { color: theme.primary }]}>{L('Bu mesajla başla', 'Start with this message')}</Text>
+            </BouncyButton>
+          ) : (
+            <BouncyButton style={styles.chatButton} onPress={() => handleStartChat()} pressedScale={0.95}>
+              <MessageCircle size={22} color={theme.primary} />
+              <Text style={[styles.chatButtonText, { color: theme.primary }]}>{L('Mesaj gönder', 'Send a message')}</Text>
+            </BouncyButton>
+          )}
+          {insight?.opener && (
+            <BouncyButton style={styles.dismiss} onPress={() => handleStartChat()} pressedScale={0.95} haptic={false}>
+              <Text style={styles.dismissText}>{L('Kendi mesajımı yazacağım', "I'll write my own")}</Text>
+            </BouncyButton>
+          )}
           <BouncyButton style={styles.dismiss} onPress={onClose} pressedScale={0.95} haptic={false}>
             <Text style={styles.dismissText}>{L('Keşfetmeye devam et', 'Keep swiping')}</Text>
           </BouncyButton>
         </Animated.View>
+        </ScrollView>
       </LinearGradient>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  root: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  scroll: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 48 },
+  reasonsCard: { width: '100%', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, gap: 10, marginBottom: 12 },
+  reasonsTitle: { fontSize: 16, fontWeight: '800', color: '#22202A' },
+  reasonRow: { gap: 6 },
+  reasonText: { fontSize: 14, fontWeight: '600', color: '#22202A' },
+  reasonChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  reasonChip: { fontSize: 12, fontWeight: '600', color: '#5A4A55', backgroundColor: '#F4EEF1', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, overflow: 'hidden' },
+  openerBox: { width: '100%', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 16, padding: 14, gap: 6, marginBottom: 16 },
+  openerLabel: { fontSize: 12, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6, textTransform: 'uppercase' },
+  openerText: { fontSize: 15, color: '#FFFFFF', lineHeight: 21 },
   floatHeart: { position: 'absolute', bottom: -30 },
-  titleWrap: { alignItems: 'center', marginBottom: 40 },
+  titleWrap: { alignItems: 'center', marginBottom: 28 },
   titleSmall: { color: 'rgba(255,255,255,0.9)', fontSize: 16, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
   title: {
     color: '#FFFFFF',
@@ -188,7 +252,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 10,
   },
   subtitle: { color: 'rgba(255,255,255,0.95)', fontSize: 16, marginTop: 10, textAlign: 'center' },
-  avatars: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 56 },
+  avatars: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 28 },
   avatarFrame: {
     borderRadius: AVATAR / 2 + 5,
     padding: 5,

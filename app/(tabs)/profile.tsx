@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Coins, Crown, Settings, Eye, Camera, X, Plus, CreditCard as Edit2, CreditCard as Edit } from 'lucide-react-native';
+import { User, Coins, Crown, Settings, Eye, Cake, Camera, X, Plus, CreditCard as Edit2, CreditCard as Edit } from 'lucide-react-native';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -26,6 +26,7 @@ import { PREMIUM_PLANS } from '@/lib/storeProducts';
 import * as ImagePicker from 'expo-image-picker';
 import EditProfileModal from '@/components/EditProfileModal';
 import ProfileModal from '@/components/ProfileModal';
+import { BIRTHDAY_WEEK_DAYS, birthdayWeekDay, loadBirthDateExact } from '@/lib/birthday';
 import ProfileStrength from '@/components/ProfileStrength';
 import { uploadGalleryPhoto, deletePhotoFromStorage } from '@/lib/uploadAvatar';
 import {
@@ -76,6 +77,11 @@ export default function ProfileScreen() {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [bioText, setBioText] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [birthdayExact, setBirthdayExact] = useState(true);
+  useEffect(() => {
+    loadBirthDateExact(user?.id).then(setBirthdayExact);
+  }, [user?.id, profile?.birth_date, showEditModal]);
+  const bdayDay = birthdayWeekDay(profile?.birth_date, birthdayExact);
 
   useEffect(() => {
     if (user) {
@@ -607,6 +613,32 @@ export default function ProfileScreen() {
           </View>
         </LinearGradient>
 
+        {birthdayExact && bdayDay !== null ? (
+          <LinearGradient colors={theme.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bdayCard}>
+            <Cake size={22} color={theme.onGradient} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.bdayTitle, { color: theme.onGradient }]}>
+                {bdayDay === 0 ? L('Doğum günün kutlu olsun!', 'Happy birthday!') : L('Doğum günü haftandasın', "It's your birthday week")}
+              </Text>
+              <Text style={[styles.bdayText, { color: theme.onGradient }]}>
+                {L("Profilin Keşfet'te öne çıkıyor · {0} gün kaldı", 'Your profile is boosted in Explore · {0} days left', [BIRTHDAY_WEEK_DAYS - bdayDay])}
+              </Text>
+            </View>
+          </LinearGradient>
+        ) : !birthdayExact ? (
+          <TouchableOpacity
+            style={[styles.bdayPrompt, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}
+            onPress={() => setShowEditModal(true)}>
+            <Cake size={22} color={theme.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.bdayTitle, { color: theme.text }]}>{L('Doğum gününü ekle', 'Add your birthday')}</Text>
+              <Text style={[styles.bdayText, { color: theme.textSecondary }]}>
+                {L('Doğum günü haftanda öne çık, doğum günü ikizlerini bul.', 'Get boosted in your birthday week and find your birthday twins.')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ) : null}
+
         <ProfileStrength
           profile={profile}
           photoCount={photos.length}
@@ -1003,6 +1035,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
+  bdayCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginTop: 14, padding: 14, borderRadius: 18 },
+  bdayPrompt: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginTop: 14, padding: 14, borderRadius: 18, borderWidth: 1 },
+  bdayTitle: { fontSize: 15, fontWeight: '800' },
+  bdayText: { fontSize: 12, marginTop: 2, lineHeight: 17 },
   settingsButton: {
     position: 'absolute',
     top: 10,

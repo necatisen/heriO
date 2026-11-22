@@ -13,7 +13,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Location from 'expo-location';
-import { ListFilter as Filter, Heart, X, MapPin, MessageCircle, Sparkles } from 'lucide-react-native';
+import { ListFilter as Filter, Heart, X, MapPin, MessageCircle, Sparkles, Cake } from 'lucide-react-native';
+import { loadBirthdayWeekIds } from '@/lib/birthday';
+import BirthdayTwinsModal from '@/components/BirthdayTwinsModal';
 import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -74,6 +76,8 @@ export default function ExploreScreen() {
   const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
   const [isPremium, setIsPremium] = useState(false);
+  const [birthdayIds, setBirthdayIds] = useState<Set<string>>(() => new Set());
+  const [twinsVisible, setTwinsVisible] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
   const exploreCacheKey = user ? `explore:${user.id}` : '';
   const cachedUsers = exploreCacheKey ? peekCache<UserProfile[]>(exploreCacheKey) : undefined;
@@ -317,8 +321,8 @@ export default function ExploreScreen() {
             .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         : Promise.resolve({ data: [] as any[] } as any);
 
-      const [{ data, error }, { data: blocks }, { data: likesSent }, { data: friendsRows }, { data: sessions }] =
-        await Promise.all([baseQuery, blocksPromise, likesPromise, friendsPromise, sessionsPromise]);
+      const [{ data, error }, { data: blocks }, { data: likesSent }, { data: friendsRows }, { data: sessions }, bIds] =
+        await Promise.all([baseQuery, blocksPromise, likesPromise, friendsPromise, sessionsPromise, loadBirthdayWeekIds()]);
 
       if (error) throw error;
 
@@ -373,6 +377,12 @@ export default function ExploreScreen() {
 
       // Not: Ek premium sıralama sorgusu ilk açılışı geciktirdiği için kaldırıldı.
       // Ana hedef burada hızlı first-paint ve akıcı kart geçişi.
+
+      // Birthday week: these profiles come first and get a birthday badge.
+      setBirthdayIds(bIds);
+      if (bIds.size > 0) {
+        filteredUsers = [...filteredUsers.filter((u) => bIds.has(u.id)), ...filteredUsers.filter((u) => !bIds.has(u.id))];
+      }
 
       setUsers((prev) => {
         const next = mode === 'append' ? [...prev, ...filteredUsers] : [...filteredUsers];
@@ -653,6 +663,12 @@ export default function ExploreScreen() {
           </Text>
           {u.verification_status === 'verified' && <VerifiedBadge size={22} verified />}
         </View>
+        {birthdayIds.has(u.id) && (
+          <View style={styles.onlineRow}>
+            <Cake size={14} color="#FFFFFF" />
+            <Text style={styles.onlineText}>{L('Doğum günü haftasında', 'Birthday week')}</Text>
+          </View>
+        )}
         {isUserOnlineNow(u.is_online, u.last_seen) && (
           <View style={styles.onlineRow}>
             <View style={styles.onlineIndicator} />
@@ -694,7 +710,12 @@ export default function ExploreScreen() {
         <Text style={[styles.headerTitle, { color: theme.onGradient }]}>
           {L('Keşfet', 'Explore')}
         </Text>
-        <View style={{ width: 48 }} />
+        <TouchableOpacity
+          style={[styles.filterButton, { backgroundColor: 'rgba(255,255,255,0.25)' }]}
+          accessibilityLabel={L('Doğum günü ikizlerin', 'Your birthday twins')}
+          onPress={() => setTwinsVisible(true)}>
+          <Cake size={24} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -766,6 +787,8 @@ export default function ExploreScreen() {
           language={language}
         />
       )}
+
+      <BirthdayTwinsModal visible={twinsVisible} onClose={() => setTwinsVisible(false)} />
 
       <MatchCelebrationModal
         visible={!!matchCelebration}

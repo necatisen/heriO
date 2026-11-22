@@ -22,7 +22,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient';
 import Reanimated, { FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
-import { Send, User, ArrowLeft, CreditCard as Edit2, Reply, Check, CheckCheck, Image as ImageIcon, Copy, Trash2, Shield } from 'lucide-react-native';
+import { Send, User, ArrowLeft, CreditCard as Edit2, Reply, Check, CheckCheck, Image as ImageIcon, Copy, Trash2, Shield, LogOut } from 'lucide-react-native';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +42,8 @@ import HeartLoader from '@/components/HeartLoader';
 import { sanitizeSocialAndContacts } from '@/lib/textSanitizer';
 
 import { L } from '@/lib/l10n';
+import { PoliteCloseSheet, WaitingReplyBanner, BirthdayBanner, ClosedChatNotice, waitingDays, birthdayWish } from '@/components/ChatExtras';
+import { birthdayWeekDay } from '@/lib/birthday';
 type Message = {
   id: string;
   content: string;
@@ -84,6 +86,61 @@ export default function ConversationScreen() {
   const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
   const [messageActionMessage, setMessageActionMessage] = useState<Message | null>(null);
   const [reactionsByMessageId, setReactionsByMessageId] = useState<Record<string, { emoji: string; user_id: string }[]>>({});
+  const [closedInfo, setClosedInfo] = useState<{ closed_by: string | null; closed_at: string } | null>(null);
+  const [politeVisible, setPoliteVisible] = useState(false);
+  const [politeSending, setPoliteSending] = useState(false);
+  const draftApplied = useRef(false);
+
+  // "Bu mesajla başla" on the match screen opens the chat with a ready first message.
+  useEffect(() => {
+    const draft = typeof params.draft === 'string' ? params.draft : '';
+    if (draft && !draftApplied.current) {
+      draftApplied.current = true;
+      setMessageText(draft);
+    }
+  }, [params.draft]);
+
+  // Polite close state (columns from migration 20261122130000; missing columns = never closed).
+  useEffect(() => {
+    const sid = typeof params.id === 'string' ? params.id : null;
+    setClosedInfo(null);
+    if (!sid) return;
+    supabase
+      .from('chat_sessions')
+      .select('closed_by, closed_at')
+      .eq('id', sid)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!error && (data as any)?.closed_at) setClosedInfo(data as any);
+      });
+  }, [params.id]);
+
+  const sendPoliteClose = async (text: string) => {
+    if (!user?.id || !otherUser?.id || !sessionId) return;
+    setPoliteSending(true);
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({ session_id: sessionId, sender_id: user.id, receiver_id: otherUser.id, content: text });
+      if (error) throw error;
+      const closedAt = new Date().toISOString();
+      const { error: closeError } = await supabase
+        .from('chat_sessions')
+        .update({ closed_by: user.id, closed_at: closedAt })
+        .eq('id', sessionId);
+      if (closeError) throw closeError;
+      void supabase.functions.invoke('send-push-message', {
+        body: { to_user_id: otherUser.id, body: text, data: { type: 'message', session_id: sessionId, sender_id: user.id } },
+      });
+      setClosedInfo({ closed_by: user.id, closed_at: closedAt });
+      setPoliteVisible(false);
+      fetchMessages(sessionId);
+    } catch (e: any) {
+      Alert.alert(L('Hata', 'Error'), e?.message || L('Sohbet kapatılamadı.', 'Could not close the chat.'));
+    } finally {
+      setPoliteSending(false);
+    }
+  };
   const flatListRef = useRef<FlatList>(null);
   const messageIdsRef = useRef<string[]>([]);
   messageIdsRef.current = messages.map((m) => m.id);
@@ -918,6 +975,9 @@ export default function ConversationScreen() {
     );
   }
 
+  const birthdayDay = otherUser ? birthdayWeekDay(otherUser.birth_date, otherUser.birth_date_exact) : null;
+  const waitDays = waitingDays(messages, user?.id);
+
   if (!otherUser) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -972,6 +1032,14 @@ export default function ConversationScreen() {
             </View>
           </TouchableOpacity>
 
+          {!closedInfo && (
+            <TouchableOpacity
+              onPress={() => setPoliteVisible(true)}
+              style={[styles.blockButton, { marginRight: 10 }]}
+              accessibilityLabel={L('Sohbeti kibarca bitir', 'End the chat kindly')}>
+              <LogOut size={22} color={theme.textSecondary} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={handleBlockUser} style={styles.blockButton}>
             <Shield size={22} color={theme.error} />
           </TouchableOpacity>
@@ -1172,6 +1240,27 @@ export default function ConversationScreen() {
           </View>
         )}
 
+        {!closedInfo && birthdayDay !== null && (
+          <BirthdayBanner
+            name={otherUser.full_name}
+            today={birthdayDay === 0}
+            onCelebrate={() => setMessageText(birthdayWish(otherUser.full_name))}
+          />
+        )}
+        {!closedInfo && waitDays > 0 && (
+          <WaitingReplyBanner name={otherUser.full_name} days={waitDays} onClose={() => setPoliteVisible(true)} />
+        )}
+
+        <PoliteCloseSheet
+          visible={politeVisible}
+          onClose={() => setPoliteVisible(false)}
+          onSend={sendPoliteClose}
+          sending={politeSending}
+        />
+
+        {closedInfo ? (
+          <ClosedChatNotice closedByMe={closedInfo.closed_by === user?.id} name={otherUser.full_name} />
+        ) : (
         <View
           style={[
             styles.inputContainer,
@@ -1212,6 +1301,7 @@ export default function ConversationScreen() {
             )}
           </TouchableOpacity>
         </View>
+        )}
 
         {otherUser && (
           <ProfileModal

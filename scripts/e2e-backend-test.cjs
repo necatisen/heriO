@@ -168,6 +168,23 @@ async function callFunction(c, name, body) {
     must(fake.status === 403, `sahte beğeni kabul edildi: ${fake.status}`);
     return `200 / 403`;
   });
+  await step('Doğum günü: gerçek tarih + ikiz bulma', async () => {
+    const bd = '1995-11-22';
+    check(await A.from('profiles').update({ birth_date: bd, birth_date_exact: true }).eq('id', idA), 'A doğum günü');
+    check(await B.from('profiles').update({ birth_date: '1993-11-22', birth_date_exact: true }).eq('id', idB), 'B doğum günü');
+    const twins = check(await A.rpc('birthday_twins', { max_rows: 30 }), 'birthday_twins');
+    must(twins.some((t) => t.id === idB), 'B ikiz olarak görünmüyor');
+    check(await A.rpc('birthday_week_ids'), 'birthday_week_ids');
+    return `${twins.length} ikiz`;
+  });
+  await step('Kibar kapanış: kapanan sohbete mesaj yazılamaz', async () => {
+    check(await B.from('messages').insert({ session_id: sessionId, sender_id: idB, receiver_id: idA, content: 'İyi şanslar' }), 'kapanış notu');
+    check(await B.from('chat_sessions').update({ closed_by: idB, closed_at: new Date().toISOString() }).eq('id', sessionId), 'kapat');
+    const after = await A.from('messages').insert({ session_id: sessionId, sender_id: idA, receiver_id: idB, content: 'hâlâ orada mısın' });
+    must(after.error, 'kapalı sohbete mesaj gönderilebildi!');
+    const s = check(await A.from('chat_sessions').select('closed_by').eq('id', sessionId).single(), 'A görüyor');
+    must(s.closed_by === idB, 'kapanış bilgisi görünmüyor');
+  });
   await step('Fonksiyon: moderate-image', async () => {
     const img = (await randomJpeg(64, 64, 70)).toString('base64');
     const r = await callFunction(A, 'moderate-image', { image_base64: img });

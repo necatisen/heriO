@@ -19,6 +19,7 @@ import ComboBox from '@/components/ComboBox';
 import { FullScreenModal } from '@/components/FullScreenModal';
 import { ProfileExtrasEditor, loadProfileExtras, saveProfileExtras } from '@/components/ProfileExtras';
 import { EMPTY_EXTRAS, type ProfileExtras } from '@/lib/profileExtras';
+import { birthDateFromAge, dayMonthOf, loadBirthDateExact, monthName } from '@/lib/birthday';
 
 import { L } from '@/lib/l10n';
 type Profile = {
@@ -93,10 +94,20 @@ export default function EditProfileModal({
   const [showRelationshipGoalPicker, setShowRelationshipGoalPicker] = useState(false);
 
   const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
+  /** Real birthday (day + month); null = only the age is known. */
+  const [bday, setBday] = useState<{ day: number; month: number } | null>(null);
 
   useEffect(() => {
-    if (visible) loadProfileExtras(userId).then(setExtras);
-  }, [visible, userId]);
+    if (!visible) return;
+    loadProfileExtras(userId).then(setExtras);
+    setBday(null);
+    loadBirthDateExact(userId).then((exact) => {
+      if (exact) setBday(dayMonthOf(profile?.birth_date));
+    });
+  }, [visible, userId, profile?.birth_date]);
+
+  const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: String(i + 1) }));
+  const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: monthName(i + 1) }));
 
   const ageOptions = generateAgeOptions();
 
@@ -312,7 +323,11 @@ export default function EditProfileModal({
         relationship_goal: formData.relationship_goal || null,
       };
 
-      const birthDate = calculateBirthDateFromAge(formData.age);
+      const ageNum = parseInt(formData.age, 10);
+      const birthDate =
+        bday && ageNum >= 18 && ageNum <= 100
+          ? birthDateFromAge(ageNum, bday.day, bday.month)
+          : calculateBirthDateFromAge(formData.age);
       updates.birth_date = birthDate || null;
 
       if (formData.height) {
@@ -346,6 +361,9 @@ export default function EditProfileModal({
       } catch (e) {
         console.warn('Profile extras not saved:', e);
       }
+      try {
+        await supabase.from('profiles').update({ birth_date_exact: !!bday && !!birthDate }).eq('id', userId);
+      } catch {}
 
       const message = L('Profil güncellendi', 'Profile updated');
       if (Platform.OS === 'web') {
@@ -445,6 +463,30 @@ export default function EditProfileModal({
                   </ScrollView>
                 </View>
               )}
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: theme.text }]}>{L('Doğum günü', 'Birthday')}</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, marginBottom: 8 }}>
+                {L('Doğum günü haftanda profilin öne çıkar. Yılın gösterilmez, sadece yaşın görünür.', 'Your profile is boosted during your birthday week. Your birth year is never shown, only your age.')}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <ComboBox
+                    options={DAY_OPTIONS}
+                    selectedValue={bday?.day ?? ''}
+                    onValueChange={(v) => setBday({ day: Number(v), month: bday?.month ?? 1 })}
+                    placeholder={L('Gün', 'Day')}
+                  />
+                </View>
+                <View style={{ flex: 1.4 }}>
+                  <ComboBox
+                    options={MONTH_OPTIONS}
+                    selectedValue={bday?.month ?? ''}
+                    onValueChange={(v) => setBday({ day: bday?.day ?? 1, month: Number(v) })}
+                    placeholder={L('Ay', 'Month')}
+                  />
+                </View>
+              </View>
             </View>
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
