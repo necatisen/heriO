@@ -96,6 +96,8 @@ export default function TabLayout() {
             router.push('/(tabs)/likes' as Href);
           } else if (data.type === 'plan_join') {
             router.push('/(tabs)/plans' as Href);
+          } else if (data.type === 'birthday_wish') {
+            router.push('/(tabs)/profile' as Href);
           }
         }
 
@@ -109,6 +111,8 @@ export default function TabLayout() {
             router.push('/(tabs)/likes' as Href);
           } else if (data.type === 'plan_join') {
             router.push('/(tabs)/plans' as Href);
+          } else if (data.type === 'birthday_wish') {
+            router.push('/(tabs)/profile' as Href);
           }
         });
       } catch {

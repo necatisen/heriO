@@ -53,6 +53,7 @@ import { ProfileExtrasView, useProfileExtras } from '@/components/ProfileExtras'
 import { formatLastSeen, isUserOnlineNow } from '@/lib/dateFormat';
 
 import { L } from '@/lib/l10n';
+import ChoiceSheet from '@/components/ChoiceSheet';
 function getCountryLabel(value: string | null | undefined, language: string): string {
   const raw = String(value ?? '').trim();
   const norm = raw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
@@ -115,6 +116,8 @@ type ProfileModalProps = {
   language?: string;
   /** Own profile opened from "Profilim → 👁": shows a banner, no action buttons. */
   previewMode?: boolean;
+  /** false hides "Sohbet et" (e.g. birthday twins: they greet first, the other side opens the chat). */
+  allowDirectChat?: boolean;
 };
 
 export default function ProfileModal({
@@ -127,7 +130,9 @@ export default function ProfileModal({
   showActionButtons = true,
   language: languageProp,
   previewMode = false,
+  allowDirectChat = true,
 }: ProfileModalProps) {
+  const [reportVisible, setReportVisible] = useState(false);
   const extras = useProfileExtras(visible ? profile?.id : null);
   const { language: contextLanguage } = useLanguage();
   const language = languageProp ?? contextLanguage;
@@ -256,19 +261,7 @@ export default function ProfileModal({
 
   const handleReport = () => {
     if (!user || !profile || profile.id === user.id) return;
-    const reasons = REPORT_REASONS.tr.map((tr, i) => L(tr, REPORT_REASONS.en[i]));
-    Alert.alert(
-      L('Şikâyet et', 'Report'),
-      L('Sebep seçin', 'Choose a reason'),
-      [
-        { text: reasons[0], onPress: () => submitReport(reasons[0]) },
-        { text: reasons[1], onPress: () => submitReport(reasons[1]) },
-        { text: reasons[2], onPress: () => submitReport(reasons[2]) },
-        { text: reasons[3], onPress: () => submitReport(reasons[3]) },
-        { text: reasons[4], onPress: () => submitReport(reasons[4]) },
-        { text: L('İptal', 'Cancel'), style: 'cancel' },
-      ]
-    );
+    setReportVisible(true);
   };
 
   const handleStartChat = async () => {
@@ -607,7 +600,7 @@ export default function ProfileModal({
                   </Text>
                 </TouchableOpacity>
 
-                {isPremium && (
+                {isPremium && allowDirectChat && (
                   <TouchableOpacity
                     style={[styles.reportBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
                     onPress={handleStartChat}>
@@ -685,6 +678,17 @@ export default function ProfileModal({
           </Text>
         </View>
       </FullScreenModal>
+
+      <ChoiceSheet
+        visible={reportVisible}
+        title={L('Şikâyet et', 'Report')}
+        message={L('Sebep seçin', 'Choose a reason')}
+        onClose={() => setReportVisible(false)}
+        choices={REPORT_REASONS.tr.map((tr, i) => {
+          const label = L(tr, REPORT_REASONS.en[i]);
+          return { label, onPress: () => void submitReport(label) };
+        })}
+      />
     </>
   );
 }

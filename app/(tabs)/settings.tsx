@@ -1,14 +1,16 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, Image, Switch } from 'react-native';
 import type { Language } from '@/lib/i18n';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings as SettingsIcon, LogOut, Globe, Palette, Trash2, Mail, Check, FileText, X, ShoppingBag, FileCheck, Shield } from 'lucide-react-native';
+import { Settings as SettingsIcon, LogOut, Globe, Palette, Trash2, Mail, Check, FileText, X, ShoppingBag, FileCheck, Shield, Cake } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme, THEMES, THEME_TYPES, type ThemeType , type Theme } from '@/contexts/ThemeContext';
 import { useRouter, type Href } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { loadShareBirthday, saveShareBirthday } from '@/lib/birthdayGreetings';
+import { loadBirthDateExact } from '@/lib/birthday';
 import { getErrorLogs, clearErrorLogs, ErrorLog } from '@/lib/errorLogger';
 import { paymentsEnabledSync } from '@/lib/payments';
 
@@ -41,6 +43,29 @@ export default function SettingsScreen() {
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [showBlockedUsers, setShowBlockedUsers] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [shareBday, setShareBday] = useState(false);
+
+  useEffect(() => {
+    loadShareBirthday(user?.id).then(setShareBday);
+  }, [user?.id]);
+
+  const toggleShareBday = async (v: boolean) => {
+    if (!user?.id) return;
+    if (v && !(await loadBirthDateExact(user.id))) {
+      Alert.alert(
+        L('Önce doğum gününü ekle', 'Add your birthday first'),
+        L('Profilim → Profili düzenle bölümünden doğum gününü (gün ve ay) seç.', 'Pick your birthday (day and month) in My profile → Edit profile.')
+      );
+      return;
+    }
+    setShareBday(v);
+    try {
+      await saveShareBirthday(user.id, v);
+    } catch (e: any) {
+      setShareBday(!v);
+      Alert.alert(L('Hata', 'Error'), e?.message || '');
+    }
+  };
 
   const handleLogout = async () => {
     const confirmText = L('Çıkış yapmak istediğinize emin misiniz?', 'Are you sure you want to logout?');
@@ -360,6 +385,18 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </TouchableOpacity>
+          <View style={[styles.settingItem, { borderBottomColor: theme.border }]}>
+            <View style={[styles.settingLeft, { flex: 1 }]}>
+              <Cake size={24} color={theme.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingText, { color: theme.text }]}>{L('Doğum günümü paylaş', 'Share my birthday')}</Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>
+                  {L('Doğum günü ikizlerinde görün ve doğum günü haftanda öne çık.', 'Appear to your birthday twins and get boosted in your birthday week.')}
+                </Text>
+              </View>
+            </View>
+            <Switch value={shareBday} onValueChange={toggleShareBday} trackColor={{ true: theme.primary, false: theme.border }} thumbColor="#FFFFFF" />
+          </View>
         </View>
 
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>

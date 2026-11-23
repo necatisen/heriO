@@ -172,10 +172,33 @@ async function callFunction(c, name, body) {
     const bd = '1995-11-22';
     check(await A.from('profiles').update({ birth_date: bd, birth_date_exact: true }).eq('id', idA), 'A doğum günü');
     check(await B.from('profiles').update({ birth_date: '1993-11-22', birth_date_exact: true }).eq('id', idB), 'B doğum günü');
+    const hidden = check(await A.rpc('birthday_twins', { max_rows: 30 }), 'birthday_twins (kapalı)');
+    must(!hidden.some((t) => t.id === idB), 'paylaşımı kapalı B ikizlerde görünüyor!');
+    check(await B.from('profiles').update({ share_birthday: true }).eq('id', idB), 'B paylaş');
     const twins = check(await A.rpc('birthday_twins', { max_rows: 30 }), 'birthday_twins');
     must(twins.some((t) => t.id === idB), 'B ikiz olarak görünmüyor');
     check(await A.rpc('birthday_week_ids'), 'birthday_week_ids');
     return `${twins.length} ikiz`;
+  });
+  await step('Doğum günü: kutlama / teşekkür / güvenlik', async () => {
+    // A → B allowed (B shares). B → A refused (A does not share).
+    const g = check(await A.from('birthday_greetings').insert({ from_user: idA, to_user: idB, kind: 'wish', note: 'İyi ki doğdun' }).select('id').single(), 'A kutla');
+    const twice = await A.from('birthday_greetings').insert({ from_user: idA, to_user: idB, kind: 'hello' });
+    must(twice.error, 'aynı yıl ikinci not kabul edildi!');
+    const back = await B.from('birthday_greetings').insert({ from_user: idB, to_user: idA, kind: 'hello' });
+    must(back.error, 'paylaşımı kapalı kişiye not gönderilebildi!');
+    const forged = await A.from('birthday_greetings').update({ thanked_at: new Date().toISOString() }).eq('id', g.id).select('id');
+    must(!forged.data?.length, 'gönderen kendi notunu teşekkürlü yapabildi!');
+    const pw = await callFunction(A, 'send-push-message', { kind: 'birthday_wish', to_user_id: idB });
+    must(pw.status === 200, `birthday_wish push ${pw.status}`);
+    const fakeThanks = await callFunction(A, 'send-push-message', { kind: 'birthday_thanks', to_user_id: idB });
+    must(fakeThanks.status === 403, `sahte teşekkür push ${fakeThanks.status}`);
+    check(await B.from('birthday_greetings').update({ thanked_at: new Date().toISOString() }).eq('id', g.id), 'B teşekkür');
+    const pt = await callFunction(B, 'send-push-message', { kind: 'birthday_thanks', to_user_id: idA });
+    must(pt.status === 200, `birthday_thanks push ${pt.status}`);
+    check(await B.from('notifications').select('id').limit(1), 'bildirim okunur');
+    check(await B.from('birthday_greetings').delete().eq('id', g.id), 'B sil');
+    return '200 / 403';
   });
   await step('Kibar kapanış: kapanan sohbete mesaj yazılamaz', async () => {
     check(await B.from('messages').insert({ session_id: sessionId, sender_id: idB, receiver_id: idA, content: 'İyi şanslar' }), 'kapanış notu');

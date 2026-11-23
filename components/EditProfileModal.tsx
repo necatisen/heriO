@@ -8,7 +8,9 @@ import {
   ScrollView,
   Platform,
   Alert,
+  Switch,
 } from 'react-native';
+import { loadShareBirthday, saveShareBirthday } from '@/lib/birthdayGreetings';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Save } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -96,10 +98,13 @@ export default function EditProfileModal({
   const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
   /** Real birthday (day + month); null = only the age is known. */
   const [bday, setBday] = useState<{ day: number; month: number } | null>(null);
+  /** Opt-in: appear in "birthday twins" and get the birthday-week boost. */
+  const [shareBday, setShareBday] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
     loadProfileExtras(userId).then(setExtras);
+    loadShareBirthday(userId).then(setShareBday);
     setBday(null);
     loadBirthDateExact(userId).then((exact) => {
       if (exact) setBday(dayMonthOf(profile?.birth_date));
@@ -364,6 +369,9 @@ export default function EditProfileModal({
       try {
         await supabase.from('profiles').update({ birth_date_exact: !!bday && !!birthDate }).eq('id', userId);
       } catch {}
+      try {
+        await saveShareBirthday(userId, shareBday && !!bday);
+      } catch {}
 
       const message = L('Profil güncellendi', 'Profile updated');
       if (Platform.OS === 'web') {
@@ -467,7 +475,7 @@ export default function EditProfileModal({
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>{L('Doğum günü', 'Birthday')}</Text>
               <Text style={{ color: theme.textSecondary, fontSize: 12, marginBottom: 8 }}>
-                {L('Doğum günü haftanda profilin öne çıkar. Yılın gösterilmez, sadece yaşın görünür.', 'Your profile is boosted during your birthday week. Your birth year is never shown, only your age.')}
+                {L('Doğum tarihin kimseye gösterilmez; profilde sadece yaşın ve burcun görünür.', 'Your birth date is never shown; your profile only shows your age and zodiac sign.')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
@@ -487,6 +495,20 @@ export default function EditProfileModal({
                   />
                 </View>
               </View>
+              {bday ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600' }}>{L('Doğum günümü paylaş', 'Share my birthday')}</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 }}>
+                      {L(
+                        'Açarsan aynı gün doğanlar (doğum günü ikizlerin) seni görür ve kutlayabilir; doğum günü haftanda Keşfet\'te öne çıkarsın.',
+                        'If on, people born on the same day (your birthday twins) can see and greet you, and you are boosted in Explore during your birthday week.'
+                      )}
+                    </Text>
+                  </View>
+                  <Switch value={shareBday} onValueChange={setShareBday} trackColor={{ true: theme.primary, false: theme.border }} thumbColor="#FFFFFF" />
+                </View>
+              ) : null}
             </View>
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>

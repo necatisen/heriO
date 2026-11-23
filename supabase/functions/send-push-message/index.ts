@@ -37,9 +37,20 @@ const PLAN_TEXT: Record<string, { joinTitle: string; join: string; acceptTitle: 
   ar: { joinTitle: 'شخص يريد الانضمام 🙋', join: '{name}: «{plan}»', acceptTitle: 'تم قبول طلبك 🎉', accept: 'قبلك {name} في خطة «{plan}». المحادثة مفتوحة!' },
 };
 
+// Birthday greetings ({name} = sender).
+const BDAY_TEXT: Record<string, { wishTitle: string; wish: string; helloTitle: string; hello: string; thanksTitle: string; thanks: string }> = {
+  tr: { wishTitle: 'Doğum günün kutlandı 🎂', wish: '{name} doğum gününü kutladı. Görmek için dokun.', helloTitle: 'Doğum günü ikizinden selam 👋', hello: '{name} ile aynı gün doğmuşsunuz! Selamını görmek için dokun.', thanksTitle: 'Teşekkür geldi 💌', thanks: '{name} kutlaman için teşekkür etti. Sohbet açıldı!' },
+  en: { wishTitle: 'Someone celebrated your birthday 🎂', wish: '{name} wished you a happy birthday. Tap to see.', helloTitle: 'Hello from a birthday twin 👋', hello: 'You and {name} share a birthday! Tap to see their note.', thanksTitle: 'You got a thank-you 💌', thanks: '{name} thanked you for your note. Your chat is open!' },
+  de: { wishTitle: 'Glückwunsch zum Geburtstag 🎂', wish: '{name} hat dir zum Geburtstag gratuliert. Tippe, um es zu sehen.', helloTitle: 'Gruß von deinem Geburtstagszwilling 👋', hello: 'Du und {name} habt am selben Tag Geburtstag! Tippe für die Nachricht.', thanksTitle: 'Ein Dankeschön 💌', thanks: '{name} hat sich für deine Nachricht bedankt. Der Chat ist offen!' },
+  fr: { wishTitle: 'On a fêté ton anniversaire 🎂', wish: '{name} vous a souhaité un joyeux anniversaire. Touchez pour voir.', helloTitle: "Bonjour d'un jumeau d'anniversaire 👋", hello: 'Vous et {name} êtes nés le même jour ! Touchez pour voir le message.', thanksTitle: 'Un merci pour vous 💌', thanks: '{name} vous remercie pour votre message. La discussion est ouverte !' },
+  es: { wishTitle: 'Te felicitaron el cumpleaños 🎂', wish: '{name} te felicitó el cumpleaños. Toca para verlo.', helloTitle: 'Saludo de tu gemelo de cumpleaños 👋', hello: '¡Tú y {name} cumplís el mismo día! Toca para ver su nota.', thanksTitle: 'Te dieron las gracias 💌', thanks: '{name} te agradeció tu nota. ¡El chat está abierto!' },
+  ru: { wishTitle: 'Вас поздравили с днём рождения 🎂', wish: '{name} поздравил(а) вас с днём рождения. Нажмите, чтобы посмотреть.', helloTitle: 'Привет от близнеца по дню рождения 👋', hello: 'Вы с {name} родились в один день! Нажмите, чтобы прочитать.', thanksTitle: 'Вас поблагодарили 💌', thanks: '{name} поблагодарил(а) за поздравление. Чат открыт!' },
+  ar: { wishTitle: 'تمت تهنئتك بعيد ميلادك 🎂', wish: 'هنّأك {name} بعيد ميلادك. اضغط للمشاهدة.', helloTitle: 'تحية من توأم عيد ميلادك 👋', hello: 'أنت و{name} وُلدتما في اليوم نفسه! اضغط لقراءة الرسالة.', thanksTitle: 'وصلك شكر 💌', thanks: 'شكرك {name} على رسالتك. المحادثة مفتوحة!' },
+};
+
 type RequestBody = {
-  /** 'like' / 'match' / 'plan_join' / 'plan_accept' → title and body are built here in the receiver's language */
-  kind?: 'message' | 'like' | 'match' | 'plan_join' | 'plan_accept';
+  /** 'like' / 'match' / 'plan_join' / 'plan_accept' / 'birthday_*' → title and body are built here in the receiver's language */
+  kind?: 'message' | 'like' | 'match' | 'plan_join' | 'plan_accept' | 'birthday_wish' | 'birthday_thanks';
   plan_id?: string;
   /** 'photo' → body is replaced by a localized "Photo" label */
   media?: 'text' | 'photo';
@@ -139,6 +150,34 @@ Deno.serve(async (req: Request) => {
       const planTitle = String(plan.title || '').slice(0, 60);
       localizedTitle = payload.kind === 'plan_join' ? pt.joinTitle : pt.acceptTitle;
       localizedBody = (payload.kind === 'plan_join' ? pt.join : pt.accept).replace('{name}', name).replace('{plan}', planTitle);
+    }
+    if (payload.kind === 'birthday_wish' || payload.kind === 'birthday_thanks') {
+      // wish: caller sent a greeting to the receiver. thanks: the receiver's greeting to the caller was thanked.
+      const [from, to] = payload.kind === 'birthday_wish' ? [userRes.user.id, toUserId] : [toUserId, userRes.user.id];
+      const { data: g } = await admin
+        .from('birthday_greetings')
+        .select('kind, thanked_at, created_at')
+        .eq('from_user', from)
+        .eq('to_user', to)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      // Only right after the action, so one greeting cannot be replayed into many pushes.
+      const recent = (iso?: string | null) => !!iso && Date.now() - new Date(iso).getTime() < 10 * 60 * 1000;
+      const valid = payload.kind === 'birthday_wish' ? !!g && recent(g.created_at) && !g.thanked_at : recent(g?.thanked_at);
+      if (!valid) return jsonResponse({ success: false, message: 'No such greeting' }, 403);
+      const bt = BDAY_TEXT[String(receiver?.preferred_language || 'en')] || BDAY_TEXT.en;
+      const name = senderName || 'Birthchat';
+      if (payload.kind === 'birthday_thanks') {
+        localizedTitle = bt.thanksTitle;
+        localizedBody = bt.thanks.replace('{name}', name);
+      } else if (g.kind === 'wish') {
+        localizedTitle = bt.wishTitle;
+        localizedBody = bt.wish.replace('{name}', name);
+      } else {
+        localizedTitle = bt.helloTitle;
+        localizedBody = bt.hello.replace('{name}', name);
+      }
     }
     // last_ticket_id comes from migration 20261121120000; fall back if it has not been applied yet.
     let { data: tokens, error: tokensErr } = await admin

@@ -27,6 +27,8 @@ import * as ImagePicker from 'expo-image-picker';
 import EditProfileModal from '@/components/EditProfileModal';
 import ProfileModal from '@/components/ProfileModal';
 import { BIRTHDAY_WEEK_DAYS, birthdayWeekDay, loadBirthDateExact } from '@/lib/birthday';
+import { loadShareBirthday } from '@/lib/birthdayGreetings';
+import GreetingsCard from '@/components/GreetingsCard';
 import ProfileStrength from '@/components/ProfileStrength';
 import { uploadGalleryPhoto, deletePhotoFromStorage } from '@/lib/uploadAvatar';
 import {
@@ -78,8 +80,10 @@ export default function ProfileScreen() {
   const [bioText, setBioText] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [birthdayExact, setBirthdayExact] = useState(true);
+  const [shareBday, setShareBday] = useState(false);
   useEffect(() => {
     loadBirthDateExact(user?.id).then(setBirthdayExact);
+    loadShareBirthday(user?.id).then(setShareBday);
   }, [user?.id, profile?.birth_date, showEditModal]);
   const bdayDay = birthdayWeekDay(profile?.birth_date, birthdayExact);
 
@@ -621,7 +625,9 @@ export default function ProfileScreen() {
                 {bdayDay === 0 ? L('Doğum günün kutlu olsun!', 'Happy birthday!') : L('Doğum günü haftandasın', "It's your birthday week")}
               </Text>
               <Text style={[styles.bdayText, { color: theme.onGradient }]}>
-                {L("Profilin Keşfet'te öne çıkıyor · {0} gün kaldı", 'Your profile is boosted in Explore · {0} days left', [BIRTHDAY_WEEK_DAYS - bdayDay])}
+                {shareBday
+                  ? L("Profilin Keşfet'te öne çıkıyor · {0} gün kaldı", 'Your profile is boosted in Explore · {0} days left', [BIRTHDAY_WEEK_DAYS - bdayDay])
+                  : L("Öne çıkmak için Ayarlar'dan \"Doğum günümü paylaş\"ı aç.", 'Turn on "Share my birthday" in Settings to get boosted.')}
               </Text>
             </View>
           </LinearGradient>
@@ -638,6 +644,8 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
         ) : null}
+
+        <GreetingsCard />
 
         <ProfileStrength
           profile={profile}

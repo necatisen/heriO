@@ -44,6 +44,7 @@ import { sanitizeSocialAndContacts } from '@/lib/textSanitizer';
 import { L } from '@/lib/l10n';
 import { PoliteCloseSheet, WaitingReplyBanner, BirthdayBanner, ClosedChatNotice, waitingDays, birthdayWish } from '@/components/ChatExtras';
 import { birthdayWeekDay } from '@/lib/birthday';
+import ChoiceSheet from '@/components/ChoiceSheet';
 type Message = {
   id: string;
   content: string;
@@ -72,6 +73,7 @@ export default function ConversationScreen() {
   const params = useLocalSearchParams();
 
   const [otherUser, setOtherUser] = useState<any>(null);
+  const [blockSheetVisible, setBlockSheetVisible] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
@@ -631,39 +633,20 @@ export default function ConversationScreen() {
     })();
   };
 
+  const BLOCK_REASONS = [
+    { key: 'harassment', tr: 'Taciz', en: 'Harassment' },
+    { key: 'spam', tr: 'Spam / Reklam', en: 'Spam / Ads' },
+    { key: 'inappropriate', tr: 'Uygunsuz içerik', en: 'Inappropriate content' },
+    { key: 'other', tr: 'Diğer', en: 'Other' },
+  ];
+
   const handleBlockUser = () => {
     if (!user?.id || !otherUser?.id) return;
+    setBlockSheetVisible(true);
+  };
 
-    Alert.alert(
-      L('Kullanıcıyı Engelle', 'Block User'),
-      L('{0} kullanıcısını engellemek istiyor musunuz? Bir sebep seçin.', 'Do you want to block {0}? Choose a reason.', [otherUser.full_name]),
-      [
-        { text: L('Vazgeç', 'Cancel'), style: 'cancel' },
-        ...[
-          {
-            key: 'harassment',
-            tr: 'Taciz',
-            en: 'Harassment',
-          },
-          {
-            key: 'spam',
-            tr: 'Engelle',
-            en: 'Spam / Ads',
-          },
-          {
-            key: 'inappropriate',
-            tr: 'Uygunsuz içerik',
-            en: 'Inappropriate content',
-          },
-          {
-            key: 'other',
-            tr: 'Diğer',
-            en: 'Other',
-          },
-        ].map((opt) => ({
-          text: L(opt.tr, opt.en),
-          style: 'destructive' as const,
-          onPress: async () => {
+  const blockWithReason = async (opt: { key: string }) => {
+    if (!user?.id || !otherUser?.id) return;
             try {
               const { data: existing } = await supabase
                 .from('blocks')
@@ -708,10 +691,6 @@ export default function ConversationScreen() {
                   (L('Kullanıcı engellenemedi.', 'Failed to block user.'))
               );
             }
-          },
-        })),
-      ]
-    );
   };
 
   const deleteMessage = async (messageId: string) => {
@@ -1256,6 +1235,13 @@ export default function ConversationScreen() {
           onClose={() => setPoliteVisible(false)}
           onSend={sendPoliteClose}
           sending={politeSending}
+        />
+        <ChoiceSheet
+          visible={blockSheetVisible}
+          title={L('Kullanıcıyı Engelle', 'Block User')}
+          message={L('{0} kullanıcısını engellemek istiyor musunuz? Bir sebep seçin.', 'Do you want to block {0}? Choose a reason.', [otherUser.full_name])}
+          onClose={() => setBlockSheetVisible(false)}
+          choices={BLOCK_REASONS.map((opt) => ({ label: L(opt.tr, opt.en), destructive: true, onPress: () => void blockWithReason(opt) }))}
         />
 
         {closedInfo ? (

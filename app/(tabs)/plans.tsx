@@ -15,6 +15,7 @@ import HeartLoader from '@/components/HeartLoader';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import ProfileModal from '@/components/ProfileModal';
 import CreatePlanModal from '@/components/CreatePlanModal';
+import ChoiceSheet from '@/components/ChoiceSheet';
 import { supabase } from '@/lib/supabase';
 import { compatibilityScore } from '@/lib/compatibility';
 import { loadProfileExtras } from '@/components/ProfileExtras';
@@ -62,6 +63,7 @@ export default function PlansScreen() {
   const [createVisible, setCreateVisible] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [opened, setOpened] = useState<any | null>(null);
+  const [reporting, setReporting] = useState<Plan | null>(null);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -181,29 +183,24 @@ export default function PlansScreen() {
       },
     ]);
 
-  const onMore = (p: Plan) => {
-    const reasons: [string, string][] = [
-      ['Uygunsuz içerik', 'Inappropriate content'],
-      ['Spam / reklam', 'Spam / advertising'],
-      ['Sahte profil', 'Fake profile'],
-      ['Güvensiz buluşma', 'Unsafe meetup'],
-    ];
-    Alert.alert(L('Planı şikâyet et', 'Report plan'), L('Neden şikâyet ediyorsun?', 'Why are you reporting it?'), [
-      ...reasons.map(([tr, en]) => ({
-        text: L(tr, en),
-        onPress: async () => {
-          if (!user?.id) return;
-          try {
-            await reportPlan(p, user.id, en);
-            setFeed((prev) => prev.filter((x) => x.id !== p.id));
-            Alert.alert(L('Teşekkürler', 'Thank you'), L('Şikâyetiniz alındı. İncelenecektir.', 'Your report has been received and will be reviewed.'));
-          } catch (e: any) {
-            Alert.alert(L('Hata', 'Error'), e?.message || '');
-          }
-        },
-      })),
-      { text: L('Vazgeç', 'Cancel'), style: 'cancel' as const },
-    ]);
+  const onMore = (p: Plan) => setReporting(p);
+
+  const REPORT_REASONS: [string, string][] = [
+    ['Uygunsuz içerik', 'Inappropriate content'],
+    ['Spam / reklam', 'Spam / advertising'],
+    ['Sahte profil', 'Fake profile'],
+    ['Güvensiz buluşma', 'Unsafe meetup'],
+  ];
+
+  const submitReport = async (p: Plan, reasonEn: string) => {
+    if (!user?.id) return;
+    try {
+      await reportPlan(p, user.id, reasonEn);
+      setFeed((prev) => prev.filter((x) => x.id !== p.id));
+      Alert.alert(L('Teşekkürler', 'Thank you'), L('Şikâyetiniz alındı. İncelenecektir.', 'Your report has been received and will be reviewed.'));
+    } catch (e: any) {
+      Alert.alert(L('Hata', 'Error'), e?.message || '');
+    }
   };
 
   const openOwner = async (userId: string) => {
@@ -460,6 +457,18 @@ export default function PlansScreen() {
         }}
       />
       <ProfileModal visible={!!opened} profile={opened} onClose={() => setOpened(null)} showActionButtons={false} />
+      <ChoiceSheet
+        visible={!!reporting}
+        title={L('Planı şikâyet et', 'Report plan')}
+        message={L('Neden şikâyet ediyorsun?', 'Why are you reporting it?')}
+        onClose={() => setReporting(null)}
+        choices={REPORT_REASONS.map(([tr, en]) => ({
+          label: L(tr, en),
+          onPress: () => {
+            if (reporting) void submitReport(reporting, en);
+          },
+        }))}
+      />
     </SafeAreaView>
   );
 }
