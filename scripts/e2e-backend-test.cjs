@@ -233,6 +233,51 @@ async function callFunction(c, name, body) {
     const fourth = await A.from('plans').insert({ user_id: idA, category: 'games', title: 'QA plan 4', starts_at: at(50) });
     must(fourth.error, '4. açık plan engellenmedi!');
   });
+  await step('Moderasyon: şikâyet gizliliği / yetkisiz işlem reddedilir', async () => {
+    const rep = check(
+      await A.from('user_reports').insert({ reporter_id: idA, reported_user_id: idB, reason: 'QA spam', context: { excerpt: 'qa' } }).select('id').single(),
+      'şikâyet'
+    );
+    const forged = await A.from('user_reports').insert({ reporter_id: idA, reported_user_id: idB, reason: 'x', status: 'resolved' });
+    must(forged.error, 'şikâyet kapalı olarak eklenebildi!');
+    must(check(await B.from('user_reports').select('id').eq('reported_user_id', idB), 'B okuyor').length === 0, 'şikâyet edilen kişi şikâyeti görebiliyor!');
+    const n = await callFunction(A, 'moderate-user', { action: 'notify_report', report_id: rep.id });
+    must(n.status === 200, `notify_report ${n.status} ${n.body.message || ''}`);
+    const fakeNotify = await callFunction(B, 'moderate-user', { action: 'notify_report', report_id: rep.id });
+    must(fakeNotify.status === 403, `başkasının şikâyeti bildirildi: ${fakeNotify.status}`);
+    const act = await callFunction(B, 'moderate-user', { action: 'act', kind: 'ban', target_user_id: idA, reason: 'x' });
+    must(act.status === 403, `yetkisiz ban: ${act.status}`);
+    const up = await B.storage.from('moderation-evidence').upload(`${idA}/qa.jpg`, Buffer.from('x'), { contentType: 'image/jpeg' });
+    must(up.error, 'yetkisiz kanıt yüklendi!');
+    must(check(await B.from('moderation_actions').select('id'), 'log').length === 0, 'kullanıcı işlem kaydını görüyor!');
+    const selfBan = await B.from('user_bans').insert({ user_id: idA, reason: 'x' });
+    must(selfBan.error, 'kullanıcı ban ekleyebildi!');
+    if (!admin) return `bildirim: ${n.body.notified ?? 0} yetkili`;
+
+    // Full flow with a temporary moderator (needs the service role key).
+    check(await admin.from('staff_roles').insert({ user_id: idA, role: 'moderator' }), 'moderatör ekle');
+    try {
+      const noEvidence = await callFunction(A, 'moderate-user', { action: 'act', kind: 'ban', target_user_id: idB, reason: 'QA' });
+      must(noEvidence.status === 400, `kanıtsız ban: ${noEvidence.status}`);
+      const path = `${idB}/qa_${Date.now()}.jpg`;
+      check(await A.storage.from('moderation-evidence').upload(path, await randomJpeg(32, 32, 60), { contentType: 'image/jpeg' }), 'kanıt yükle');
+      const s = await callFunction(A, 'moderate-user', { action: 'act', kind: 'suspend', days: 1, target_user_id: idB, reason: 'QA spam', note: 'e2e', evidence: [path] });
+      must(s.status === 200, `askı ${s.status} ${s.body.message || ''}`);
+      must(check(await B.from('user_bans').select('until'), 'B ban görüyor').length === 1, 'ban kaydı yok');
+      must(check(await A.from('user_reports').select('status').eq('id', rep.id).single(), 'durum').status === 'resolved', 'şikâyet kapanmadı');
+      const relog = await client().auth.signInWithPassword({ email: users.b.email, password: users.b.password });
+      must(relog.error, 'askıdaki kullanıcı giriş yapabildi!');
+      const log = check(await A.from('moderation_actions').select('action, actor_id, evidence').eq('target_user', idB), 'log');
+      must(log.some((l) => l.action === 'suspend' && l.actor_id === idA && l.evidence.length === 1), 'işlem kaydı eksik');
+      const u = await callFunction(A, 'moderate-user', { action: 'act', kind: 'unban', target_user_id: idB, reason: 'QA bitti' });
+      must(u.status === 200, `ban kaldır ${u.status}`);
+      must(check(await A.from('user_bans').select('user_id').eq('user_id', idB), 'ban sil').length === 0, 'ban kalktı ama kayıt duruyor');
+      await admin.storage.from('moderation-evidence').remove([path]);
+      return `askı → giriş engellendi → kaldırıldı · e-posta: ${s.body.email_sent ? 'gitti' : 'SMTP yok'}`;
+    } finally {
+      await admin.from('staff_roles').delete().eq('user_id', idA);
+    }
+  });
   await step('Fonksiyon: moderate-image', async () => {
     const img = (await randomJpeg(64, 64, 70)).toString('base64');
     const r = await callFunction(A, 'moderate-image', { image_base64: img });

@@ -15,6 +15,12 @@ export function authErrorMessage(raw: string | null | undefined): string {
   if (m.includes('provider is not enabled') || m.includes('unsupported provider')) {
     return L('Google ile giriş şu anda kullanılamıyor. E-posta ile devam edebilirsiniz.', 'Google sign-in is not available right now. You can continue with email.');
   }
+  if (m.includes('banned')) {
+    return L(
+      'Hesabın topluluk kurallarını ihlal ettiği için yönetim tarafından engellendi. İtiraz için: birthchathelp@gmail.com',
+      'Your account was blocked by the moderation team for breaking the community rules. To appeal: birthchathelp@gmail.com'
+    );
+  }
   if (m.includes('invalid login credentials')) return L('E-posta veya şifre hatalı', 'Email or password is incorrect');
   if (m.includes('email not confirmed')) {
     return L(

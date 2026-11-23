@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, 
 import type { Language } from '@/lib/i18n';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings as SettingsIcon, LogOut, Globe, Palette, Trash2, Mail, Check, FileText, X, ShoppingBag, FileCheck, Shield, Cake } from 'lucide-react-native';
+import { Settings as SettingsIcon, LogOut, Globe, Palette, Trash2, Mail, Check, FileText, X, ShoppingBag, FileCheck, Shield, Cake, ShieldCheck } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme, THEMES, THEME_TYPES, type ThemeType , type Theme } from '@/contexts/ThemeContext';
@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { useState, useMemo, useEffect } from 'react';
 import { loadShareBirthday, saveShareBirthday } from '@/lib/birthdayGreetings';
 import { loadBirthDateExact } from '@/lib/birthday';
+import { getMyStaffRole, type StaffRole } from '@/lib/staff';
 import { getErrorLogs, clearErrorLogs, ErrorLog } from '@/lib/errorLogger';
 import { paymentsEnabledSync } from '@/lib/payments';
 
@@ -44,6 +45,11 @@ export default function SettingsScreen() {
   const [showBlockedUsers, setShowBlockedUsers] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [shareBday, setShareBday] = useState(false);
+  const [staffRole, setStaffRoleState] = useState<StaffRole | null>(null);
+
+  useEffect(() => {
+    getMyStaffRole(user?.id, true).then(setStaffRoleState);
+  }, [user?.id]);
 
   useEffect(() => {
     loadShareBirthday(user?.id).then(setShareBday);
@@ -375,6 +381,18 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
             {L('Gizlilik & Güvenlik', 'Privacy & Safety')}
           </Text>
+          {staffRole ? (
+            <TouchableOpacity
+              style={[styles.settingItem, { borderBottomColor: theme.border }]}
+              onPress={() => router.push('/admin' as Href)}>
+              <View style={styles.settingLeft}>
+                <ShieldCheck size={24} color={theme.primary} />
+                <Text style={[styles.settingText, { color: theme.text }]}>
+                  {L('Yönetim', 'Moderation')} ({staffRole === 'admin' ? 'Admin' : L('Moderatör', 'Moderator')})
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={[styles.settingItem, { borderBottomColor: theme.border }]}
             onPress={handleViewBlockedUsers}>

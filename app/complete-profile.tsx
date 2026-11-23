@@ -24,6 +24,7 @@ import ComboBox from '@/components/ComboBox';
 import { BrandLogo } from '@/components/BrandLogo';
 import { L } from '@/lib/l10n';
 import { ConsentChecklist, signupConsentItems, allChecked } from '@/components/ConsentChecklist';
+import RulesNotice from '@/components/RulesNotice';
 import { recordConsents, SIGNUP_CONSENTS, type ConsentType } from '@/lib/consents';
 
 /**
@@ -171,6 +172,8 @@ export default function CompleteProfileScreen() {
                 />
               </View>
             )}
+
+            <RulesNotice />
 
             <ConsentChecklist
               items={consentItems}

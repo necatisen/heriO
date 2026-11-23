@@ -6,7 +6,7 @@
 import type { Language } from '@/lib/i18n';
 
 export const SUPPORT_EMAIL = 'birthchathelp@gmail.com';
-const UPDATED = '20.11.2026';
+const UPDATED = '23.11.2026';
 
 export const PRIVACY: Record<Language, string> = {
   tr: `Birthchat Gizlilik Politikası
@@ -311,7 +311,7 @@ En az 18 yaşında olmalısınız. Hesap bilgilerinizin doğru olması ve tek bi
 Şunlar kesinlikle yasaktır: taciz, tehdit, nefret söylemi; çıplaklık veya müstehcen içerik; sahte profil, başkasının fotoğrafını kullanma; dolandırıcılık, para isteme, spam ve reklam; 18 yaş altını içeren her türlü içerik; yasa dışı faaliyetler. Uygunsuz içeriğe ve kötüye kullanıma sıfır tolerans uygularız.
 
 4. Şikâyet ve engelleme
-Rahatsız edici kullanıcıları profillerinden veya sohbetten şikâyet edebilir ve engelleyebilirsiniz. Şikâyetler 24 saat içinde incelenir; kurallara aykırı içerik kaldırılır ve ilgili hesap askıya alınır veya kapatılır.
+Rahatsız edici kullanıcıları profillerinden veya sohbetten şikâyet edebilir ve engelleyebilirsiniz. Şikâyetler 24 saat içinde incelenir; kurallara aykırı içerik kaldırılır ve ilgili hesap askıya alınır veya kapatılır. Şikâyetleri Birthchat moderatörleri ve yöneticileri inceler. İhlal durumunda hesaba uyarı verilebilir, hesap geçici olarak askıya alınabilir (1, 7 veya 30 gün) ya da kalıcı olarak engellenebilir; karar ve nedeni kayıtlı e-posta adresinize bildirilir. Kararın dayanağı olan kanıtlar (ör. ekran görüntüleri) ve işlem kaydı yalnızca yetkili ekip tarafından görülebilir şekilde saklanır. Sohbetten bir mesajı şikâyet ettiğinizde yalnızca o mesaj moderatörlere iletilir. Karara birthchathelp@gmail.com adresinden itiraz edebilirsiniz.
 
 5. İçeriğiniz
 Paylaştığınız içeriğin sorumluluğu size aittir. Hizmeti sunmak için bu içeriği saklama ve diğer kullanıcılara gösterme izni verirsiniz. Hesabınızı sildiğinizde bu izin sona erer.
@@ -347,7 +347,7 @@ You must be at least 18 years old. Your account details must be accurate and you
 Strictly prohibited: harassment, threats, hate speech; nudity or sexual content; fake profiles or using someone else's photos; scams, asking for money, spam and advertising; any content involving minors; illegal activity. We have zero tolerance for objectionable content and abusive users.
 
 4. Reporting and blocking
-You can report and block users from their profile or from the chat. Reports are reviewed within 24 hours; violating content is removed and the account is suspended or terminated.
+You can report and block users from their profile or from the chat. Reports are reviewed within 24 hours; violating content is removed and the account is suspended or terminated. Reports are reviewed by Birthchat moderators and admins. A violation can lead to a warning, a temporary suspension (1, 7 or 30 days) or a permanent ban; the decision and its reason are sent to your registered e-mail address. Evidence for the decision (e.g. screenshots) and the action log are stored so that only the authorised team can see them. When you report a message in a chat, only that message is shared with moderators. You can appeal at birthchathelp@gmail.com.
 
 5. Your content
 You are responsible for what you share. You allow us to store it and show it to other users in order to provide the service. This permission ends when you delete your account.
@@ -383,7 +383,7 @@ Du musst mindestens 18 Jahre alt sein, wahre Angaben machen und darfst nur ein p
 Streng verboten: Belästigung, Drohungen, Hassrede; Nacktheit oder sexuelle Inhalte; Fake-Profile oder fremde Fotos; Betrug, Geldforderungen, Spam und Werbung; jegliche Inhalte mit Minderjährigen; illegale Aktivitäten. Für anstößige Inhalte und missbräuchliche Nutzer gilt null Toleranz.
 
 4. Melden und Blockieren
-Du kannst Nutzer im Profil oder im Chat melden und blockieren. Meldungen werden innerhalb von 24 Stunden geprüft; Verstöße werden entfernt und das Konto gesperrt oder gelöscht.
+Du kannst Nutzer im Profil oder im Chat melden und blockieren. Meldungen werden innerhalb von 24 Stunden geprüft; Verstöße werden entfernt und das Konto gesperrt oder gelöscht. Meldungen werden von Birthchat-Moderatoren und -Admins geprüft. Ein Verstoß kann zu einer Verwarnung, einer vorübergehenden Sperre (1, 7 oder 30 Tage) oder einem dauerhaften Ausschluss führen; Entscheidung und Grund werden an deine E-Mail-Adresse gesendet. Beweise (z. B. Screenshots) und das Aktionsprotokoll sind nur für das berechtigte Team sichtbar. Meldest du eine Chatnachricht, wird nur diese Nachricht an Moderatoren weitergegeben. Widerspruch: birthchathelp@gmail.com.
 
 5. Deine Inhalte
 Du bist für deine Inhalte verantwortlich und erlaubst uns, sie zur Bereitstellung des Dienstes zu speichern und anderen Nutzern anzuzeigen. Die Erlaubnis endet mit der Kontolöschung.
@@ -419,7 +419,7 @@ Vous devez avoir au moins 18 ans, fournir des informations exactes et n'utiliser
 Strictement interdits : harcèlement, menaces, discours haineux ; nudité ou contenu sexuel ; faux profils ou photos d'autrui ; arnaques, demandes d'argent, spam et publicité ; tout contenu impliquant des mineurs ; activités illégales. Tolérance zéro pour les contenus choquants et les utilisateurs abusifs.
 
 4. Signalement et blocage
-Vous pouvez signaler et bloquer un utilisateur depuis son profil ou la discussion. Les signalements sont examinés sous 24 heures ; le contenu fautif est supprimé et le compte suspendu ou fermé.
+Vous pouvez signaler et bloquer un utilisateur depuis son profil ou la discussion. Les signalements sont examinés sous 24 heures ; le contenu fautif est supprimé et le compte suspendu ou fermé. Les signalements sont examinés par les modérateurs et administrateurs de Birthchat. Une infraction peut entraîner un avertissement, une suspension temporaire (1, 7 ou 30 jours) ou un bannissement définitif ; la décision et son motif sont envoyés à votre adresse e-mail. Les preuves (ex. captures d’écran) et le journal des actions ne sont visibles que par l’équipe autorisée. Si vous signalez un message, seul ce message est transmis aux modérateurs. Recours : birthchathelp@gmail.com.
 
 5. Votre contenu
 Vous êtes responsable de ce que vous partagez et nous autorisez à le stocker et à l'afficher aux autres utilisateurs pour fournir le service. Cette autorisation prend fin à la suppression du compte.
@@ -455,7 +455,7 @@ Debes tener al menos 18 años, dar datos veraces y usar una sola cuenta personal
 Está terminantemente prohibido: acoso, amenazas, discurso de odio; desnudos o contenido sexual; perfiles falsos o fotos de otras personas; estafas, pedir dinero, spam y publicidad; cualquier contenido con menores; actividades ilegales. Tolerancia cero con el contenido ofensivo y los usuarios abusivos.
 
 4. Denuncias y bloqueos
-Puedes denunciar y bloquear usuarios desde su perfil o desde el chat. Las denuncias se revisan en 24 horas; el contenido infractor se elimina y la cuenta se suspende o cierra.
+Puedes denunciar y bloquear usuarios desde su perfil o desde el chat. Las denuncias se revisan en 24 horas; el contenido infractor se elimina y la cuenta se suspende o cierra. Las denuncias las revisan moderadores y administradores de Birthchat. Una infracción puede conllevar una advertencia, una suspensión temporal (1, 7 o 30 días) o una expulsión permanente; la decisión y su motivo se envían a tu correo registrado. Las pruebas (p. ej. capturas) y el registro de acciones solo los ve el equipo autorizado. Si denuncias un mensaje del chat, solo ese mensaje se comparte con los moderadores. Apelaciones: birthchathelp@gmail.com.
 
 5. Tu contenido
 Eres responsable de lo que compartes y nos permites guardarlo y mostrarlo a otros usuarios para prestar el servicio. El permiso termina al eliminar la cuenta.
@@ -491,7 +491,7 @@ ${SUPPORT_EMAIL}`,
 Строго запрещено: домогательства, угрозы, язык вражды; нагота и сексуальный контент; фейковые профили и чужие фото; мошенничество, просьбы о деньгах, спам и реклама; любой контент с участием несовершеннолетних; незаконная деятельность. К оскорбительному контенту и нарушителям — нулевая терпимость.
 
 4. Жалобы и блокировка
-Пожаловаться на пользователя и заблокировать его можно в профиле или чате. Жалобы рассматриваются в течение 24 часов; нарушающий контент удаляется, аккаунт блокируется или закрывается.
+Пожаловаться на пользователя и заблокировать его можно в профиле или чате. Жалобы рассматриваются в течение 24 часов; нарушающий контент удаляется, аккаунт блокируется или закрывается. Жалобы рассматривают модераторы и администраторы Birthchat. Нарушение может повлечь предупреждение, временную блокировку (1, 7 или 30 дней) или постоянный бан; решение и причина отправляются на ваш e-mail. Доказательства (например, скриншоты) и журнал действий доступны только уполномоченной команде. Если вы жалуетесь на сообщение в чате, модераторам передаётся только это сообщение. Обжалование: birthchathelp@gmail.com.
 
 5. Ваш контент
 Вы отвечаете за то, чем делитесь, и разрешаете нам хранить и показывать это другим пользователям для работы сервиса. Разрешение прекращается при удалении аккаунта.
@@ -527,7 +527,7 @@ ${SUPPORT_EMAIL}`,
 يُمنع منعًا باتًا: التحرش والتهديد وخطاب الكراهية؛ العري أو المحتوى الجنسي؛ الحسابات المزيفة أو استخدام صور الآخرين؛ الاحتيال وطلب المال والرسائل المزعجة والإعلانات؛ أي محتوى يتعلق بالقاصرين؛ الأنشطة غير القانونية. لا تسامح مطلقًا مع المحتوى المسيء والمستخدمين المسيئين.
 
 4. الإبلاغ والحظر
-يمكنك الإبلاغ عن المستخدمين وحظرهم من ملفهم أو من المحادثة. تُراجع البلاغات خلال 24 ساعة، ويُحذف المحتوى المخالف ويُعلّق الحساب أو يُغلق.
+يمكنك الإبلاغ عن المستخدمين وحظرهم من ملفهم أو من المحادثة. تُراجع البلاغات خلال 24 ساعة، ويُحذف المحتوى المخالف ويُعلّق الحساب أو يُغلق. يراجع مشرفو Birthchat ومسؤولوه البلاغات. قد تؤدي المخالفة إلى تحذير أو تعليق مؤقت (1 أو 7 أو 30 يومًا) أو حظر دائم؛ ويُرسل القرار وسببه إلى بريدك الإلكتروني المسجل. تُحفظ الأدلة (مثل لقطات الشاشة) وسجل الإجراءات بحيث لا يراها إلا الفريق المخوّل. عند الإبلاغ عن رسالة في المحادثة، تُرسل تلك الرسالة فقط إلى المشرفين. للاعتراض: birthchathelp@gmail.com.
 
 5. محتواك
 أنت مسؤول عما تشاركه، وتأذن لنا بتخزينه وعرضه على المستخدمين الآخرين لتقديم الخدمة. ينتهي هذا الإذن عند حذف حسابك.
@@ -754,7 +754,7 @@ Birthchat предназначен только для лиц от 18 лет. П
  * Version of the consent texts below. Stored with every consent record (user_consents.version);
  * bump it when KVKK / explicit-consent / terms texts change materially.
  */
-export const LEGAL_VERSION = '2026-11-20';
+export const LEGAL_VERSION = '2026-11-23';
 /** Data controller (KVKK "veri sorumlusu"). Update when a company is founded. */
 export const DATA_CONTROLLER = 'Necati Şen';
 

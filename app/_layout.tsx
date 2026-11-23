@@ -37,6 +37,7 @@ export default function RootLayout() {
               <Stack.Screen name="verify-face" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
               <Stack.Screen name="store" options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="legal" />
+              <Stack.Screen name="admin/index" options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="+not-found" />
             </Stack>
             <StatusBar style="auto" />

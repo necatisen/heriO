@@ -22,7 +22,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient';
 import Reanimated, { FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
-import { Send, User, ArrowLeft, CreditCard as Edit2, Reply, Check, CheckCheck, Image as ImageIcon, Copy, Trash2, Shield, LogOut } from 'lucide-react-native';
+import { Send, User, ArrowLeft, CreditCard as Edit2, Reply, Check, CheckCheck, Image as ImageIcon, Copy, Trash2, Shield, LogOut, Flag } from 'lucide-react-native';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +45,7 @@ import { L } from '@/lib/l10n';
 import { PoliteCloseSheet, WaitingReplyBanner, BirthdayBanner, ClosedChatNotice, waitingDays, birthdayWish } from '@/components/ChatExtras';
 import { birthdayWeekDay } from '@/lib/birthday';
 import ChoiceSheet from '@/components/ChoiceSheet';
+import { submitUserReport } from '@/lib/staff';
 type Message = {
   id: string;
   content: string;
@@ -74,6 +75,7 @@ export default function ConversationScreen() {
 
   const [otherUser, setOtherUser] = useState<any>(null);
   const [blockSheetVisible, setBlockSheetVisible] = useState(false);
+  const [reportingMessage, setReportingMessage] = useState<Message | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
@@ -895,6 +897,30 @@ export default function ConversationScreen() {
 
   const closeMessageActions = () => setMessageActionMessage(null);
 
+  const MESSAGE_REPORT_REASONS: [string, string][] = [
+    ['Taciz / Nefret', 'Harassment or hate'],
+    ['Uygunsuz içerik', 'Inappropriate content'],
+    ['Spam / Reklam', 'Spam / Ads'],
+    ['Dolandırıcılık / para isteme', 'Scam / asking for money'],
+    ['Reşit olmayan kullanıcı', 'Underage user'],
+    ['Diğer', 'Other'],
+  ];
+
+  const handleMessageActionReport = () => {
+    if (messageActionMessage) setReportingMessage(messageActionMessage);
+    closeMessageActions();
+  };
+
+  const reportMessage = async (m: Message, reason: string) => {
+    if (!user?.id || !otherUser?.id) return;
+    try {
+      await submitUserReport(user.id, otherUser.id, reason, { message_id: m.id, excerpt: String(m.content || '').slice(0, 500) });
+      Alert.alert(L('Teşekkürler', 'Thank you'), L('Şikâyetiniz alındı. İncelenecektir.', 'Your report has been received and will be reviewed.'));
+    } catch (e: any) {
+      Alert.alert(L('Hata', 'Error'), e?.message || L('Şikâyet gönderilemedi', 'Report failed'));
+    }
+  };
+
   const handleMessageActionReply = () => {
     if (messageActionMessage) setReplyToMessage(messageActionMessage);
     closeMessageActions();
@@ -1237,6 +1263,18 @@ export default function ConversationScreen() {
           sending={politeSending}
         />
         <ChoiceSheet
+          visible={!!reportingMessage}
+          title={L('Mesajı şikâyet et', 'Report message')}
+          message={L('Bu mesaj ve nedeni moderatörlere iletilir. Sohbetin geri kalanı paylaşılmaz.', 'This message and the reason are sent to moderators. The rest of the chat is not shared.')}
+          onClose={() => setReportingMessage(null)}
+          choices={MESSAGE_REPORT_REASONS.map(([tr, en]) => ({
+            label: L(tr, en),
+            onPress: () => {
+              if (reportingMessage) void reportMessage(reportingMessage, L(tr, en));
+            },
+          }))}
+        />
+        <ChoiceSheet
           visible={blockSheetVisible}
           title={L('Kullanıcıyı Engelle', 'Block User')}
           message={L('{0} kullanıcısını engellemek istiyor musunuz? Bir sebep seçin.', 'Do you want to block {0}? Choose a reason.', [otherUser.full_name])}
@@ -1336,6 +1374,12 @@ export default function ConversationScreen() {
                   <Copy size={20} color="rgba(255,255,255,0.95)" strokeWidth={2} />
                   <Text style={styles.contextMenuRowText}>{L('Kopyala', 'Copy')}</Text>
                 </TouchableOpacity>
+                {messageActionMessage && messageActionMessage.sender_id !== user?.id ? (
+                  <TouchableOpacity style={styles.contextMenuRow} onPress={handleMessageActionReport}>
+                    <Flag size={20} color="#FF6B6B" strokeWidth={2} />
+                    <Text style={[styles.contextMenuRowText, styles.contextMenuRowTextDanger]}>{L('Şikâyet et', 'Report')}</Text>
+                  </TouchableOpacity>
+                ) : null}
                 <TouchableOpacity style={[styles.contextMenuRow, styles.contextMenuRowLast]} onPress={handleMessageActionDelete}>
                   <Trash2 size={20} color="#FF6B6B" strokeWidth={2} />
                   <Text style={[styles.contextMenuRowText, styles.contextMenuRowTextDanger]}>

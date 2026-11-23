@@ -54,6 +54,7 @@ import { formatLastSeen, isUserOnlineNow } from '@/lib/dateFormat';
 
 import { L } from '@/lib/l10n';
 import ChoiceSheet from '@/components/ChoiceSheet';
+import { submitUserReport } from '@/lib/staff';
 function getCountryLabel(value: string | null | undefined, language: string): string {
   const raw = String(value ?? '').trim();
   const norm = raw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
@@ -243,12 +244,7 @@ export default function ProfileModal({
   const submitReport = async (reason: string) => {
     if (!user || !profile) return;
     try {
-      const { error } = await supabase.from('user_reports').insert({
-        reporter_id: user.id,
-        reported_user_id: profile.id,
-        reason,
-      });
-      if (error) throw error;
+      await submitUserReport(user.id, profile.id, reason);
       Alert.alert(
         L('Teşekkürler', 'Thank you'),
         L('Şikâyetiniz alındı. İncelenecektir.', 'Your report has been received and will be reviewed.')

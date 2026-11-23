@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { L } from '@/lib/l10n';
 import { maskBadWords } from '@/lib/moderation';
 import { sanitizeSocialAndContacts } from '@/lib/textSanitizer';
+import { submitUserReport } from '@/lib/staff';
 
 export type PlanCategory = 'coffee' | 'food' | 'walk' | 'sport' | 'concert' | 'cinema' | 'culture' | 'games' | 'travel' | 'other';
 
@@ -215,11 +216,8 @@ export async function declineJoin(joinId: string): Promise<void> {
 export async function reportPlan(plan: Plan, myId: string, reason: string): Promise<void> {
   const { error } = await supabase.from('plan_reports').insert({ plan_id: plan.id, reporter_id: myId, reason });
   if (error && error.code !== '23505') throw error;
-  // Also goes to the general report list the team already reviews.
-  await supabase
-    .from('user_reports')
-    .insert({ reporter_id: myId, reported_user_id: plan.user_id, reason: `plan:${plan.id} ${reason}` })
-    .then(() => {}, () => {});
+  // Also goes to the moderators' report inbox (with the plan text as context).
+  await submitUserReport(myId, plan.user_id, `plan: ${reason}`, { plan_id: plan.id, plan_title: plan.title }).catch(() => {});
 }
 
 /** "Bugün 19:00", "Cmt 10:00", "28 Kas 21:00". */

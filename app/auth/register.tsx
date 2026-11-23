@@ -50,6 +50,7 @@ import {
 } from '@/lib/constants';
 import ComboBox from '@/components/ComboBox';
 import { ConsentChecklist, signupConsentItems, allChecked } from '@/components/ConsentChecklist';
+import RulesNotice from '@/components/RulesNotice';
 import type { ConsentType } from '@/lib/consents';
 
 import { L } from '@/lib/l10n';
@@ -1126,6 +1127,8 @@ export default function RegisterScreen() {
             </View>
 
             <Text style={styles.ageWarning}>{t.ageVerification}</Text>
+
+            <RulesNotice />
 
             <ConsentChecklist
               items={consentItems}

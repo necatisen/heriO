@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View, Alert, AppState } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Search,
@@ -16,6 +16,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerPushToken, setNotificationHandler } from '@/lib/pushNotifications';
 import { needsProfileCompletion } from '@/lib/profileCompletion';
+import { loadMyBan } from '@/lib/staff';
+import { L } from '@/lib/l10n';
 import { useRouter, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -64,7 +66,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { language } = useLanguage();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const router = useRouter();
   const handledResponseRef = useRef(false);
 
@@ -76,6 +78,35 @@ export default function TabLayout() {
   useEffect(() => {
     if (needsProfileCompletion(user)) router.replace('/complete-profile' as Href);
   }, [user]);
+
+  // Banned / suspended accounts: tell the person and sign out (checked on start and when the app comes back).
+  useEffect(() => {
+    if (!user?.id) return;
+    let shown = false;
+    const check = async () => {
+      const ban = await loadMyBan(user.id);
+      if (!ban || shown) return;
+      shown = true;
+      const until = ban.until ? new Date(ban.until).toLocaleDateString() : null;
+      Alert.alert(
+        until ? L('Hesabın askıya alındı', 'Your account is suspended') : L('Hesabın engellendi', 'Your account is banned'),
+        (until
+          ? L('Topluluk kurallarını ihlal ettiğin için hesabın {0} tarihine kadar askıya alındı.', 'Your account is suspended until {0} for breaking the community rules.', [until])
+          : L('Topluluk kurallarını ihlal ettiğin için hesabın kalıcı olarak engellendi.', 'Your account has been permanently banned for breaking the community rules.')) +
+          '\n\n' +
+          L('Neden: {0}', 'Reason: {0}', [ban.reason]) +
+          '\n\n' +
+          L('İtiraz için: birthchathelp@gmail.com', 'To appeal: birthchathelp@gmail.com'),
+        [{ text: L('Tamam', 'OK'), onPress: () => void signOut() }],
+        { cancelable: false }
+      );
+    };
+    check();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') check();
+    });
+    return () => sub.remove();
+  }, [user?.id]);
 
   // When user taps a notification, navigate to the relevant screen (e.g. conversation)
   useEffect(() => {
@@ -98,6 +129,8 @@ export default function TabLayout() {
             router.push('/(tabs)/plans' as Href);
           } else if (data.type === 'birthday_wish') {
             router.push('/(tabs)/profile' as Href);
+          } else if (data.type === 'report') {
+            router.push('/admin' as Href);
           }
         }
 
@@ -113,6 +146,8 @@ export default function TabLayout() {
             router.push('/(tabs)/plans' as Href);
           } else if (data.type === 'birthday_wish') {
             router.push('/(tabs)/profile' as Href);
+          } else if (data.type === 'report') {
+            router.push('/admin' as Href);
           }
         });
       } catch {
