@@ -27,14 +27,14 @@ const PUSH_TEXT: Record<string, PushText> = {
 };
 
 // Plan notifications ({name} = sender, {plan} = plan title).
-const PLAN_TEXT: Record<string, { joinTitle: string; join: string; acceptTitle: string; accept: string }> = {
-  tr: { joinTitle: 'Planına katılmak istiyor 🙋', join: '{name}: "{plan}"', acceptTitle: 'Plan isteğin kabul edildi 🎉', accept: '{name} seni "{plan}" planına kabul etti. Sohbet açıldı!' },
-  en: { joinTitle: 'Someone wants to join 🙋', join: '{name}: "{plan}"', acceptTitle: 'Your request was accepted 🎉', accept: '{name} accepted you for "{plan}". Your chat is open!' },
-  de: { joinTitle: 'Jemand möchte mitmachen 🙋', join: '{name}: "{plan}"', acceptTitle: 'Deine Anfrage wurde angenommen 🎉', accept: '{name} hat dich für "{plan}" angenommen. Der Chat ist offen!' },
-  fr: { joinTitle: "Quelqu'un veut participer 🙋", join: '{name} : « {plan} »', acceptTitle: 'Demande acceptée 🎉', accept: '{name} vous a accepté pour « {plan} ». La discussion est ouverte !' },
-  es: { joinTitle: 'Alguien quiere unirse 🙋', join: '{name}: "{plan}"', acceptTitle: 'Solicitud aceptada 🎉', accept: '{name} te aceptó en "{plan}". ¡El chat está abierto!' },
-  ru: { joinTitle: 'Хотят присоединиться 🙋', join: '{name}: «{plan}»', acceptTitle: 'Заявка принята 🎉', accept: '{name} принял(а) вас в план «{plan}». Чат открыт!' },
-  ar: { joinTitle: 'شخص يريد الانضمام 🙋', join: '{name}: «{plan}»', acceptTitle: 'تم قبول طلبك 🎉', accept: 'قبلك {name} في خطة «{plan}». المحادثة مفتوحة!' },
+const PLAN_TEXT: Record<string, { joinTitle: string; join: string; acceptTitle: string; accept: string; updateTitle: string; update: string }> = {
+  tr: { joinTitle: 'Planına katılmak istiyor 🙋', join: '{name}: "{plan}"', acceptTitle: 'Plan isteğin kabul edildi 🎉', accept: '{name} seni "{plan}" planına kabul etti. Sohbet açıldı!', updateTitle: "Plan güncellendi 📝", update: "{name} \"{plan}\" planını güncelledi. Yeni saat ve yere göz at." },
+  en: { joinTitle: 'Someone wants to join 🙋', join: '{name}: "{plan}"', acceptTitle: 'Your request was accepted 🎉', accept: '{name} accepted you for "{plan}". Your chat is open!', updateTitle: "Plan updated 📝", update: "{name} updated \"{plan}\". Check the new time and place." },
+  de: { joinTitle: 'Jemand möchte mitmachen 🙋', join: '{name}: "{plan}"', acceptTitle: 'Deine Anfrage wurde angenommen 🎉', accept: '{name} hat dich für "{plan}" angenommen. Der Chat ist offen!', updateTitle: "Plan aktualisiert 📝", update: "{name} hat „{plan}“ geändert. Sieh dir Zeit und Ort an." },
+  fr: { joinTitle: "Quelqu'un veut participer 🙋", join: '{name} : « {plan} »', acceptTitle: 'Demande acceptée 🎉', accept: '{name} vous a accepté pour « {plan} ». La discussion est ouverte !', updateTitle: "Plan modifié 📝", update: "{name} a modifié « {plan} ». Vérifiez la nouvelle heure et le lieu." },
+  es: { joinTitle: 'Alguien quiere unirse 🙋', join: '{name}: "{plan}"', acceptTitle: 'Solicitud aceptada 🎉', accept: '{name} te aceptó en "{plan}". ¡El chat está abierto!', updateTitle: "Plan actualizado 📝", update: "{name} actualizó \"{plan}\". Revisa la nueva hora y lugar." },
+  ru: { joinTitle: 'Хотят присоединиться 🙋', join: '{name}: «{plan}»', acceptTitle: 'Заявка принята 🎉', accept: '{name} принял(а) вас в план «{plan}». Чат открыт!', updateTitle: "План обновлён 📝", update: "{name} изменил(а) план «{plan}». Проверьте новое время и место." },
+  ar: { joinTitle: 'شخص يريد الانضمام 🙋', join: '{name}: «{plan}»', acceptTitle: 'تم قبول طلبك 🎉', accept: 'قبلك {name} في خطة «{plan}». المحادثة مفتوحة!', updateTitle: "تم تحديث الخطة 📝", update: "قام {name} بتحديث «{plan}». تحقق من الوقت والمكان الجديدين." },
 };
 
 // Birthday greetings ({name} = sender).
@@ -50,7 +50,7 @@ const BDAY_TEXT: Record<string, { wishTitle: string; wish: string; helloTitle: s
 
 type RequestBody = {
   /** 'like' / 'match' / 'plan_join' / 'plan_accept' / 'birthday_*' → title and body are built here in the receiver's language */
-  kind?: 'message' | 'like' | 'match' | 'plan_join' | 'plan_accept' | 'birthday_wish' | 'birthday_thanks';
+  kind?: 'message' | 'like' | 'match' | 'plan_join' | 'plan_accept' | 'plan_update' | 'birthday_wish' | 'birthday_thanks';
   plan_id?: string;
   /** 'photo' → body is replaced by a localized "Photo" label */
   media?: 'text' | 'photo';
@@ -150,6 +150,21 @@ Deno.serve(async (req: Request) => {
       const planTitle = String(plan.title || '').slice(0, 60);
       localizedTitle = payload.kind === 'plan_join' ? pt.joinTitle : pt.acceptTitle;
       localizedBody = (payload.kind === 'plan_join' ? pt.join : pt.accept).replace('{name}', name).replace('{plan}', planTitle);
+    }
+    if (payload.kind === 'plan_update') {
+      // Only the plan owner, right after an edit, to people already accepted to the plan.
+      const planId = String(payload.plan_id || '');
+      const { data: plan } = await admin.from('plans').select('id, user_id, title, edited_at').eq('id', planId).maybeSingle();
+      const { data: join } = plan
+        ? await admin.from('plan_joins').select('status').eq('plan_id', planId).eq('user_id', toUserId).maybeSingle()
+        : { data: null };
+      const fresh = !!plan?.edited_at && Date.now() - new Date(plan.edited_at).getTime() < 10 * 60 * 1000;
+      if (!plan || plan.user_id !== userRes.user.id || join?.status !== 'accepted' || !fresh) {
+        return jsonResponse({ success: false, message: 'No such plan update' }, 403);
+      }
+      const pt = PLAN_TEXT[String(receiver?.preferred_language || 'en')] || PLAN_TEXT.en;
+      localizedTitle = pt.updateTitle;
+      localizedBody = pt.update.replace('{name}', senderName || 'Birthchat').replace('{plan}', String(plan.title || '').slice(0, 60));
     }
     if (payload.kind === 'birthday_wish' || payload.kind === 'birthday_thanks') {
       // wish: caller sent a greeting to the receiver. thanks: the receiver's greeting to the caller was thanked.

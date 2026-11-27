@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -13,6 +14,8 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* Off by default (other screens keep the system resize); the chat screen turns it on. */}
+      <KeyboardProvider enabled={false} preserveEdgeToEdge statusBarTranslucent navigationBarTranslucent>
       <ThemeProvider>
         <LanguageProvider>
           <ForceUpdateGate>
@@ -45,6 +48,7 @@ export default function RootLayout() {
           </ForceUpdateGate>
         </LanguageProvider>
       </ThemeProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

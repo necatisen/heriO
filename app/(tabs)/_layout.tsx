@@ -125,7 +125,7 @@ export default function TabLayout() {
             router.push(`/conversation/${sessionId}`);
           } else if (data.type === 'like') {
             router.push('/(tabs)/likes' as Href);
-          } else if (data.type === 'plan_join') {
+          } else if (data.type === 'plan_join' || data.type === 'plan_update') {
             router.push('/(tabs)/plans' as Href);
           } else if (data.type === 'birthday_wish') {
             router.push('/(tabs)/profile' as Href);
@@ -142,7 +142,7 @@ export default function TabLayout() {
             router.push(`/conversation/${sessionId}`);
           } else if (data.type === 'like') {
             router.push('/(tabs)/likes' as Href);
-          } else if (data.type === 'plan_join') {
+          } else if (data.type === 'plan_join' || data.type === 'plan_update') {
             router.push('/(tabs)/plans' as Href);
           } else if (data.type === 'birthday_wish') {
             router.push('/(tabs)/profile' as Href);

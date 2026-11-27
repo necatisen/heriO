@@ -29,7 +29,8 @@ import ProfileModal from '@/components/ProfileModal';
 import { BIRTHDAY_WEEK_DAYS, birthdayWeekDay, loadBirthDateExact } from '@/lib/birthday';
 import { loadShareBirthday } from '@/lib/birthdayGreetings';
 import GreetingsCard from '@/components/GreetingsCard';
-import ProfileStrength from '@/components/ProfileStrength';
+import ProfileStrength, { type StrengthAction } from '@/components/ProfileStrength';
+import { loadProfileExtras } from '@/components/ProfileExtras';
 import { uploadGalleryPhoto, deletePhotoFromStorage } from '@/lib/uploadAvatar';
 import {
   getEducationLabel,
@@ -81,9 +82,11 @@ export default function ProfileScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [birthdayExact, setBirthdayExact] = useState(true);
   const [shareBday, setShareBday] = useState(false);
+  const [interestsCount, setInterestsCount] = useState(0);
   useEffect(() => {
     loadBirthDateExact(user?.id).then(setBirthdayExact);
     loadShareBirthday(user?.id).then(setShareBday);
+    if (!showEditModal) loadProfileExtras(user?.id).then((e) => setInterestsCount(e.interests.length));
   }, [user?.id, profile?.birth_date, showEditModal]);
   const bdayDay = birthdayWeekDay(profile?.birth_date, birthdayExact);
 
@@ -650,7 +653,12 @@ export default function ProfileScreen() {
         <ProfileStrength
           profile={profile}
           photoCount={photos.length}
-          onPress={() => (profile?.verification_status !== "verified" && profile?.profile_picture ? router.push("/verify-face") : setShowEditModal(true))}
+          interestsCount={interestsCount}
+          onAction={(a: StrengthAction) => {
+            if (a === 'photo') void handlePickImage();
+            else if (a === 'verify' && profile?.profile_picture) router.push('/verify-face');
+            else setShowEditModal(true);
+          }}
         />
 
         <View style={[styles.content, { backgroundColor: theme.background }]}>

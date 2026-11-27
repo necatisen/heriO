@@ -9,7 +9,6 @@ import {
   Alert,
   FlatList,
   Image,
-  KeyboardAvoidingView,
   Platform,
   Animated,
   PanResponder,
@@ -46,6 +45,8 @@ import { PoliteCloseSheet, WaitingReplyBanner, BirthdayBanner, ClosedChatNotice,
 import { birthdayWeekDay } from '@/lib/birthday';
 import ChoiceSheet from '@/components/ChoiceSheet';
 import { submitUserReport } from '@/lib/staff';
+import { KeyboardAvoidingView, useKeyboardController, useKeyboardState } from 'react-native-keyboard-controller';
+import { BLOCK_REASONS, USER_REPORT_REASONS, blockUser, blockedMessage, type BlockReasonKey } from '@/lib/safety';
 type Message = {
   id: string;
   content: string;
@@ -75,6 +76,15 @@ export default function ConversationScreen() {
 
   const [otherUser, setOtherUser] = useState<any>(null);
   const [blockSheetVisible, setBlockSheetVisible] = useState(false);
+  const [safetyVisible, setSafetyVisible] = useState(false);
+  // The input bar sits right on the keyboard; the nav-bar gap is only added while the keyboard is closed.
+  const keyboardOpen = useKeyboardState((k) => k.isVisible);
+  const { setEnabled: setKeyboardHandling } = useKeyboardController();
+  useEffect(() => {
+    setKeyboardHandling(true);
+    return () => setKeyboardHandling(false);
+  }, [setKeyboardHandling]);
+  const [reportUserVisible, setReportUserVisible] = useState(false);
   const [reportingMessage, setReportingMessage] = useState<Message | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -635,64 +645,47 @@ export default function ConversationScreen() {
     })();
   };
 
-  const BLOCK_REASONS = [
-    { key: 'harassment', tr: 'Taciz', en: 'Harassment' },
-    { key: 'spam', tr: 'Spam / Reklam', en: 'Spam / Ads' },
-    { key: 'inappropriate', tr: 'Uygunsuz içerik', en: 'Inappropriate content' },
-    { key: 'other', tr: 'Diğer', en: 'Other' },
-  ];
-
   const handleBlockUser = () => {
     if (!user?.id || !otherUser?.id) return;
-    setBlockSheetVisible(true);
+    setSafetyVisible(true);
   };
 
-  const blockWithReason = async (opt: { key: string }) => {
+  const blockWithReason = async (reason: BlockReasonKey) => {
     if (!user?.id || !otherUser?.id) return;
-            try {
-              const { data: existing } = await supabase
-                .from('blocks')
-                .select('id')
-                .eq('user_id', user.id)
-                .eq('blocked_user_id', otherUser.id)
-                .maybeSingle();
+    try {
+      const res = await blockUser(user.id, otherUser.id, reason);
+      if (res === 'already') {
+        Alert.alert(L('Zaten Engellendi', 'Already Blocked'), L('Bu kullanıcı zaten engellenmiş.', 'This user is already blocked.'));
+        return;
+      }
+      Alert.alert(
+        L('Engellendi', 'Blocked'),
+        blockedMessage() +
+          (reason !== 'none' ? '\n\n' + L('Sebebin moderatörlere iletildi.', 'Your reason was sent to the moderators.') : '')
+      );
+      // İki kullanıcı arasındaki aktif sohbeti de kaldır
+      await supabase
+        .from('chat_sessions')
+        .delete()
+        .or(
+          `and(user1_id.eq.${user.id},user2_id.eq.${otherUser.id}),` +
+          `and(user1_id.eq.${otherUser.id},user2_id.eq.${user.id})`
+        )
+        .eq('status', 'active');
+      router.back();
+    } catch (e: any) {
+      Alert.alert(L('Hata', 'Error'), e?.message || L('Kullanıcı engellenemedi.', 'Failed to block user.'));
+    }
+  };
 
-              if (existing) {
-                Alert.alert(
-                  L('Zaten Engellendi', 'Already Blocked'),
-                  L('Bu kullanıcı zaten engellenmiş.', 'This user is already blocked.')
-                );
-                return;
-              }
-
-              const { error } = await supabase.from('blocks').insert({
-                user_id: user.id,
-                blocked_user_id: otherUser.id,
-                reason: opt.key,
-              });
-              if (error) throw error;
-
-              Alert.alert(
-                L('Engellendi', 'Blocked'),
-                L('Kullanıcı engellendi. Artık sizden mesaj alamayacak.', 'User has been blocked and will no longer be able to contact you.')
-              );
-              // İki kullanıcı arasındaki aktif sohbeti de kaldır
-              await supabase
-                .from('chat_sessions')
-                .delete()
-                .or(
-                  `and(user1_id.eq.${user.id},user2_id.eq.${otherUser.id}),` +
-                  `and(user1_id.eq.${otherUser.id},user2_id.eq.${user.id})`
-                )
-                .eq('status', 'active');
-              router.back();
-            } catch (e: any) {
-              Alert.alert(
-                L('Hata', 'Error'),
-                e?.message ||
-                  (L('Kullanıcı engellenemedi.', 'Failed to block user.'))
-              );
-            }
+  const reportUser = async (reason: string) => {
+    if (!user?.id || !otherUser?.id) return;
+    try {
+      await submitUserReport(user.id, otherUser.id, reason, { source: 'chat' });
+      Alert.alert(L('Teşekkürler', 'Thank you'), L('Şikâyetiniz alındı. İncelenecektir.', 'Your report has been received and will be reviewed.'));
+    } catch (e: any) {
+      Alert.alert(L('Bilgi', 'Info'), e?.message || L('Şikâyet gönderilemedi', 'Report failed'));
+    }
   };
 
   const deleteMessage = async (messageId: string) => {
@@ -917,7 +910,7 @@ export default function ConversationScreen() {
       await submitUserReport(user.id, otherUser.id, reason, { message_id: m.id, excerpt: String(m.content || '').slice(0, 500) });
       Alert.alert(L('Teşekkürler', 'Thank you'), L('Şikâyetiniz alındı. İncelenecektir.', 'Your report has been received and will be reviewed.'));
     } catch (e: any) {
-      Alert.alert(L('Hata', 'Error'), e?.message || L('Şikâyet gönderilemedi', 'Report failed'));
+      Alert.alert(L('Bilgi', 'Info'), e?.message || L('Şikâyet gönderilemedi', 'Report failed'));
     }
   };
 
@@ -994,10 +987,7 @@ export default function ConversationScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
         <View style={[styles.header, { backgroundColor: theme.cardBackground, borderBottomColor: theme.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -1277,9 +1267,33 @@ export default function ConversationScreen() {
         <ChoiceSheet
           visible={blockSheetVisible}
           title={L('Kullanıcıyı Engelle', 'Block User')}
-          message={L('{0} kullanıcısını engellemek istiyor musunuz? Bir sebep seçin.', 'Do you want to block {0}? Choose a reason.', [otherUser.full_name])}
+          message={L(
+            '{0} kullanıcısını engellemek istiyor musunuz? Seçtiğin sebep moderatörlere de iletilir.',
+            'Do you want to block {0}? The reason you choose is also sent to the moderators.',
+            [otherUser.full_name]
+          )}
           onClose={() => setBlockSheetVisible(false)}
-          choices={BLOCK_REASONS.map((opt) => ({ label: L(opt.tr, opt.en), destructive: true, onPress: () => void blockWithReason(opt) }))}
+          choices={BLOCK_REASONS.map((opt) => ({ label: L(opt.tr, opt.en), destructive: true, onPress: () => void blockWithReason(opt.key) }))}
+        />
+        <ChoiceSheet
+          visible={safetyVisible}
+          title={L('Güvenlik', 'Safety')}
+          message={L('{0} ile ilgili bir sorun mu var?', 'Is there a problem with {0}?', [otherUser.full_name])}
+          onClose={() => setSafetyVisible(false)}
+          choices={[
+            { label: L('🚩 Şikâyet et', '🚩 Report'), onPress: () => setTimeout(() => setReportUserVisible(true), 250) },
+            { label: L('⛔ Engelle', '⛔ Block'), destructive: true, onPress: () => setTimeout(() => setBlockSheetVisible(true), 250) },
+          ]}
+        />
+        <ChoiceSheet
+          visible={reportUserVisible}
+          title={L('Kişiyi şikâyet et', 'Report this person')}
+          message={L(
+            'Şikâyetin moderatörlere iletilir, karşı taraf kimin şikâyet ettiğini görmez. Belirli bir mesajı şikâyet etmek için mesaja uzun bas.',
+            'Your report goes to the moderators; the other person will not see who reported them. To report a specific message, long-press it.'
+          )}
+          onClose={() => setReportUserVisible(false)}
+          choices={USER_REPORT_REASONS.map(([tr, en]) => ({ label: L(tr, en), onPress: () => void reportUser(L(tr, en)) }))}
         />
 
         {closedInfo ? (
@@ -1291,10 +1305,8 @@ export default function ConversationScreen() {
             {
               backgroundColor: theme.cardBackground,
               borderTopColor: theme.border,
-              // Android alt gezinme çubuğuyla çakışmayı önleyip barı gereksiz yukarı itmeden hizala.
-              paddingBottom: Platform.OS === 'android'
-                ? (insets.bottom > 0 ? insets.bottom + 6 : 10)
-                : Math.max(insets.bottom, 10),
+              // Keyboard open: sit right on it. Closed: keep clear of the system navigation bar.
+              paddingBottom: keyboardOpen ? 8 : Math.max(insets.bottom, 8) + 4,
             },
           ]}>
           <TouchableOpacity
@@ -1308,16 +1320,23 @@ export default function ConversationScreen() {
             )}
           </TouchableOpacity>
           <TextInput
-            style={[styles.input, { backgroundColor: theme.background, color: theme.text }]}
+            style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
             placeholder={L('Mesaj yaz...', 'Type a message...')}
             placeholderTextColor={theme.textSecondary}
             value={messageText}
             onChangeText={setMessageText}
+            multiline
+            maxLength={2000}
+            textAlignVertical="center"
           />
           <TouchableOpacity
-            style={[styles.sendButton, { backgroundColor: theme.primary }, loading && styles.sendButtonDisabled]}
+            style={[
+              styles.sendButton,
+              { backgroundColor: theme.primary },
+              (loading || !messageText.trim()) && styles.sendButtonDisabled,
+            ]}
             onPress={sendMessage}
-            disabled={loading}>
+            disabled={loading || !messageText.trim()}>
             {editingMessage ? (
               <Edit2 size={20} color="#FFFFFF" />
             ) : (
@@ -1867,37 +1886,43 @@ const createStyles = (t: Theme) =>
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    paddingBottom: Platform.OS === 'android' ? 24 : 16,
-    borderTopWidth: 1,
-    gap: 12,
+    alignItems: 'flex-end',
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 8,
   },
   imageButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
   },
   input: {
     flex: 1,
     backgroundColor: '#F5F5F5',
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    borderRadius: 21,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 11 : 9,
+    paddingBottom: Platform.OS === 'ios' ? 11 : 9,
+    minHeight: 42,
+    // About 5 lines, then it scrolls inside.
+    maxHeight: 120,
     fontSize: 16,
+    lineHeight: 21,
     color: '#333333',
   },
   sendButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: t.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sendButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
 });

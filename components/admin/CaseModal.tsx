@@ -173,6 +173,11 @@ export default function CaseModal({
               {r.reporter?.full_name || '?'} · {formatDateTime(r.created_at)}
               {r.status === 'resolved' ? ` · ${L('kapandı', 'closed')}` : ''}
             </Text>
+            {r.context?.source === 'block' ? (
+              <Text style={{ color: theme.error, fontSize: 12, fontWeight: '700', marginTop: 4 }}>
+                🚫 {L('Bu kişi şikâyet ederken aynı zamanda engelledi', 'The reporter also blocked this person')}
+              </Text>
+            ) : null}
             {r.context?.excerpt ? (
               <View style={[styles.quote, { borderLeftColor: theme.primary, backgroundColor: theme.inputBackground }]}>
                 <Text style={{ color: theme.text, fontSize: 14 }}>"{r.context.excerpt}"</Text>

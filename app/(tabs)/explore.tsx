@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import HeroFade from '@/components/HeroFade';
-import { getCountryLabel } from '@/lib/constants';
+import { getCountryLabel, countries as COUNTRY_LIST } from '@/lib/constants';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import * as Location from 'expo-location';
 import { ListFilter as Filter, Heart, X, MapPin, MessageCircle, Sparkles, Cake } from 'lucide-react-native';
 import { loadBirthdayWeekIds } from '@/lib/birthday';
 import BirthdayTwinsModal from '@/components/BirthdayTwinsModal';
+import ProfileNudge from '@/components/ProfileNudge';
 import { useTheme , type Theme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,6 +69,27 @@ type UserProfile = {
 };
 
 const PAGE_SIZE = 48;
+
+/** Normalised country key ("Turkey", "Türkiye", "turkey" → "turkey"). */
+function countryKey(v: string | null | undefined): string {
+  const raw = String(v ?? '').trim().toLowerCase();
+  if (!raw) return '';
+  const hit = COUNTRY_LIST.find((c) => c.value === raw || c.label.en.toLowerCase() === raw || c.label.tr.toLowerCase() === raw);
+  return hit ? hit.value : raw;
+}
+
+/** All spellings a country may be stored with (older profiles saved the English name). */
+function countryVariants(key: string): string[] {
+  const hit = COUNTRY_LIST.find((c) => c.value === key);
+  const out = new Set<string>([key]);
+  if (hit) {
+    out.add(hit.label.en);
+    out.add(hit.label.tr);
+    out.add(hit.label.en.toLowerCase());
+  }
+  out.add(key.charAt(0).toUpperCase() + key.slice(1));
+  return Array.from(out);
+}
 
 export default function ExploreScreen() {
   const { theme } = useTheme();
@@ -299,6 +321,14 @@ export default function ExploreScreen() {
         if (filters.childrenStatus.length > 0) baseQuery = baseQuery.in('children_status', filters.childrenStatus);
         if (filters.relationshipStatus.length > 0) baseQuery = baseQuery.in('relationship_status', filters.relationshipStatus);
         if (filters.relationshipGoals.length > 0) baseQuery = baseQuery.in('relationship_goal', filters.relationshipGoals);
+        // Country / city on the server, so people of that country are not lost behind the first page.
+        if (filters.countries.length > 0) {
+          baseQuery = baseQuery.in('country', filters.countries.flatMap((c) => countryVariants(countryKey(c))));
+        }
+        if (filters.cities.length > 0) {
+          const city = filters.cities[0].replace(/[%_,()]/g, ' ').trim();
+          if (city) baseQuery = baseQuery.ilike('city', `%${city}%`);
+        }
       }
 
       const blocksPromise = user?.id
@@ -359,17 +389,20 @@ export default function ExploreScreen() {
         filteredUsers = filteredUsers.filter((u) => !excludeIds.has(u.id));
       }
 
+      // Picking another country means "show me people there": the distance limit would hide all of them.
+      const myCountry = countryKey((profile as any)?.country);
+      const ignoreDistance = filters.countries.length > 0 && filters.countries.some((c) => countryKey(c) !== myCountry);
       if (isPremium) {
         filteredUsers = filteredUsers.filter((u) => {
           const age = calculateAge(u.birth_date);
           if (age < filters.ageRange[0] || age > filters.ageRange[1]) return false;
           if (u.height && (u.height < filters.heightRange[0] || u.height > filters.heightRange[1])) return false;
-          if (profile?.latitude && profile?.longitude && u.latitude && u.longitude) {
+          if (!ignoreDistance && profile?.latitude && profile?.longitude && u.latitude && u.longitude) {
             const distance = calculateDistance(profile.latitude, profile.longitude, u.latitude, u.longitude);
             if (distance > filters.distanceKm) return false;
           }
           if (filters.languages.length > 0 && !filters.languages.some((lang) => u.languages?.includes(lang))) return false;
-          if (filters.countries.length > 0 && !filters.countries.some((c) => u.country?.toLowerCase().includes(c.toLowerCase()))) return false;
+          if (filters.countries.length > 0 && !filters.countries.some((c) => countryKey(u.country) === countryKey(c))) return false;
           if (filters.cities.length > 0 && !filters.cities.some((c) => u.city?.toLowerCase().includes(c.toLowerCase()))) return false;
           return true;
         });
@@ -718,6 +751,23 @@ export default function ExploreScreen() {
         </TouchableOpacity>
       </View>
 
+      <ProfileNudge />
+
+      {isPremium && (filters.countries.length > 0 || filters.cities.length > 0) ? (
+        <View style={styles.activeFilters}>
+          <TouchableOpacity
+            style={styles.activeChip}
+            onPress={() => setFilters((f) => ({ ...f, countries: [], cities: [] }))}
+            accessibilityLabel={L('Konum filtresini kaldır', 'Remove location filter')}>
+            <MapPin size={14} color="#FFFFFF" />
+            <Text style={styles.activeChipText} numberOfLines={1}>
+              {[filters.cities[0], filters.countries[0] ? getCountryLabel(filters.countries[0]) : null].filter(Boolean).join(', ')}
+            </Text>
+            <X size={14} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <HeartLoader />
@@ -805,6 +855,18 @@ const createStyles = (t: Theme) =>
   container: {
     flex: 1,
   },
+  activeFilters: { flexDirection: 'row', justifyContent: 'center', marginTop: -4, marginBottom: 6 },
+  activeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: 260,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  activeChipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', flexShrink: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

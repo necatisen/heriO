@@ -7,7 +7,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, Alert, Refre
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, User, MoreVertical, Clock, MapPin, CalendarHeart } from 'lucide-react-native';
+import { Plus, User, MoreVertical, Clock, MapPin, CalendarHeart, Pencil } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import HeroFade from '@/components/HeroFade';
@@ -61,6 +61,7 @@ export default function PlansScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [createVisible, setCreateVisible] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [opened, setOpened] = useState<any | null>(null);
   const [reporting, setReporting] = useState<Plan | null>(null);
@@ -249,7 +250,10 @@ export default function PlansScreen() {
         <Text style={[styles.planTitle, { color: theme.text }]}>{p.title}</Text>
         <View style={styles.whenRow}>
           <Clock size={14} color={theme.textSecondary} />
-          <Text style={[styles.meta, { color: theme.textSecondary }]}>{formatPlanTime(p.starts_at)}</Text>
+          <Text style={[styles.meta, { color: theme.textSecondary }]}>
+            {formatPlanTime(p.starts_at)}
+            {p.edited_at ? ` · ${L('düzenlendi', 'edited')}` : ''}
+          </Text>
           {(p.place || p.city) && (
             <>
               <MapPin size={14} color={theme.textSecondary} style={{ marginLeft: 8 }} />
@@ -301,8 +305,17 @@ export default function PlansScreen() {
           <Text style={[styles.meta, { color: theme.textSecondary }]}>
             {formatPlanTime(p.starts_at)}
             {past ? ` · ${L('Geçti', 'Past')}` : ''}
+            {p.edited_at ? ` · ${L('düzenlendi', 'edited')}` : ''}
           </Text>
         </View>
+        {p.place ? (
+          <View style={styles.whenRow}>
+            <MapPin size={14} color={theme.textSecondary} />
+            <Text style={[styles.meta, { color: theme.textSecondary, flexShrink: 1 }]} numberOfLines={1}>
+              {p.place}
+            </Text>
+          </View>
+        ) : null}
 
         {requests.length === 0 ? (
           <Text style={[styles.meta, { color: theme.textSecondary, marginTop: 10 }]}>{L('Henüz katılma isteği yok.', 'No join requests yet.')}</Text>
@@ -343,9 +356,15 @@ export default function PlansScreen() {
         )}
 
         {!past && (
-          <TouchableOpacity onPress={() => onCancelPlan(p)} style={{ marginTop: 12, alignSelf: 'flex-start', paddingVertical: 6 }}>
-            <Text style={{ color: theme.error, fontWeight: '600', fontSize: 13 }}>{L('Planı iptal et', 'Cancel plan')}</Text>
-          </TouchableOpacity>
+          <View style={styles.ownerActions}>
+            <TouchableOpacity onPress={() => setEditingPlan(p)} style={[styles.editBtn, { borderColor: theme.border }]}>
+              <Pencil size={14} color={theme.primary} />
+              <Text style={{ color: theme.primary, fontWeight: '700', fontSize: 13 }}>{L('Düzenle', 'Edit')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => onCancelPlan(p)} style={{ paddingVertical: 6 }}>
+              <Text style={{ color: theme.error, fontWeight: '600', fontSize: 13 }}>{L('Planı iptal et', 'Cancel plan')}</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -449,8 +468,12 @@ export default function PlansScreen() {
       </TouchableOpacity>
 
       <CreatePlanModal
-        visible={createVisible}
-        onClose={() => setCreateVisible(false)}
+        visible={createVisible || !!editingPlan}
+        editing={editingPlan}
+        onClose={() => {
+          setCreateVisible(false);
+          setEditingPlan(null);
+        }}
         onCreated={() => {
           setTab('mine');
           load();
@@ -474,6 +497,8 @@ export default function PlansScreen() {
 }
 
 const styles = StyleSheet.create({
+  ownerActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 },
   headerTitle: { fontSize: 24, fontWeight: '800' },

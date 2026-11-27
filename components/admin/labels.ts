@@ -39,6 +39,10 @@ export function blockReasonLabel(key: string): string {
       return L('Spam / Reklam', 'Spam / Ads');
     case 'inappropriate':
       return L('Uygunsuz içerik', 'Inappropriate content');
+    case 'fake':
+      return L('Sahte profil', 'Fake profile');
+    case 'none':
+      return L('Sebep belirtilmedi', 'No reason given');
     default:
       return L('Diğer', 'Other');
   }

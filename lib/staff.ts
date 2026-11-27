@@ -4,6 +4,7 @@
  */
 import { supabase } from '@/lib/supabase';
 import { compressImage } from '@/lib/uploadAvatar';
+import { L } from '@/lib/l10n';
 
 export type StaffRole = 'admin' | 'moderator';
 export type ModAction = 'warn' | 'suspend' | 'ban' | 'unban' | 'dismiss' | 'role_add' | 'role_remove';
@@ -24,7 +25,7 @@ export type Report = {
   reason: string;
   created_at: string;
   status: 'open' | 'resolved';
-  context: { message_id?: string; excerpt?: string; plan_id?: string; plan_title?: string; message_verified?: boolean } | null;
+  context: { message_id?: string; excerpt?: string; plan_id?: string; plan_title?: string; message_verified?: boolean; source?: 'block' | 'chat' | 'profile' } | null;
   reporter?: MiniProfile;
 };
 
@@ -37,6 +38,8 @@ export type ReportCase = {
   blockReasons: Record<string, number>;
   lastAt: string;
   previous: ModerationAction[];
+  /** No open report, but blocked by many people recently. */
+  blockOnly?: boolean;
 };
 
 export type ModerationAction = {
@@ -115,7 +118,27 @@ export async function loadReportCases(): Promise<ReportCase[]> {
     .limit(500);
   if (error) throw error;
   const reports = (data as Report[]) || [];
-  const targetIds = Array.from(new Set(reports.map((r) => r.reported_user_id)));
+  const reportedIds = new Set(reports.map((r) => r.reported_user_id));
+
+  // People blocked by BLOCK_ALERT_MIN+ others in the last 60 days, even without a report.
+  const since = new Date(Date.now() - 60 * 86400000).toISOString();
+  const { data: recentBlocks } = await supabase
+    .from('blocks')
+    .select('user_id, blocked_user_id, created_at')
+    .gte('created_at', since)
+    .limit(2000);
+  const blockers = new Map<string, { users: Set<string>; last: string }>();
+  for (const b of (recentBlocks as any[]) || []) {
+    const e = blockers.get(b.blocked_user_id) ?? { users: new Set<string>(), last: '' };
+    e.users.add(b.user_id);
+    if (String(b.created_at) > e.last) e.last = String(b.created_at);
+    blockers.set(b.blocked_user_id, e);
+  }
+  const blockOnlyIds = Array.from(blockers.entries())
+    .filter(([id, e]) => !reportedIds.has(id) && e.users.size >= BLOCK_ALERT_MIN)
+    .map(([id]) => id);
+
+  const targetIds = [...Array.from(reportedIds), ...blockOnlyIds];
   const reporterIds = Array.from(new Set(reports.map((r) => r.reporter_id)));
   const [people, { data: blocks }, { data: history }] = await Promise.all([
     profilesById(Array.from(new Set([...targetIds, ...reporterIds]))),
@@ -125,7 +148,7 @@ export async function loadReportCases(): Promise<ReportCase[]> {
       : Promise.resolve({ data: [] } as any),
   ]);
 
-  return targetIds
+  const cases: ReportCase[] = targetIds
     .map((id) => {
       const rs = reports.filter((r) => r.reported_user_id === id).map((r) => ({ ...r, reporter: people.get(r.reporter_id) }));
       const bs = ((blocks as any[]) || []).filter((b) => b.blocked_user_id === id);
@@ -138,12 +161,18 @@ export async function loadReportCases(): Promise<ReportCase[]> {
         reporters: new Set(rs.map((r) => r.reporter_id)).size,
         blockedBy: new Set(bs.map((b) => b.user_id)).size,
         blockReasons,
-        lastAt: rs[0]?.created_at ?? '',
+        lastAt: rs[0]?.created_at ?? blockers.get(id)?.last ?? '',
         previous: ((history as ModerationAction[]) || []).filter((h) => h.target_user === id),
+        blockOnly: !reportedIds.has(id),
       };
     })
-    .sort((a, b) => b.reporters - a.reporters || b.lastAt.localeCompare(a.lastAt));
+    // A block-only case disappears once a moderator acted after the latest block.
+    .filter((c) => !c.blockOnly || !c.previous.some((h) => h.created_at > c.lastAt));
+  return cases.sort((a, b) => b.reporters - a.reporters || b.blockedBy - a.blockedBy || b.lastAt.localeCompare(a.lastAt));
 }
+
+/** A person blocked by this many people (60 days) shows up in the admin inbox without a report. */
+export const BLOCK_ALERT_MIN = 3;
 
 /** Builds a case for any user (e.g. opened from the bans list), including resolved reports. */
 export async function loadCaseFor(userId: string): Promise<ReportCase> {
@@ -264,7 +293,16 @@ export async function submitUserReport(
     // Database without the moderation migration: save the report without context.
     ({ data, error } = await supabase.from('user_reports').insert({ reporter_id: reporterId, reported_user_id: reportedUserId, reason }).select('id').single());
   }
-  if (error) throw error;
+  if (error) {
+    // Unique (reporter, reported) from before migration 20261127120000, or the daily limit trigger.
+    if (error.code === '23505' || /report_limit_user/.test(error.message)) {
+      throw new Error(L('Bu kişiyi zaten şikâyet ettin, ekibimiz inceliyor. Teşekkürler!', 'You already reported this person; our team is reviewing it. Thank you!'));
+    }
+    if (/report_limit_daily/.test(error.message)) {
+      throw new Error(L('Bugün çok fazla şikâyet gönderdin. Lütfen yarın tekrar dene.', 'You sent too many reports today. Please try again tomorrow.'));
+    }
+    throw error;
+  }
   const id = (data as any)?.id as string | undefined;
   if (id) void invoke({ action: 'notify_report', report_id: id }).catch(() => {});
   return id;

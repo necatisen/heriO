@@ -278,6 +278,38 @@ async function callFunction(c, name, body) {
       await admin.from('staff_roles').delete().eq('user_id', idA);
     }
   });
+  await step('Plan düzenleme + tekrar şikâyet (migration 20261127120000)', async () => {
+    const probe = await A.from('plans').select('id, edited_at, edit_count').eq('title', 'QA kahve planı').maybeSingle();
+    if (probe.error && /edited_at|edit_count/.test(probe.error.message)) return 'migration henüz çalıştırılmadı — atlandı';
+    const plan = check(probe, 'plan bul');
+    must(plan, 'QA planı bulunamadı');
+    const at = (h) => new Date(Date.now() + h * 3600 * 1000).toISOString();
+    // Owner edits: counter + label.
+    const ed = check(await A.from('plans').update({ title: 'QA kahve planı', place: 'Kordon', starts_at: at(26) }).eq('id', plan.id).select('edited_at, edit_count').single(), 'düzenle');
+    must(ed.edited_at && ed.edit_count === 1, `düzenleme işaretlenmedi (${ed.edit_count})`);
+    // Owner cannot move the plan beyond 15 days.
+    const far = await A.from('plans').update({ starts_at: at(24 * 20) }).eq('id', plan.id);
+    must(far.error && /plan_time_range/.test(far.error.message), '15 günden sonraya taşınabildi!');
+    // Someone else cannot edit it.
+    await B.from('plans').update({ title: 'hacked' }).eq('id', plan.id);
+    must(check(await A.from('plans').select('title').eq('id', plan.id).single(), 'başlık').title === 'QA kahve planı', 'başkası planı düzenleyebildi!');
+    // Update push: only the owner, only to accepted people.
+    const pu = await callFunction(A, 'send-push-message', { kind: 'plan_update', plan_id: plan.id, to_user_id: idB });
+    must(pu.status === 200, `plan_update push ${pu.status}`);
+    const fakeU = await callFunction(B, 'send-push-message', { kind: 'plan_update', plan_id: plan.id, to_user_id: idA });
+    must(fakeU.status === 403, `sahte plan_update push ${fakeU.status}`);
+    // Reports: the same person may report again, up to 3 times a day.
+    const before = check(
+      await A.from('user_reports').select('id').eq('reporter_id', idA).eq('reported_user_id', idB).gte('created_at', new Date(Date.now() - 86400000).toISOString()),
+      'şikâyet say'
+    ).length;
+    for (let i = before; i < 3; i++) {
+      check(await A.from('user_reports').insert({ reporter_id: idA, reported_user_id: idB, reason: `QA tekrar ${i}` }), `tekrar şikâyet ${i}`);
+    }
+    const over = await A.from('user_reports').insert({ reporter_id: idA, reported_user_id: idB, reason: 'QA fazla' });
+    must(over.error && /report_limit_user/.test(over.error.message), 'günlük şikâyet sınırı çalışmadı!');
+    return 'düzenleme, 15 gün sınırı, push doğrulama, şikâyet sınırı OK';
+  });
   await step('Fonksiyon: moderate-image', async () => {
     const img = (await randomJpeg(64, 64, 70)).toString('base64');
     const r = await callFunction(A, 'moderate-image', { image_base64: img });

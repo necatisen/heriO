@@ -55,6 +55,7 @@ import { formatLastSeen, isUserOnlineNow } from '@/lib/dateFormat';
 import { L } from '@/lib/l10n';
 import ChoiceSheet from '@/components/ChoiceSheet';
 import { submitUserReport } from '@/lib/staff';
+import { BLOCK_REASONS, USER_REPORT_REASONS, blockUser, type BlockReasonKey } from '@/lib/safety';
 function getCountryLabel(value: string | null | undefined, language: string): string {
   const raw = String(value ?? '').trim();
   const norm = raw.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
@@ -100,10 +101,6 @@ type ProfileData = {
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
 };
 
-const REPORT_REASONS = {
-  tr: ['Spam', 'Taciz / Nefret', 'Uygunsuz içerik', 'Sahte profil', 'Diğer'],
-  en: ['Spam', 'Harassment or hate', 'Inappropriate content', 'Fake profile', 'Other'],
-} as const;
 
 type ProfileModalProps = {
   visible: boolean;
@@ -134,6 +131,7 @@ export default function ProfileModal({
   allowDirectChat = true,
 }: ProfileModalProps) {
   const [reportVisible, setReportVisible] = useState(false);
+  const [blockVisible, setBlockVisible] = useState(false);
   const extras = useProfileExtras(visible ? profile?.id : null);
   const { language: contextLanguage } = useLanguage();
   const language = languageProp ?? contextLanguage;
@@ -211,47 +209,33 @@ export default function ProfileModal({
     }
   }, [visible, fetchPhotos]);
 
-    const handleBlock = async () => {
+  const handleBlock = () => {
     if (!user || !profile || profile.id === user.id) return;
-    const confirmTr = 'Bu kullanıcıyı engellemek istediğinize emin misiniz? Sohbet ve eşleşme görünmez olacak.';
-    const confirmEn = 'Are you sure you want to block this user? Chat and match will be hidden.';
-    Alert.alert(
-      L('Engelle', 'Block'),
-      L(confirmTr, confirmEn),
-      [
-        { text: L('İptal', 'Cancel'), style: 'cancel' },
-        {
-          text: L('Engelle', 'Block'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase.from('blocks').insert({
-                user_id: user.id,
-                blocked_user_id: profile.id,
-              });
-              if (error) throw error;
-              onClose();
-              onBlocked?.();
-            } catch (e: any) {
-              Alert.alert(L('Hata', 'Error'), e.message || (L('Engelleme başarısız', 'Block failed')));
-            }
-          },
-        },
-      ]
-    );
+    setBlockVisible(true);
+  };
+
+  const blockWithReason = async (reason: BlockReasonKey) => {
+    if (!user || !profile) return;
+    try {
+      await blockUser(user.id, profile.id, reason);
+      onClose();
+      onBlocked?.();
+    } catch (e: any) {
+      Alert.alert(L('Hata', 'Error'), e.message || L('Engelleme başarısız', 'Block failed'));
+    }
   };
 
   const submitReport = async (reason: string) => {
     if (!user || !profile) return;
     try {
-      await submitUserReport(user.id, profile.id, reason);
+      await submitUserReport(user.id, profile.id, reason, { source: 'profile' });
       Alert.alert(
         L('Teşekkürler', 'Thank you'),
         L('Şikâyetiniz alındı. İncelenecektir.', 'Your report has been received and will be reviewed.')
       );
       onClose();
     } catch (e: any) {
-      Alert.alert(L('Hata', 'Error'), e.message || (L('Şikâyet gönderilemedi', 'Report failed')));
+      Alert.alert(L('Bilgi', 'Info'), e.message || L('Şikâyet gönderilemedi', 'Report failed'));
     }
   };
 
@@ -680,10 +664,20 @@ export default function ProfileModal({
         title={L('Şikâyet et', 'Report')}
         message={L('Sebep seçin', 'Choose a reason')}
         onClose={() => setReportVisible(false)}
-        choices={REPORT_REASONS.tr.map((tr, i) => {
-          const label = L(tr, REPORT_REASONS.en[i]);
+        choices={USER_REPORT_REASONS.map(([tr, en]) => {
+          const label = L(tr, en);
           return { label, onPress: () => void submitReport(label) };
         })}
+      />
+      <ChoiceSheet
+        visible={blockVisible}
+        title={L('Engelle', 'Block')}
+        message={L(
+          'Bu kullanıcıyı engellemek istediğinize emin misiniz? Sohbet ve eşleşme görünmez olacak. Seçtiğin sebep moderatörlere de iletilir.',
+          'Are you sure you want to block this user? Chat and match will be hidden. The reason you choose is also sent to the moderators.'
+        )}
+        onClose={() => setBlockVisible(false)}
+        choices={BLOCK_REASONS.map((o) => ({ label: L(o.tr, o.en), destructive: true, onPress: () => void blockWithReason(o.key) }))}
       />
     </>
   );

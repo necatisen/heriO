@@ -57,6 +57,9 @@ export type Plan = {
   starts_at: string;
   status: 'open' | 'cancelled';
   created_at: string;
+  /** Set when the owner edited title / place / time (migration 20261127120000). */
+  edited_at?: string | null;
+  edit_count?: number;
   owner?: PlanOwner;
   /** Pending + accepted requests (owner sees all; others only their own row). */
   joins?: PlanJoin[];
@@ -149,6 +152,59 @@ export async function createPlan(input: {
     }
     throw error;
   }
+}
+
+export const MAX_PLAN_EDITS = 5;
+
+/** Turns the database guard errors of plan inserts/updates into readable text. */
+function planError(error: { message: string }): Error {
+  const m = error.message || '';
+  if (/plan_time_range/.test(m)) return new Error(L('Plan saati şimdiden sonra ve en fazla 15 gün içinde olmalı.', 'The plan time must be in the future and within 15 days.'));
+  if (/plan_edit_limit/.test(m)) return new Error(L('Bir plan en fazla {0} kez düzenlenebilir.', 'A plan can be edited at most {0} times.', [MAX_PLAN_EDITS]));
+  if (/plan_not_open/.test(m)) return new Error(L('İptal edilmiş plan düzenlenemez.', 'A cancelled plan cannot be edited.'));
+  return new Error(m);
+}
+
+/**
+ * Owner edits an open plan. People already accepted get an in-app notification and a push.
+ * Returns how many people were notified.
+ */
+export async function updatePlan(
+  plan: Plan,
+  input: { category: PlanCategory; title: string; place: string; startsAt: Date },
+  myId: string,
+  myName: string
+): Promise<number> {
+  const title = cleanPlanText(input.title).slice(0, 140);
+  const place = cleanPlanText(input.place).slice(0, 80);
+  const timeOrPlaceChanged =
+    new Date(plan.starts_at).getTime() !== input.startsAt.getTime() || (plan.place || '') !== place;
+  const { error } = await supabase
+    .from('plans')
+    .update({ category: input.category, title, place: place || null, starts_at: input.startsAt.toISOString() })
+    .eq('id', plan.id)
+    .eq('user_id', myId);
+  if (error) throw planError(error);
+
+  const accepted = (plan.joins || []).filter((j) => j.status === 'accepted').map((j) => j.user_id);
+  if (!timeOrPlaceChanged || accepted.length === 0) return 0;
+  await supabase
+    .from('notifications')
+    .insert(
+      accepted.map((uid) => ({
+        user_id: uid,
+        actor_user_id: myId,
+        type: 'plan_update',
+        data: { plan_id: plan.id, plan_title: title, actor_name: myName },
+      }))
+    )
+    .then(() => {}, () => {});
+  for (const uid of accepted) {
+    void supabase.functions
+      .invoke('send-push-message', { body: { kind: 'plan_update', plan_id: plan.id, to_user_id: uid, data: { type: 'plan_update', plan_id: plan.id } } })
+      .catch(() => {});
+  }
+  return accepted.length;
 }
 
 export async function cancelPlan(planId: string): Promise<void> {

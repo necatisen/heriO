@@ -1,5 +1,5 @@
-/** "Plan paylaş": category, what, where, when. City comes from the user's profile. */
-import { useMemo, useState } from 'react';
+/** "Plan paylaş": category, what, where, when. City comes from the user's profile. With `editing`, the owner edits an open plan. */
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,13 +9,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { FullScreenModal } from '@/components/FullScreenModal';
 import ComboBox from '@/components/ComboBox';
 import { L } from '@/lib/l10n';
-import { PLAN_CATEGORIES, createPlan, type PlanCategory } from '@/lib/plans';
+import { PLAN_CATEGORIES, MAX_PLAN_EDITS, createPlan, updatePlan, type Plan, type PlanCategory } from '@/lib/plans';
 
 const DAY_NAMES: [string, string][] = [
   ['Paz', 'Sun'], ['Pzt', 'Mon'], ['Sal', 'Tue'], ['Çar', 'Wed'], ['Per', 'Thu'], ['Cum', 'Fri'], ['Cmt', 'Sat'],
 ];
 
-export default function CreatePlanModal({ visible, onClose, onCreated }: { visible: boolean; onClose: () => void; onCreated: () => void }) {
+export default function CreatePlanModal({
+  visible,
+  onClose,
+  onCreated,
+  editing = null,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+  /** Plan to edit (owner only). */
+  editing?: Plan | null;
+}) {
   const { theme } = useTheme();
   const { user, profile } = useAuth();
   const insets = useSafeAreaInsets();
@@ -25,6 +36,20 @@ export default function CreatePlanModal({ visible, onClose, onCreated }: { visib
   const [dayOffset, setDayOffset] = useState(0);
   const [time, setTime] = useState('19:00');
   const [saving, setSaving] = useState(false);
+
+  // Edit mode: fill the form with the plan's current values.
+  useEffect(() => {
+    if (!visible || !editing) return;
+    const d = new Date(editing.starts_at);
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const startOfPlanDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    setCategory(editing.category);
+    setTitle(editing.title);
+    setPlace(editing.place || '');
+    setDayOffset(Math.min(6, Math.max(0, Math.round((startOfPlanDay - startOfToday) / 86400000))));
+    setTime(`${String(d.getHours()).padStart(2, '0')}:${d.getMinutes() >= 30 ? '30' : '00'}`);
+  }, [visible, editing?.id]);
 
   const days = useMemo(() => {
     const now = new Date();
@@ -74,6 +99,16 @@ export default function CreatePlanModal({ visible, onClose, onCreated }: { visib
     }
     setSaving(true);
     try {
+      if (editing) {
+        const notified = await updatePlan(editing, { category, title, place, startsAt: when }, user.id, String(profile?.full_name || ''));
+        reset();
+        onCreated();
+        onClose();
+        if (notified > 0) {
+          Alert.alert(L('Plan güncellendi', 'Plan updated'), L('Katılan {0} kişiye bildirim gönderildi.', '{0} people who joined were notified.', [notified]));
+        }
+        return;
+      }
       await createPlan({
         userId: user.id,
         category,
@@ -87,7 +122,7 @@ export default function CreatePlanModal({ visible, onClose, onCreated }: { visib
       onCreated();
       onClose();
     } catch (e: any) {
-      Alert.alert(L('Hata', 'Error'), e?.message || L('Plan paylaşılamadı.', 'Could not share the plan.'));
+      Alert.alert(L('Hata', 'Error'), e?.message || (editing ? L('Plan güncellenemedi.', 'Could not update the plan.') : L('Plan paylaşılamadı.', 'Could not share the plan.')));
     } finally {
       setSaving(false);
     }
@@ -97,7 +132,7 @@ export default function CreatePlanModal({ visible, onClose, onCreated }: { visib
     <FullScreenModal visible={visible} onRequestClose={onClose} animationType="slide" contentStyle={{ flex: 1, backgroundColor: theme.background }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: theme.border, backgroundColor: theme.cardBackground }]}>
-          <Text style={[styles.title, { color: theme.text }]}>{L('Plan paylaş', 'Share a plan')}</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{editing ? L('Planı düzenle', 'Edit plan') : L('Plan paylaş', 'Share a plan')}</Text>
           <TouchableOpacity onPress={onClose} style={styles.close} accessibilityLabel={L('Kapat', 'Close')}>
             <X size={24} color={theme.text} />
           </TouchableOpacity>
@@ -176,9 +211,25 @@ export default function CreatePlanModal({ visible, onClose, onCreated }: { visib
             )}
           </Text>
 
+          {editing ? (
+            <Text style={[styles.note, { color: theme.textSecondary }]}>
+              {L(
+                'Bir plan en fazla {0} kez düzenlenebilir (kalan: {1}). Saat veya yer değişirse kabul ettiğin kişilere bildirim gider.',
+                'A plan can be edited at most {0} times ({1} left). If the time or place changes, people you accepted are notified.',
+                [MAX_PLAN_EDITS, Math.max(0, MAX_PLAN_EDITS - (editing.edit_count || 0))]
+              )}
+            </Text>
+          ) : null}
+
           <TouchableOpacity disabled={saving} onPress={submit} style={{ marginTop: 10, opacity: saving ? 0.6 : 1 }}>
             <LinearGradient colors={theme.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submit}>
-              <Text style={[styles.submitText, { color: theme.onGradient }]}>{saving ? L('Paylaşılıyor...', 'Sharing...') : L('Planı paylaş', 'Share plan')}</Text>
+              <Text style={[styles.submitText, { color: theme.onGradient }]}>{saving
+                  ? editing
+                    ? L('Kaydediliyor...', 'Saving...')
+                    : L('Paylaşılıyor...', 'Sharing...')
+                  : editing
+                    ? L('Değişiklikleri kaydet', 'Save changes')
+                    : L('Planı paylaş', 'Share plan')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </ScrollView>

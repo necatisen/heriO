@@ -193,11 +193,16 @@ export default function AdminScreen() {
                   {item.user?.full_name || L('Silinmiş kullanıcı', 'Deleted user')}
                 </Text>
                 <Text style={{ color: theme.textSecondary, fontSize: 12 }} numberOfLines={1}>
-                  {item.reports[0]?.reason} · {formatDateTime(item.lastAt)}
+                  {item.blockOnly
+                    ? L('⚠️ Şikâyet yok, {0} kişi engelledi', '⚠️ No report, blocked by {0} people', [item.blockedBy])
+                    : item.reports[0]?.reason}{' '}
+                  · {formatDateTime(item.lastAt)}
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[styles.badge, { backgroundColor: item.reporters >= 3 ? theme.error : theme.primary }]}>{item.reports.length}</Text>
+                <Text style={[styles.badge, { backgroundColor: item.blockOnly ? '#F59E0B' : item.reporters >= 3 ? theme.error : theme.primary }]}>
+                  {item.blockOnly ? '⛔' : item.reports.length}
+                </Text>
                 {item.blockedBy > 0 ? (
                   <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 4 }}>{L('{0} engelleme', '{0} blocks', [item.blockedBy])}</Text>
                 ) : null}

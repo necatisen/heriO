@@ -437,6 +437,14 @@ export default function FilterModal({
               }}
               placeholder={L('Ülke seçin', 'Select country')}
             />
+            {filters.countries.length > 0 ? (
+              <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 6 }}>
+                {L(
+                  'Başka bir ülke seçtiğinde mesafe sınırı dikkate alınmaz; o ülkedeki herkes gösterilir.',
+                  'When you pick another country, the distance limit is ignored and everyone there is shown.'
+                )}
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.section}>
