@@ -22,6 +22,7 @@ import {
   Platform,
   Animated,
   Easing,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, type Href } from 'expo-router';
@@ -552,7 +553,8 @@ export default function VerifyFaceScreen() {
           <Text style={styles.headerTitle}>{L('Kimlik doğrulama', 'Identity check')}</Text>
           <View style={styles.iconBtn} />
         </View>
-        <View style={styles.introBody}>
+        {/* Scrolls on small screens so the tips never slide under the consent box. */}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.introBody} showsVerticalScrollIndicator={false}>
           <View style={styles.heroCircle}>
             <ScanFace size={72} color={BLUE} strokeWidth={1.4} />
           </View>
@@ -573,7 +575,7 @@ export default function VerifyFaceScreen() {
               </View>
             ))}
           </View>
-        </View>
+        </ScrollView>
         <View style={styles.footer}>
           <TouchableOpacity style={styles.consentRow} onPress={() => setBiometricConsent((v) => !v)} activeOpacity={0.7}>
             <View style={[styles.consentBox, biometricConsent && styles.consentBoxOn]}>
@@ -767,25 +769,26 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 17, fontWeight: '600', color: '#111' },
   iconBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  introBody: { flex: 1, alignItems: 'center', paddingHorizontal: 24, paddingTop: 24 },
+  introBody: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16 },
   heroCircle: {
-    width: 132,
-    height: 132,
-    borderRadius: 66,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     backgroundColor: 'rgba(29,155,240,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 18,
   },
   title: { fontSize: 24, fontWeight: '800', color: '#0F172A', textAlign: 'center', marginBottom: 10 },
   subtitle: { fontSize: 15, color: '#475569', textAlign: 'center', lineHeight: 22 },
-  tips: { width: '100%', marginTop: 28, gap: 12 },
+  tips: { width: '100%', marginTop: 20, gap: 10 },
   tipRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     backgroundColor: '#FFF',
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E8EEF5',
@@ -799,7 +802,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tipText: { fontSize: 15, color: '#1E293B', flex: 1 },
-  footer: { paddingHorizontal: 24, paddingBottom: 16, gap: 12 },
+  footer: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16, gap: 12, borderTopWidth: 1, borderTopColor: '#E8EEF5', backgroundColor: '#F7F9FC' },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',

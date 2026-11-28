@@ -135,6 +135,8 @@ export default function ExploreScreen() {
   });
 
   const fetchSeq = useRef(0);
+  const resetInFlight = useRef(false);
+  const lastFiltersKey = useRef<string | null>(null);
   const deckRef = useRef<SwipeDeckHandle>(null);
 
   const fetchPremiumStatus = useCallback(async () => {
@@ -160,6 +162,13 @@ export default function ExploreScreen() {
 
   const resetAndFetch = useCallback(() => {
     if (!user) return;
+    // New filters: drop the old cards right away so people from the previous search never show up.
+    const key = JSON.stringify({ filters, isPremium });
+    if (lastFiltersKey.current !== null && lastFiltersKey.current !== key) {
+      usersCountRef.current = 0;
+      setUsers([]);
+    }
+    lastFiltersKey.current = key;
     setCurrentIndex(0);
     setPage(0);
     setHasMore(true);
@@ -267,6 +276,9 @@ export default function ExploreScreen() {
   const fetchUsers = async (opts?: { mode: 'reset' | 'append'; page: number }) => {
     const mode = opts?.mode ?? 'reset';
     const nextPage = opts?.page ?? 0;
+    // A "next page" request must never replace a fresh reset (e.g. new filters) that is still loading.
+    if (mode === 'append' && resetInFlight.current) return;
+    if (mode === 'reset') resetInFlight.current = true;
     const seq = ++fetchSeq.current;
     try {
       if (mode === 'append') setLoadingMore(true);
@@ -435,6 +447,7 @@ export default function ExploreScreen() {
       console.error('Error fetching users:', error);
     } finally {
       if (seq !== fetchSeq.current) return;
+      resetInFlight.current = false;
       setLoading(false);
       setLoadingMore(false);
     }

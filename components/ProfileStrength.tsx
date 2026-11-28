@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, ChevronUp, Sparkles } from 'lucide-react-nat
 import BouncyButton from '@/components/BouncyButton';
 import { useTheme } from '@/contexts/ThemeContext';
 import { L } from '@/lib/l10n';
+import type { EditFocus } from '@/components/EditProfileModal';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const SIZE = 64;
@@ -16,7 +17,8 @@ const CIRC = 2 * Math.PI * R;
 
 type P = Record<string, any> | null | undefined;
 
-export type StrengthAction = 'photo' | 'verify' | 'edit';
+/** What a step opens: photo picker, face check, the bio box, or a field of the edit modal. */
+export type StrengthAction = 'photo' | 'verify' | 'bio' | EditFocus;
 
 type Step = { key: string; done: boolean; w: number; emoji: string; tip: string; why: string; action: StrengthAction };
 
@@ -25,16 +27,16 @@ function checklist(p: P, photoCount: number, interestsCount: number): Step[] {
   return [
     { key: 'avatar', done: !!p?.profile_picture, w: 18, emoji: '📸', action: 'photo', tip: L('Profil fotoğrafı ekle', 'Add a profile photo'), why: L('Fotoğrafsız profiller neredeyse hiç beğeni almaz.', 'Profiles without a photo get almost no likes.') },
     { key: 'photos', done: photoCount >= 3, w: 12, emoji: '🖼️', action: 'photo', tip: L('En az 3 fotoğraf ekle', 'Add at least 3 photos'), why: L('Farklı ortamlardan fotoğraflar güven verir.', 'Photos from different moments build trust.') },
-    { key: 'bio', done: (p?.bio || '').trim().length >= 20, w: 14, emoji: '✍️', action: 'edit', tip: L('Kendini 2 cümleyle anlat', 'Describe yourself in 2 sentences'), why: L('İlk mesaj genelde biyografinden çıkar.', 'First messages usually start from your bio.') },
-    { key: 'interests', done: interestsCount >= 3, w: 12, emoji: '🎯', action: 'edit', tip: L('En az 3 ilgi alanı / aktivite seç', 'Pick at least 3 interests / activities'), why: L('Ortak hobiler eşleşmede öne çıkarır.', 'Shared hobbies boost you in matches.') },
+    { key: 'bio', done: (p?.bio || '').trim().length >= 20, w: 14, emoji: '✍️', action: 'bio', tip: L('Kendini 2 cümleyle anlat', 'Describe yourself in 2 sentences'), why: L('İlk mesaj genelde biyografinden çıkar.', 'First messages usually start from your bio.') },
+    { key: 'interests', done: interestsCount >= 3, w: 12, emoji: '🎯', action: 'interests', tip: L('En az 3 ilgi alanı / aktivite seç', 'Pick at least 3 interests / activities'), why: L('Ortak hobiler eşleşmede öne çıkarır.', 'Shared hobbies boost you in matches.') },
     { key: 'verify', done: p?.verification_status === 'verified', w: 14, emoji: '✅', action: 'verify', tip: L('Doğrula, mavi tik al', 'Verify and get the blue tick'), why: L('Doğrulanmış profiller daha çok güven ve yanıt alır.', 'Verified profiles get more trust and replies.') },
-    { key: 'goal', done: !!p?.relationship_goal, w: 8, emoji: '❤️', action: 'edit', tip: L('Ne aradığını seç', 'Say what you are looking for'), why: L('Aynı şeyi arayan kişilerle buluşursun.', 'Meet people who want the same thing.') },
-    { key: 'languages', done: Array.isArray(p?.languages) && p.languages.length > 0, w: 5, emoji: '🗣️', action: 'edit', tip: L('Konuştuğun dilleri ekle', 'Add the languages you speak'), why: L('Yabancı kullanıcılarla tanışmanı kolaylaştırır.', 'Makes it easier to meet people from abroad.') },
-    { key: 'profession', done: !!p?.profession, w: 5, emoji: '💼', action: 'edit', tip: L('Mesleğini ekle', 'Add your profession'), why: L('Sohbet başlatmak için güzel bir konu.', 'A good topic to start a chat.') },
-    { key: 'education', done: !!p?.education, w: 4, emoji: '🎓', action: 'edit', tip: L('Eğitim durumunu ekle', 'Add your education'), why: L('Uyum puanını etkiler.', 'Affects your match score.') },
-    { key: 'height', done: !!p?.height, w: 3, emoji: '📏', action: 'edit', tip: L('Boyunu ekle', 'Add your height'), why: L('Filtrelerde görünmeni sağlar.', 'Lets you appear in filters.') },
-    { key: 'city', done: !!p?.city, w: 3, emoji: '📍', action: 'edit', tip: L('Şehrini ekle', 'Add your city'), why: L('Yakınındaki kişilere gösterilirsin.', 'You are shown to people near you.') },
-    { key: 'habits', done: !!(p?.smoking_habit && p?.alcohol_consumption), w: 2, emoji: '🍷', action: 'edit', tip: L('Alışkanlıklarını ekle', 'Add your habits'), why: L('Uyum puanını etkiler.', 'Affects your match score.') },
+    { key: 'goal', done: !!p?.relationship_goal, w: 8, emoji: '❤️', action: 'goal', tip: L('Ne aradığını seç', 'Say what you are looking for'), why: L('Aynı şeyi arayan kişilerle buluşursun.', 'Meet people who want the same thing.') },
+    { key: 'languages', done: Array.isArray(p?.languages) && p.languages.length > 0, w: 5, emoji: '🗣️', action: 'languages', tip: L('Konuştuğun dilleri ekle', 'Add the languages you speak'), why: L('Yabancı kullanıcılarla tanışmanı kolaylaştırır.', 'Makes it easier to meet people from abroad.') },
+    { key: 'profession', done: !!p?.profession, w: 5, emoji: '💼', action: 'profession', tip: L('Mesleğini ekle', 'Add your profession'), why: L('Sohbet başlatmak için güzel bir konu.', 'A good topic to start a chat.') },
+    { key: 'education', done: !!p?.education, w: 4, emoji: '🎓', action: 'education', tip: L('Eğitim durumunu ekle', 'Add your education'), why: L('Uyum puanını etkiler.', 'Affects your match score.') },
+    { key: 'height', done: !!p?.height, w: 3, emoji: '📏', action: 'height', tip: L('Boyunu ekle', 'Add your height'), why: L('Filtrelerde görünmeni sağlar.', 'Lets you appear in filters.') },
+    { key: 'city', done: !!p?.city, w: 3, emoji: '📍', action: 'city', tip: L('Şehrini ekle', 'Add your city'), why: L('Yakınındaki kişilere gösterilirsin.', 'You are shown to people near you.') },
+    { key: 'habits', done: !!(p?.smoking_habit && p?.alcohol_consumption), w: 2, emoji: '🍷', action: 'habits', tip: L('Alışkanlıklarını ekle', 'Add your habits'), why: L('Uyum puanını etkiler.', 'Affects your match score.') },
   ];
 }
 

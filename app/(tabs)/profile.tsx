@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -24,7 +24,7 @@ import { paymentsEnabledSync } from '@/lib/payments';
 import { useRouter } from 'expo-router';
 import { PREMIUM_PLANS } from '@/lib/storeProducts';
 import * as ImagePicker from 'expo-image-picker';
-import EditProfileModal from '@/components/EditProfileModal';
+import EditProfileModal, { type EditFocus } from '@/components/EditProfileModal';
 import ProfileModal from '@/components/ProfileModal';
 import { BIRTHDAY_WEEK_DAYS, birthdayWeekDay, loadBirthDateExact } from '@/lib/birthday';
 import { loadShareBirthday } from '@/lib/birthdayGreetings';
@@ -80,6 +80,11 @@ export default function ProfileScreen() {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [bioText, setBioText] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editFocus, setEditFocus] = useState<EditFocus | null>(null);
+  // "Seni tanısınlar" → bio: scroll to the About card and open its text box with the cursor in it.
+  const scrollRef = useRef<ScrollView>(null);
+  const contentY = useRef(0);
+  const aboutY = useRef(0);
   const [birthdayExact, setBirthdayExact] = useState(true);
   const [shareBday, setShareBday] = useState(false);
   const [interestsCount, setInterestsCount] = useState(0);
@@ -503,7 +508,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <LinearGradient
           colors={theme.headerGradient}
           style={styles.headerGradient}>
@@ -656,12 +661,20 @@ export default function ProfileScreen() {
           interestsCount={interestsCount}
           onAction={(a: StrengthAction) => {
             if (a === 'photo') void handlePickImage();
-            else if (a === 'verify' && profile?.profile_picture) router.push('/verify-face');
-            else setShowEditModal(true);
+            else if (a === 'verify') {
+              if (profile?.profile_picture) router.push('/verify-face');
+              else void handlePickImage();
+            } else if (a === 'bio') {
+              setEditingBio(true);
+              scrollRef.current?.scrollTo({ y: Math.max(0, contentY.current + aboutY.current - 16), animated: true });
+            } else {
+              setEditFocus(a);
+              setShowEditModal(true);
+            }
           }}
         />
 
-        <View style={[styles.content, { backgroundColor: theme.background }]}>
+        <View style={[styles.content, { backgroundColor: theme.background }]} onLayout={(e) => (contentY.current = e.nativeEvent.layout.y)}>
             {paymentsEnabledSync() && isPremium && subscriptionEnd && planType && (() => {
               const planDef = PREMIUM_PLANS.find((p) => p.id === planType);
               const planLabel = planDef ? L(planDef.labelTr, planDef.labelEn) : planType;
@@ -748,7 +761,7 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <View style={[styles.infoCard, { backgroundColor: theme.cardBackground }]}>
+          <View style={[styles.infoCard, { backgroundColor: theme.cardBackground }]} onLayout={(e) => (aboutY.current = e.nativeEvent.layout.y)}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 {L('Hakkımda', 'About')}
@@ -780,6 +793,7 @@ export default function ProfileScreen() {
                 }]}
                 value={bioText}
                 onChangeText={setBioText}
+                autoFocus
                 placeholder={L('Kendinizden bahsedin...', 'Tell about yourself...')}
                 placeholderTextColor={theme.textSecondary}
                 multiline
@@ -986,7 +1000,11 @@ export default function ProfileScreen() {
 
       <EditProfileModal
         visible={showEditModal}
-        onClose={() => setShowEditModal(false)}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditFocus(null);
+        }}
+        focus={editFocus}
         profile={{
           full_name: displayProfile.full_name ?? null,
           username: displayProfile.username ?? null,

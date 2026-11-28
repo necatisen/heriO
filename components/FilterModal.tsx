@@ -21,6 +21,7 @@ import { countries, getCitiesForCountry } from '@/lib/constants';
 import ComboBox from '@/components/ComboBox';
 
 import { L } from '@/lib/l10n';
+import { SPOKEN_LANGUAGES } from '@/lib/languages';
 export type FilterOptions = {
   gender: string[];
   ageRange: [number, number];
@@ -101,16 +102,7 @@ export default function FilterModal({
     { value: 'heavyset', label: L('İri Yapılı', 'Heavyset') },
   ];
 
-  const languageOptions = [
-    { value: 'tr', label: 'Türkçe' },
-    { value: 'en', label: 'English' },
-    { value: 'ru', label: 'Русский' },
-    { value: 'ar', label: 'العربية' },
-    { value: 'af', label: 'Afrikaans' },
-    { value: 'de', label: 'Deutsch' },
-    { value: 'fr', label: 'Français' },
-    { value: 'es', label: 'Español' },
-  ];
+  const languageOptions = SPOKEN_LANGUAGES;
 
   const religionOptions = [
     { value: 'muslim', label: L('Müslüman', 'Muslim') },

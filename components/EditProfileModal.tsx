@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { religionOptions, alcoholConsumptionOptions, generateAgeOptions, getCiti
 import ComboBox from '@/components/ComboBox';
 import { FullScreenModal } from '@/components/FullScreenModal';
 import { ProfileExtrasEditor, loadProfileExtras, saveProfileExtras } from '@/components/ProfileExtras';
+import { SPOKEN_LANGUAGES, MAX_LANGUAGES } from '@/lib/languages';
 import { EMPTY_EXTRAS, type ProfileExtras } from '@/lib/profileExtras';
 import { birthDateFromAge, dayMonthOf, loadBirthDateExact, monthName } from '@/lib/birthday';
 
@@ -44,7 +45,11 @@ type Profile = {
   relationship_goal?: string | null;
 };
 
+/** Field to jump to when the modal opens (from the profile "Seni tanısınlar" card). */
+export type EditFocus = 'interests' | 'languages' | 'goal' | 'profession' | 'education' | 'height' | 'city' | 'habits';
+
 type EditProfileModalProps = {
+  focus?: EditFocus | null;
   visible: boolean;
   onClose: () => void;
   profile: Profile | null;
@@ -58,6 +63,7 @@ export default function EditProfileModal({
   profile,
   userId,
   onUpdate,
+  focus = null,
 }: EditProfileModalProps) {
   const { theme } = useTheme();
   const { language } = useLanguage();
@@ -96,6 +102,14 @@ export default function EditProfileModal({
   const [showRelationshipGoalPicker, setShowRelationshipGoalPicker] = useState(false);
 
   const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
+  const [languages, setLanguages] = useState<string[]>([]);
+  // Section positions inside the scroll view, so a "focus" can scroll straight to its field.
+  const scrollRef = useRef<ScrollView>(null);
+  const heightInputRef = useRef<TextInput>(null);
+  const sectionY = useRef<Partial<Record<EditFocus, number>>>({});
+  const mark = (k: EditFocus) => (e: { nativeEvent: { layout: { y: number } } }) => {
+    sectionY.current[k] = e.nativeEvent.layout.y;
+  };
   /** Real birthday (day + month); null = only the age is known. */
   const [bday, setBday] = useState<{ day: number; month: number } | null>(null);
   /** Opt-in: appear in "birthday twins" and get the birthday-week boost. */
@@ -104,12 +118,33 @@ export default function EditProfileModal({
   useEffect(() => {
     if (!visible) return;
     loadProfileExtras(userId).then(setExtras);
+    supabase
+      .from('profiles')
+      .select('languages')
+      .eq('id', userId)
+      .maybeSingle()
+      .then(({ data }) => setLanguages(Array.isArray((data as any)?.languages) ? (data as any).languages : []));
     loadShareBirthday(userId).then(setShareBday);
     setBday(null);
     loadBirthDateExact(userId).then((exact) => {
       if (exact) setBday(dayMonthOf(profile?.birth_date));
     });
   }, [visible, userId, profile?.birth_date]);
+
+  useEffect(() => {
+    if (!visible || !focus) return;
+    if (focus === 'profession') setShowProfessionPicker(true);
+    if (focus === 'education') setShowEducationPicker(true);
+    if (focus === 'goal') setShowRelationshipGoalPicker(true);
+    if (focus === 'habits') setShowSmokingPicker(true);
+    // Wait for the sections to lay out, then scroll there.
+    const t = setTimeout(() => {
+      const y = sectionY.current[focus];
+      if (y != null) scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+      if (focus === 'height') heightInputRef.current?.focus();
+    }, 450);
+    return () => clearTimeout(t);
+  }, [visible, focus]);
 
   const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: String(i + 1) }));
   const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: monthName(i + 1) }));
@@ -326,6 +361,7 @@ export default function EditProfileModal({
         religion: formData.religion || null,
         relationship_status: formData.relationship_status || null,
         relationship_goal: formData.relationship_goal || null,
+        languages: languages.slice(0, MAX_LANGUAGES),
       };
 
       const ageNum = parseInt(formData.age, 10);
@@ -415,7 +451,7 @@ export default function EditProfileModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <ScrollView ref={scrollRef} style={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>
                 {L('Ad Soyad', 'Full name')}
@@ -531,12 +567,13 @@ export default function EditProfileModal({
                 ))}
               </View>
             </View>
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={mark('height')}>
               <Text style={[styles.label, { color: theme.text }]}>
                 {L('Boy (cm)', 'Height (cm)')}
               </Text>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
+                ref={heightInputRef}
                 value={formData.height}
                 onChangeText={(text) => setFormData({ ...formData, height: text.replace(/[^0-9]/g, '') })}
                 placeholder="170"
@@ -559,7 +596,7 @@ export default function EditProfileModal({
               />
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={mark('education')}>
               <Text style={[styles.label, { color: theme.text }]}>
                 {L('Eğitim Durumu', 'Education')}
               </Text>
@@ -602,7 +639,7 @@ export default function EditProfileModal({
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={mark('profession')}>
               <Text style={[styles.label, { color: theme.text }]}>
                 {L('Meslek', 'Profession')}
               </Text>
@@ -645,7 +682,7 @@ export default function EditProfileModal({
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={mark('habits')}>
               <Text style={[styles.label, { color: theme.text }]}>
                 {L('Sigara', 'Smoking')}
               </Text>
@@ -866,7 +903,7 @@ export default function EditProfileModal({
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={mark('goal')}>
               <Text style={[styles.label, { color: theme.text }]}>
                 {L('İlişki Arayışı', 'Relationship Goal')}
               </Text>
@@ -949,7 +986,7 @@ export default function EditProfileModal({
               )}
             </View>
 
-            <View style={styles.inputGroup}>
+            <View style={styles.inputGroup} onLayout={mark('city')}>
               <Text style={[styles.label, { color: theme.text }]}>
                 {L('Şehir', 'City')}
               </Text>
@@ -1001,7 +1038,33 @@ export default function EditProfileModal({
               )}
             </View>
 
-            <View style={{ paddingBottom: 32 }}>
+            <View style={styles.inputGroup} onLayout={mark('languages')}>
+              <Text style={[styles.label, { color: theme.text }]}>
+                {L('Konuştuğun diller', 'Languages you speak')} ({languages.length}/{MAX_LANGUAGES})
+              </Text>
+              <View style={styles.langWrap}>
+                {SPOKEN_LANGUAGES.map((o) => {
+                  const on = languages.includes(o.value);
+                  return (
+                    <TouchableOpacity
+                      key={o.value}
+                      onPress={() =>
+                        setLanguages((prev) =>
+                          on ? prev.filter((x) => x !== o.value) : prev.length >= MAX_LANGUAGES ? prev : [...prev, o.value]
+                        )
+                      }
+                      style={[
+                        styles.langChip,
+                        { borderColor: on ? theme.primary : theme.border, backgroundColor: on ? theme.primary + '22' : theme.background },
+                      ]}>
+                      <Text style={{ color: on ? theme.primary : theme.text, fontWeight: on ? '700' : '500', fontSize: 13 }}>{o.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={{ paddingBottom: 32 }} onLayout={mark('interests')}>
               <ProfileExtrasEditor value={extras} onChange={setExtras} />
             </View>
           </ScrollView>
@@ -1037,6 +1100,8 @@ export default function EditProfileModal({
 }
 
 const styles = StyleSheet.create({
+  langWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  langChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderWidth: 1 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
