@@ -1048,5 +1048,7 @@
   "Sebep belirtmeden engelle": "Bloquear sin motivo",
   "Bu kişiyi zaten şikâyet ettin, ekibimiz inceliyor. Teşekkürler!": "Ya denunciaste a esta persona; nuestro equipo lo está revisando. ¡Gracias!",
   "Bugün çok fazla şikâyet gönderdin. Lütfen yarın tekrar dene.": "Hoy enviaste demasiadas denuncias. Inténtalo de nuevo mañana.",
-  "Konuştuğun diller": "Idiomas que hablas"
+  "Konuştuğun diller": "Idiomas que hablas",
+  "Bugün çok fazla doğrulama denemesi yaptın. Lütfen yarın tekrar dene.": "Hoy hiciste demasiados intentos de verificación. Inténtalo de nuevo mañana.",
+  "Bu kişiye artık mesaj gönderemezsin.": "Ya no puedes enviar mensajes a esta persona."
 }

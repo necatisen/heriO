@@ -22,6 +22,27 @@ const corsHeaders = {
 const MIN_SELFIE_BASE64_LENGTH = 30000;
 const FACE_MATCH_THRESHOLD = 0.8;
 const MIN_LIVENESS_FRAMES = 2;
+/** Attempts per user per 24 h (failed ones count too) – slows down scripted badge requests. */
+const MAX_ATTEMPTS_PER_DAY = 5;
+const MIN_SELFIE_SIDE = 320;
+const MIN_FRAME_SIDE = 160;
+
+/** Width/height of a JPEG (null if the bytes are not a valid JPEG). */
+function jpegSize(bin: Uint8Array): { w: number; h: number } | null {
+  if (bin.length < 4 || bin[0] !== 0xff || bin[1] !== 0xd8) return null;
+  let i = 2;
+  while (i + 9 < bin.length) {
+    if (bin[i] !== 0xff) return null;
+    const marker = bin[i + 1];
+    const len = (bin[i + 2] << 8) | bin[i + 3];
+    // SOF0..SOF15 except DHT(C4), JPG(C8), DAC(CC)
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      return { h: (bin[i + 5] << 8) | bin[i + 6], w: (bin[i + 7] << 8) | bin[i + 8] };
+    }
+    i += 2 + len;
+  }
+  return null;
+}
 
 type Stage = 'selfie_capture' | 'face_match' | 'liveness' | 'complete';
 type FailureCode =
@@ -32,7 +53,8 @@ type FailureCode =
   | 'face_mismatch'
   | 'liveness_failed'
   | 'no_profile_photo'
-  | 'invalid_image';
+  | 'invalid_image'
+  | 'too_many_attempts';
 
 function jsonResponse(body: object, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -157,6 +179,44 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Daily attempt limit; every attempt is logged first so failed tries count as well.
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { count: recentAttempts } = await supabaseAdmin
+      .from('verification_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', since);
+    if ((recentAttempts ?? 0) >= MAX_ATTEMPTS_PER_DAY) {
+      return jsonResponse(
+        { success: false, stage: 'selfie_capture', code: 'too_many_attempts', message: 'Too many attempts today. Please try again tomorrow.' },
+        429
+      );
+    }
+    const { data: attemptRow } = await supabaseAdmin
+      .from('verification_attempts')
+      .insert({ user_id: userId, selfie_storage_path: null, status: 'rejected', rejection_reason: 'in_progress' })
+      .select('id')
+      .single();
+    const attemptId = (attemptRow as { id: string } | null)?.id;
+
+    // The selfie and every liveness frame must be real, distinct camera images.
+    const selfieSize = jpegSize(base64ToBinary(selfieBase64));
+    if (!selfieSize || selfieSize.w < MIN_SELFIE_SIDE || selfieSize.h < MIN_SELFIE_SIDE) {
+      return fail('selfie_capture', 'invalid_image', 'The selfie is not a valid camera photo.');
+    }
+    const frameKeys = new Set<string>([base64Data.slice(-4000)]);
+    for (const frame of livenessFrames) {
+      if (typeof frame !== 'string') return fail('liveness', 'liveness_failed', 'Invalid liveness frame.');
+      const size = jpegSize(base64ToBinary(frame));
+      if (!size || size.w < MIN_FRAME_SIDE || size.h < MIN_FRAME_SIDE) {
+        return fail('liveness', 'liveness_failed', 'Invalid liveness frame.');
+      }
+      const key = frame.replace(/^data:image\/\w+;base64,/, '').slice(-4000);
+      if (frameKeys.has(key)) return fail('liveness', 'liveness_failed', 'Liveness frames must be different moments.');
+      frameKeys.add(key);
+    }
+
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, profile_picture')
@@ -234,18 +294,20 @@ Deno.serve(async (req: Request) => {
       console.warn('old selfie cleanup failed', e);
     }
 
-    const { error: attemptError } = await supabaseAdmin
-      .from('verification_attempts')
-      .insert({
-        user_id: userId,
-        selfie_storage_path: null,
-        profile_photo_url: profile.profile_picture,
-        stage_1_passed: stage1Passed,
-        stage_2_similarity: stage2Similarity,
-        stage_3_passed: true,
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
-      });
+    const result = {
+      user_id: userId,
+      selfie_storage_path: null,
+      profile_photo_url: profile.profile_picture,
+      stage_1_passed: stage1Passed,
+      stage_2_similarity: stage2Similarity,
+      stage_3_passed: true,
+      status: 'approved',
+      rejection_reason: null,
+      reviewed_at: new Date().toISOString(),
+    };
+    const { error: attemptError } = attemptId
+      ? await supabaseAdmin.from('verification_attempts').update(result).eq('id', attemptId)
+      : await supabaseAdmin.from('verification_attempts').insert(result);
 
     if (attemptError) {
       console.error('verification_attempts insert error:', attemptError);

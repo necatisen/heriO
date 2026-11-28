@@ -640,7 +640,12 @@ export default function ConversationScreen() {
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
         setMessageText(messageContent);
         setReplyToMessage(replyTo || null);
-        Alert.alert(L('Hata', 'Error'), error.message || L('Mesaj gönderilemedi', 'Failed to send message'));
+        Alert.alert(
+          L('Hata', 'Error'),
+          /blocked/i.test(String(error.message))
+            ? L('Bu kişiye artık mesaj gönderemezsin.', 'You can no longer message this person.')
+            : error.message || L('Mesaj gönderilemedi', 'Failed to send message')
+        );
       }
     })();
   };

@@ -223,6 +223,38 @@ async function callFunction(c, name, body) {
     must(!list.data || list.data.length === 0, 'başkasının fotoğraf klasörü listelenebiliyor!');
     return 'girişsiz erişim kapalı, mesaj değiştirme engelli, konum yuvarlanıyor, depolama kapalı';
   });
+  await step('Sahte bildirim / sahte eşleşme engeli (migration 20261128140000)', async () => {
+    const C = client();
+    const stamp2 = Date.now();
+    const { data: cs, error: ce } = await C.auth.signUp({
+      email: `qa-${stamp2}-c@example.com`,
+      password: 'QaTest!2026',
+      options: { data: { full_name: 'Qa Gamma', username: `qa_gamma_${stamp2 % 100000}`, birth_date: '1995-05-05', gender: 'male', country: 'turkey', city: 'İzmir', preferred_language: 'tr', consents: { version: 'qa', accepted_at: new Date().toISOString(), app_version_code: 0, types: ['terms_privacy', 'kvkk_notice', 'transfer_abroad'] } } },
+    });
+    if (ce || !cs.session) throw new Error('C kaydı: ' + (ce?.message || 'oturum yok'));
+    const idC = cs.user.id;
+    try {
+      const fakeN = await C.from('notifications').insert({ user_id: idA, actor_user_id: idC, type: 'match', data: { matched_user_name: 'Biri' } });
+      if (!fakeN.error) return 'migration henüz çalıştırılmadı — atlandı (UYARI: sahte bildirim gönderilebiliyor)';
+      const fakeF = await C.from('friends').insert({ user_id: idC, friend_id: idA, status: 'accepted' });
+      must(fakeF.error, 'ilişkisi olmayan biriyle eşleşme kaydı açılabildi!');
+      const fakeF2 = await C.from('friends').insert({ user_id: idA, friend_id: idC, status: 'pending' });
+      must(fakeF2.error, 'başkası adına arkadaşlık isteği açılabildi!');
+      // A real like is still allowed, and the name in it is the real sender's.
+      check(await C.from('likes').insert({ user_id: idC, liked_user_id: idA }), 'C beğenir');
+      check(await C.from('notifications').insert({ user_id: idA, actor_user_id: idC, type: 'like', data: { actor_name: 'Sahte İsim' } }), 'gerçek beğeni bildirimi');
+      const n = check(await A.from('notifications').select('data').eq('actor_user_id', idC).eq('type', 'like').single(), 'bildirim oku');
+      must(n.data.actor_name === 'Qa Gamma', `bildirimdeki isim taklit edildi (${n.data.actor_name})`);
+      return 'sahte bildirim, sahte eşleşme ve isim taklidi engelli';
+    } finally {
+      const { data: sc } = await C.auth.getSession();
+      await fetch(`${URL_}/functions/v1/delete-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: KEY, Authorization: `Bearer ${sc.session.access_token}` },
+        body: '{}',
+      });
+    }
+  });
   await step('Kibar kapanış: kapanan sohbete mesaj yazılamaz', async () => {
     check(await B.from('messages').insert({ session_id: sessionId, sender_id: idB, receiver_id: idA, content: 'İyi şanslar' }), 'kapanış notu');
     check(await B.from('chat_sessions').update({ closed_by: idB, closed_at: new Date().toISOString() }).eq('id', sessionId), 'kapat');
@@ -341,11 +373,19 @@ async function callFunction(c, name, body) {
   });
   await step('Fonksiyon: verification-pipeline', async () => {
     const selfie = (await randomJpeg(720, 900, 85)).toString('base64');
-    const frame = (await randomJpeg(480, 600, 70)).toString('base64');
+    const frames = [];
+    for (let i = 0; i < 4; i++) frames.push((await randomJpeg(480, 600, 70)).toString('base64'));
+    // Same frame repeated = not a real liveness recording → refused.
+    const dup = await callFunction(A, 'verification-pipeline', {
+      selfie_base64: `data:image/jpeg;base64,${selfie}`,
+      liveness_passed: true,
+      liveness_frames: [frames[0], frames[0]].map((f) => `data:image/jpeg;base64,${f}`),
+    });
+    must(dup.status === 400, `aynı kareler kabul edildi (${dup.status})`);
     const r = await callFunction(A, 'verification-pipeline', {
       selfie_base64: `data:image/jpeg;base64,${selfie}`,
       liveness_passed: true,
-      liveness_frames: [1, 2, 3, 4].map(() => `data:image/jpeg;base64,${frame}`),
+      liveness_frames: frames.map((f) => `data:image/jpeg;base64,${f}`),
     });
     must(r.status === 200 && r.body.success, `${r.status} ${r.body.message || r.body.msg || ''}`);
     return r.body.verification_status;

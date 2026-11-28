@@ -14,7 +14,8 @@ export type VerificationFailureCode =
   | 'face_mismatch'
   | 'liveness_failed'
   | 'no_profile_photo'
-  | 'invalid_image';
+  | 'invalid_image'
+  | 'too_many_attempts';
 
 export type VerificationResult =
   | { success: true; verification_status: 'pending' | 'verified'; message: string }

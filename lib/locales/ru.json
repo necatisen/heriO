@@ -1048,5 +1048,7 @@
   "Sebep belirtmeden engelle": "Заблокировать без причины",
   "Bu kişiyi zaten şikâyet ettin, ekibimiz inceliyor. Teşekkürler!": "Вы уже пожаловались на этого человека, команда проверяет. Спасибо!",
   "Bugün çok fazla şikâyet gönderdin. Lütfen yarın tekrar dene.": "Сегодня вы отправили слишком много жалоб. Попробуйте завтра.",
-  "Konuştuğun diller": "Языки, на которых вы говорите"
+  "Konuştuğun diller": "Языки, на которых вы говорите",
+  "Bugün çok fazla doğrulama denemesi yaptın. Lütfen yarın tekrar dene.": "Сегодня слишком много попыток проверки. Попробуйте завтра.",
+  "Bu kişiye artık mesaj gönderemezsin.": "Вы больше не можете писать этому человеку."
 }

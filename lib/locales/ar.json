@@ -1048,5 +1048,7 @@
   "Sebep belirtmeden engelle": "حظر دون ذكر سبب",
   "Bu kişiyi zaten şikâyet ettin, ekibimiz inceliyor. Teşekkürler!": "لقد أبلغت عن هذا الشخص بالفعل، وفريقنا يراجع الأمر. شكرًا!",
   "Bugün çok fazla şikâyet gönderdin. Lütfen yarın tekrar dene.": "أرسلت بلاغات كثيرة اليوم. حاول مجددًا غدًا.",
-  "Konuştuğun diller": "اللغات التي تتحدثها"
+  "Konuştuğun diller": "اللغات التي تتحدثها",
+  "Bugün çok fazla doğrulama denemesi yaptın. Lütfen yarın tekrar dene.": "أجريت محاولات تحقق كثيرة اليوم. حاول مجددًا غدًا.",
+  "Bu kişiye artık mesaj gönderemezsin.": "لم يعد بإمكانك مراسلة هذا الشخص."
 }

@@ -161,6 +161,9 @@ function failureMessage(raw: string, code: string | undefined, isTr: boolean): s
   if (code === 'no_profile_photo') {
     return L('Doğrulamadan önce profilinize yüzünüzün net göründüğü bir fotoğraf ekleyin.', 'Add a clear profile photo of your face before verifying.');
   }
+  if (code === 'too_many_attempts') {
+    return L('Bugün çok fazla doğrulama denemesi yaptın. Lütfen yarın tekrar dene.', 'Too many verification attempts today. Please try again tomorrow.');
+  }
   if (code === 'face_mismatch') {
     return L('Yüzünüz profil fotoğrafınızla eşleşmedi. Kendi fotoğrafınızı kullandığınızdan emin olun.', 'Your face did not match your profile photo.');
   }
