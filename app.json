@@ -22,7 +22,7 @@
     },
     "android": {
       "package": "com.necatisen.birthchat",
-      "versionCode": 22,
+      "versionCode": 23,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/birthchat-icon.png",
         "backgroundColor": "#0f1330"
