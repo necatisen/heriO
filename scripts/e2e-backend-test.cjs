@@ -200,6 +200,29 @@ async function callFunction(c, name, body) {
     check(await B.from('birthday_greetings').delete().eq('id', g.id), 'B sil');
     return '200 / 403';
   });
+  await step('Güvenlik sertleştirme (migration 20261128120000)', async () => {
+    const anon = client();
+    const ap = await anon.from('profiles').select('id').limit(5);
+    const hardened = !ap.error && (ap.data || []).length === 0;
+    if (!hardened) return 'migration henüz çalıştırılmadı — atlandı (UYARI: profiller girişsiz okunabiliyor)';
+    // Dangerous RPCs are gone / closed.
+    const del = await anon.rpc('delete_all_users');
+    must(del.error, 'delete_all_users hâlâ çağrılabiliyor!');
+    // Receiver cannot rewrite a message they received; sender cannot fake "read".
+    const m = check(await A.from('messages').insert({ session_id: sessionId, sender_id: idA, receiver_id: idB, content: 'orijinal' }).select('id').single(), 'mesaj');
+    await B.from('messages').update({ content: 'sahte', is_read: true }).eq('id', m.id);
+    const [plain] = check(await B.rpc('get_message_texts', { p_ids: [m.id] }), 'metin');
+    must(plain && Object.values(plain).includes('orijinal'), 'alıcı mesaj metnini değiştirebildi!');
+    must(check(await A.from('messages').select('is_read').eq('id', m.id).single(), 'okundu').is_read === true, 'alıcı okundu işaretleyemedi');
+    // Location is stored rounded.
+    check(await A.from('profiles').update({ latitude: 38.423456, longitude: 27.142789 }).eq('id', idA), 'konum');
+    const loc = check(await B.from('profiles').select('latitude, longitude').eq('id', idA).single(), 'konum oku');
+    must(loc.latitude === 38.42 && loc.longitude === 27.14, `konum yuvarlanmadı (${loc.latitude}, ${loc.longitude})`);
+    // Avatars bucket cannot be listed across users.
+    const list = await B.storage.from('avatars').list(idA);
+    must(!list.data || list.data.length === 0, 'başkasının fotoğraf klasörü listelenebiliyor!');
+    return 'girişsiz erişim kapalı, mesaj değiştirme engelli, konum yuvarlanıyor, depolama kapalı';
+  });
   await step('Kibar kapanış: kapanan sohbete mesaj yazılamaz', async () => {
     check(await B.from('messages').insert({ session_id: sessionId, sender_id: idB, receiver_id: idA, content: 'İyi şanslar' }), 'kapanış notu');
     check(await B.from('chat_sessions').update({ closed_by: idB, closed_at: new Date().toISOString() }).eq('id', sessionId), 'kapat');
